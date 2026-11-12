@@ -88,10 +88,10 @@ public sealed class AgentRuntimeTests
         var runtime = agent.Get<AgentRuntime>();
         await runtime.RunCycleAsync(CancellationToken.None);
 
-        // Server goes away.
+        // Server answers with errors (it is overloaded or down behind its proxy).
         for (var i = 0; i < 5; i++)
         {
-            agent.Api.Failures.Enqueue(FakeAgentApi.Transient());
+            agent.Api.Failures.Enqueue(FakeAgentApi.ServerError());
         }
 
         var delays = new List<TimeSpan>();
@@ -126,7 +126,7 @@ public sealed class AgentRuntimeTests
         await runtime.RunCycleAsync(CancellationToken.None);
         for (var i = 0; i < 10; i++)
         {
-            agent.Api.Failures.Enqueue(FakeAgentApi.Transient());
+            agent.Api.Failures.Enqueue(FakeAgentApi.ServerError());
         }
 
         TimeSpan last = default;
@@ -314,5 +314,66 @@ public sealed class AgentRuntimeTests
         await Task.CompletedTask;
         Assert.Throws<ArgumentException>(() => agent.Keys.OpenKey("../../etc/passwd"));
         _ = ECCurve.NamedCurves.nistP256;
+    }
+
+    [Fact]
+    public async Task Unreachable_server_is_retried_at_least_every_heartbeat_interval()
+    {
+        // A network interruption must not turn into minutes of self-imposed silence
+        // that the server would report as an outage once the network is back.
+        using var agent = new AgentHarness();
+        agent.Get<BootstrapTokenStore>().Save(Token);
+        var runtime = agent.Get<AgentRuntime>();
+        await runtime.RunCycleAsync(CancellationToken.None);
+        for (var i = 0; i < 10; i++)
+        {
+            agent.Api.Failures.Enqueue(FakeAgentApi.Transient());
+        }
+
+        var delays = new List<TimeSpan>();
+        for (var i = 0; i < 10; i++)
+        {
+            delays.Add(await runtime.RunCycleAsync(CancellationToken.None));
+            agent.Time.Advance(delays[^1]);
+        }
+
+        Assert.Equal([5, 10, 20, 40, 60, 60, 60, 60, 60, 60], delays.Select(d => d.TotalSeconds));
+    }
+
+    [Fact]
+    public async Task Heartbeat_carries_boot_time_os_health_and_network_signals()
+    {
+        using var agent = new AgentHarness();
+        agent.Get<BootstrapTokenStore>().Save(Token);
+        var runtime = agent.Get<AgentRuntime>();
+        await runtime.RunCycleAsync(CancellationToken.None); // enroll
+        await runtime.RunCycleAsync(CancellationToken.None); // heartbeat
+        agent.Time.Advance(TimeSpan.FromSeconds(30));
+        agent.NetworkProbe.GatewayReachable = false;
+        await runtime.RunCycleAsync(CancellationToken.None); // not due yet
+        agent.Time.Advance(TimeSpan.FromSeconds(31));
+        await runtime.RunCycleAsync(CancellationToken.None); // second heartbeat
+
+        var first = agent.Api.Heartbeats[0].Health;
+        Assert.Equal(agent.SystemProbe.BootTimeUtc, first.SystemBootedAtUtc);
+        Assert.Equal(8L << 30, first.System!.AvailableMemoryBytes);
+        Assert.True(first.Network!.Checks.Single(c => c.Kind == NetworkCheckKind.Gateway).Success);
+
+        // Probes are rate limited to their interval (60 s): the second heartbeat re-probes.
+        var second = agent.Api.Heartbeats[1].Health;
+        Assert.False(second.Network!.Checks.Single(c => c.Kind == NetworkCheckKind.Gateway).Success);
+        Assert.Equal(2, agent.NetworkProbe.Calls);
+    }
+
+    [Fact]
+    public void Boot_time_is_stable_between_readings()
+    {
+        var probe = new Solvix.Agent.Core.Monitoring.PortableSystemHealthProbe(TimeProvider.System);
+        var a = probe.GetBootTimeUtc();
+        var b = probe.GetBootTimeUtc();
+        Assert.True((b - a).Duration() <= TimeSpan.FromSeconds(1));
+        Assert.True(a < DateTimeOffset.UtcNow);
+        var snapshot = probe.Capture();
+        Assert.True(snapshot.TotalMemoryBytes > 0);
     }
 }

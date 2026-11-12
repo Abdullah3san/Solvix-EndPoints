@@ -27,6 +27,9 @@ public sealed class AgentOptions
 
     public UpdateOptions Updates { get; set; } = new();
 
+    /// <summary>Local network reachability probes (targets are local configuration only).</summary>
+    public NetworkProbeOptions Network { get; set; } = new();
+
     /// <summary>Consecutive authentication failures after which the credential is considered lost.</summary>
     public int MaxAuthenticationFailures { get; set; } = 3;
 
@@ -65,4 +68,23 @@ public sealed class UpdateOptions
     public List<string> TrustedPublisherThumbprints { get; set; } = [];
 
     public long MaxPackageBytes { get; set; } = 200L * 1024 * 1024;
+}
+
+public sealed class NetworkProbeOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Ping the default gateway. Disable on networks whose gateway drops ICMP.</summary>
+    public bool PingGateway { get; set; } = true;
+
+    /// <summary>Host names to resolve. Empty = the server host name.</summary>
+    public List<string> DnsHostNames { get; set; } = [];
+
+    /// <summary>Internal services to test, as <c>host:port</c> (e.g. a domain controller on 389).</summary>
+    public List<string> TcpTargets { get; set; } = [];
+
+    public int TimeoutMilliseconds { get; set; } = 2000;
+
+    /// <summary>Minimum seconds between probe runs; the last result is reused in between.</summary>
+    public int IntervalSeconds { get; set; } = 60;
 }

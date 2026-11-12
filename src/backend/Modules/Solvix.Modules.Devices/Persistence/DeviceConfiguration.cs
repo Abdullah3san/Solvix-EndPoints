@@ -43,7 +43,6 @@ internal sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
             .IsUnique()
             .HasFilter("hardware_fingerprint IS NOT NULL");
         builder.HasIndex(d => new { d.TenantId, d.Hostname });
-        builder.HasIndex(d => new { d.TenantId, d.LastSeenAtUtc });
         builder.HasIndex(d => new { d.TenantId, d.AgentVersion });
         builder.HasIndex(d => new { d.TenantId, d.AssignedUserId });
     }

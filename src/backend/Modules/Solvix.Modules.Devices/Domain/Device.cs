@@ -10,7 +10,7 @@ public enum DevicePlatform
     Windows = 1,
 }
 
-/// <summary>Administrative lifecycle state. Connectivity (online/offline) is derived from <see cref="Device.LastSeenAtUtc"/>.</summary>
+/// <summary>Administrative lifecycle state. Connectivity lives in <c>device_presence</c> (Monitoring).</summary>
 public enum DeviceStatus
 {
     Active = 1,
@@ -97,8 +97,10 @@ public sealed class Device : TenantEntity
 
     public AgentHealthStatus? HealthStatus { get; private set; }
 
-    /// <summary>Latest <see cref="AgentHealthReport"/> as JSON (jsonb).</summary>
+    /// <summary>Latest <see cref="AgentHealthReport"/> as JSON (jsonb), refreshed on change or periodically.</summary>
     public string? AgentHealthJson { get; private set; }
+
+    public DateTimeOffset? AgentHealthUpdatedAtUtc { get; private set; }
 
     public DateTimeOffset EnrolledAtUtc { get; private set; }
 
@@ -107,8 +109,6 @@ public sealed class Device : TenantEntity
     public int EnrollmentCount { get; private set; }
 
     public Guid? EnrollmentTokenId { get; private set; }
-
-    public DateTimeOffset? LastSeenAtUtc { get; private set; }
 
     public DateTimeOffset? LastInventoryAtUtc { get; private set; }
 
@@ -159,17 +159,25 @@ public sealed class Device : TenantEntity
         ApplyEnrollment(identity, enrollmentTokenId, now);
     }
 
-    public void RecordHeartbeat(string agentVersion, AgentHealthStatus healthStatus, string healthJson, string? osBuild, DateTimeOffset now)
+    /// <summary>
+    /// Applies the descriptive part of a heartbeat. EF writes the row only when a
+    /// value actually changed; <paramref name="healthJson"/> is null when the stored
+    /// report is still current (it contains counters that change every heartbeat).
+    /// </summary>
+    public void RecordHeartbeat(string agentVersion, AgentHealthStatus healthStatus, string? healthJson, string? osBuild, DateTimeOffset now)
     {
         SetAgentVersion(agentVersion, now);
         HealthStatus = healthStatus;
-        AgentHealthJson = healthJson;
-        if (!string.IsNullOrWhiteSpace(osBuild))
+        if (healthJson is not null)
         {
-            OsBuild = Truncate(osBuild, 32);
+            AgentHealthJson = healthJson;
+            AgentHealthUpdatedAtUtc = now;
         }
 
-        LastSeenAtUtc = now;
+        if (!string.IsNullOrWhiteSpace(osBuild))
+        {
+            OsBuild = Truncate(osBuild, 32) ?? OsBuild;
+        }
     }
 
     public void ApplyInventory(InventoryReport report, DateTimeOffset now)
@@ -219,7 +227,6 @@ public sealed class Device : TenantEntity
             .ToList();
 
         LastInventoryAtUtc = now;
-        LastSeenAtUtc = now;
     }
 
     public void UpdateDetails(string? displayName, string? notes)
@@ -276,7 +283,6 @@ public sealed class Device : TenantEntity
         SetAgentVersion(identity.AgentVersion, now);
         EnrollmentTokenId = enrollmentTokenId;
         LastEnrolledAtUtc = now;
-        LastSeenAtUtc = now;
         EnrollmentCount++;
     }
 

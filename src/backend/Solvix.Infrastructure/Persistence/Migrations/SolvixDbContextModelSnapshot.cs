@@ -34,6 +34,10 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("agent_health_json");
 
+                    b.Property<DateTimeOffset?>("AgentHealthUpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("agent_health_updated_at_utc");
+
                     b.Property<string>("AgentVersion")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -129,10 +133,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LastInventoryAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_inventory_at_utc");
-
-                    b.Property<DateTimeOffset?>("LastSeenAtUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("last_seen_at_utc");
 
                     b.PrimitiveCollection<List<string>>("MacAddresses")
                         .IsRequired()
@@ -231,9 +231,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Hostname")
                         .HasDatabaseName("ix_devices_tenant_id_hostname");
-
-                    b.HasIndex("TenantId", "LastSeenAtUtc")
-                        .HasDatabaseName("ix_devices_tenant_id_last_seen_at_utc");
 
                     b.ToTable("devices", (string)null);
                 });
@@ -525,6 +522,422 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_enrollment_tokens_tenant_id_expires_at_utc");
 
                     b.ToTable("enrollment_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DeviceAvailabilityDay", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<int>("OfflineCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("offline_count");
+
+                    b.Property<long>("OfflineSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("offline_seconds");
+
+                    b.Property<long>("OnlineSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("online_seconds");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<long>("WarningSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("warning_seconds");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_availability_days");
+
+                    b.HasIndex("TenantId", "Day")
+                        .HasDatabaseName("ix_device_availability_days_tenant_id_day");
+
+                    b.HasIndex("TenantId", "DeviceId", "Day")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_availability_days_tenant_id_device_id_day");
+
+                    b.ToTable("device_availability_days", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DeviceConnectionEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("detail");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<long?>("DurationSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("duration_seconds");
+
+                    b.Property<int?>("FailedAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_attempts");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("from_status");
+
+                    b.Property<DateTimeOffset?>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<string>("Signal")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("signal");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("ToStatus")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("to_status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_connection_events");
+
+                    b.HasIndex("TenantId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_device_connection_events_tenant_id_occurred_at_utc");
+
+                    b.HasIndex("TenantId", "DeviceId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_device_connection_events_tenant_id_device_id_occurred_at_utc");
+
+                    b.ToTable("device_connection_events", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DevicePresence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AccountedUntilUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accounted_until_utc");
+
+                    b.Property<DateTimeOffset?>("AgentStartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("agent_started_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset?>("LastCommunicationAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_communication_at_utc");
+
+                    b.Property<DateTimeOffset?>("LastHeartbeatAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_heartbeat_at_utc");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .IsConcurrencyToken()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<DateTimeOffset?>("NetworkCheckedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("network_checked_at_utc");
+
+                    b.Property<string>("NetworkJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("network_json");
+
+                    b.Property<string>("NetworkStatus")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("network_status");
+
+                    b.Property<DateTimeOffset?>("OfflineSinceUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("offline_since_utc");
+
+                    b.Property<DateTimeOffset?>("OnlineSinceUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("online_since_utc");
+
+                    b.Property<DateTimeOffset?>("OsHealthCheckedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("os_health_checked_at_utc");
+
+                    b.Property<string>("OsHealthJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("os_health_json");
+
+                    b.Property<string>("OsHealthStatus")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("os_health_status");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer")
+                        .HasColumnName("revision");
+
+                    b.Property<DateTimeOffset?>("SignalsPersistedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("signals_persisted_at_utc");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("StateChangedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("state_changed_at_utc");
+
+                    b.Property<DateTimeOffset?>("SystemBootedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("system_booted_at_utc");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_presence");
+
+                    b.HasIndex("TenantId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_presence_tenant_id_device_id");
+
+                    b.HasIndex("TenantId", "State")
+                        .HasDatabaseName("ix_device_presence_tenant_id_state");
+
+                    b.ToTable("device_presence", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.MonitorCheckpoint", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset>("EvidenceFloorUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("evidence_floor_utc");
+
+                    b.Property<DateTimeOffset>("LastPurgeAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_purge_at_utc");
+
+                    b.Property<DateOnly>("LastRollupDay")
+                        .HasColumnType("date")
+                        .HasColumnName("last_rollup_day");
+
+                    b.Property<DateTimeOffset>("LastSweepAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_sweep_at_utc");
+
+                    b.Property<DateTimeOffset>("ObservingSinceUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("observing_since_utc");
+
+                    b.HasKey("Name")
+                        .HasName("pk_monitor_checkpoints");
+
+                    b.ToTable("monitor_checkpoints", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.MonitoringAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AcknowledgedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("acknowledged_at_utc");
+
+                    b.Property<Guid?>("AcknowledgedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("acknowledged_by_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("device_name");
+
+                    b.Property<long?>("DowntimeSeconds")
+                        .HasColumnType("bigint")
+                        .HasColumnName("downtime_seconds");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("message");
+
+                    b.Property<DateTimeOffset>("OpenedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opened_at_utc");
+
+                    b.Property<DateTimeOffset?>("ResolvedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_monitoring_alerts");
+
+                    b.HasIndex("TenantId", "DeviceId", "Type")
+                        .IsUnique()
+                        .HasDatabaseName("ux_monitoring_alerts_open_per_device")
+                        .HasFilter("status = 'Open'");
+
+                    b.HasIndex("TenantId", "Status", "OpenedAtUtc")
+                        .HasDatabaseName("ix_monitoring_alerts_tenant_id_status_opened_at_utc");
+
+                    b.ToTable("monitoring_alerts", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.MonitoringSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<int>("HeartbeatIntervalSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("heartbeat_interval_seconds");
+
+                    b.Property<int>("OfflineAfterSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("offline_after_seconds");
+
+                    b.Property<bool>("OfflineAlertsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("offline_alerts_enabled");
+
+                    b.Property<bool>("RecoveryNotificationsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("recovery_notifications_enabled");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<int>("WarningAfterSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("warning_after_seconds");
+
+                    b.HasKey("Id")
+                        .HasName("pk_monitoring_settings");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_monitoring_settings_tenant_id");
+
+                    b.ToTable("monitoring_settings", (string)null);
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.TenantMembership", b =>
@@ -986,6 +1399,88 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_enrollment_tokens_device_groups_tenant_id_device_group_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DeviceAvailabilityDay", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_availability_days_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Devices.Domain.Device", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_availability_days_devices_tenant_id_device_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DeviceConnectionEvent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_connection_events_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Devices.Domain.Device", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_connection_events_devices_tenant_id_device_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DevicePresence", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_presence_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Devices.Domain.Device", null)
+                        .WithOne()
+                        .HasForeignKey("Solvix.Modules.Devices.Monitoring.DevicePresence", "TenantId", "DeviceId")
+                        .HasPrincipalKey("Solvix.Modules.Devices.Domain.Device", "TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_presence_devices_tenant_id_device_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.MonitoringAlert", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_monitoring_alerts_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Devices.Domain.Device", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_monitoring_alerts_devices_tenant_id_device_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.MonitoringSettings", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_monitoring_settings_tenants_tenant_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.TenantMembership", b =>

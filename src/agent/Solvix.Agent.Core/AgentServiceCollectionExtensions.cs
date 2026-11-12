@@ -9,6 +9,7 @@ using Solvix.Agent.Core.Configuration;
 using Solvix.Agent.Core.Enrollment;
 using Solvix.Agent.Core.Health;
 using Solvix.Agent.Core.Inventory;
+using Solvix.Agent.Core.Monitoring;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
@@ -34,6 +35,8 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<IAgentApiClient, AgentApiClient>();
         services.TryAddSingleton<ConnectionMonitor>();
         services.TryAddSingleton<AgentHealthMonitor>();
+        services.TryAddSingleton<ISystemHealthProbe, PortableSystemHealthProbe>();
+        services.TryAddSingleton<INetworkReachabilityProbe, NetworkReachabilityProbe>();
         services.TryAddSingleton<IDeviceIdentityProvider, DeviceIdentityProvider>();
         services.TryAddSingleton<IInventoryService, InventoryService>();
         services.AddSingleton<IInventoryCollector, NetworkInventoryCollector>();

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Application.Agent;
 using Solvix.Modules.Devices.Application.Enrollment;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.SharedKernel.Web;
 
 /// <summary>
@@ -18,6 +19,7 @@ using Solvix.SharedKernel.Web;
 [ApiVersion(1.0)]
 [Produces("application/json")]
 [Route("api/v{version:apiVersion}/agent")]
+[RecordAgentContact]
 public sealed class AgentController(IAgentService agent) : ControllerBase
 {
     public const string EnrollmentRateLimitPolicy = "agent-enrollment";
@@ -41,6 +43,7 @@ public sealed class AgentController(IAgentService agent) : ControllerBase
 
     [HttpPost("heartbeat")]
     [Authorize(Policy = Policies.Device)]
+    [HeartbeatEndpoint]
     [RequestSizeLimit(64 * 1024)]
     public async Task<ActionResult<HeartbeatResponse>> Heartbeat([FromBody] HeartbeatRequest request, CancellationToken cancellationToken) =>
         Ok(await agent.HeartbeatAsync(request, cancellationToken));

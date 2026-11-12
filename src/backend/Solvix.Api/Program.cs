@@ -20,6 +20,7 @@ using Solvix.Infrastructure.DependencyInjection;
 using Solvix.Infrastructure.Persistence;
 using Solvix.Infrastructure.Tenancy;
 using Solvix.Modules.Devices.Configuration;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.Modules.Identity.Configuration;
 using Solvix.SharedKernel.Identity;
@@ -201,6 +202,24 @@ try
         });
     }
 
+    // ------------------------------------------------------------- SignalR
+    // Live monitoring updates (server → browser). Browsers reach the hub through
+    // the web BFF, which attaches the session token; the hub closes connections
+    // whose token expired so they re-authenticate.
+    var signalR = builder.Services.AddSignalR(options =>
+    {
+        options.EnableDetailedErrors = builder.Environment.IsDevelopment();
+        options.MaximumReceiveMessageSize = 4 * 1024; // clients never send payloads
+    }).AddJsonProtocol(options => options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+    var monitoringOptions = builder.Configuration.GetSection($"{DevicesOptions.SectionName}:{nameof(DevicesOptions.Monitoring)}").Get<MonitoringOptions>() ?? new MonitoringOptions();
+    if (monitoringOptions.RedisBackplane)
+    {
+        // Several API nodes: every node must deliver updates raised on any node.
+        signalR.AddStackExchangeRedis(
+            builder.Configuration.GetConnectionString(InfrastructureServiceCollectionExtensions.RedisConnectionName)!,
+            options => options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("solvix-signalr"));
+    }
+
     // ------------------------------------------------------------------ CORS
     builder.Services.AddCors(options =>
     {
@@ -253,6 +272,13 @@ try
     app.UseRateLimiter();
 
     app.MapControllers();
+    app.MapHub<MonitoringHub>(MonitoringHub.Route, options =>
+    {
+        options.CloseOnAuthenticationExpiration = true;
+        options.Transports = Microsoft.AspNetCore.Http.Connections.HttpTransportType.ServerSentEvents
+            | Microsoft.AspNetCore.Http.Connections.HttpTransportType.LongPolling
+            | Microsoft.AspNetCore.Http.Connections.HttpTransportType.WebSockets;
+    });
     app.MapOpenApi().WithDocumentPerVersion();
     app.MapScalarApiReference(options => options.WithTitle("Solvix EndPoints API"));
     app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });

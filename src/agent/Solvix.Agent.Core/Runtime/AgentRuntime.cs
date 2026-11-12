@@ -8,6 +8,7 @@ using Solvix.Agent.Core.Configuration;
 using Solvix.Agent.Core.Enrollment;
 using Solvix.Agent.Core.Health;
 using Solvix.Agent.Core.Inventory;
+using Solvix.Agent.Core.Monitoring;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
 using Solvix.Agent.Core.Updates;
@@ -30,6 +31,8 @@ public sealed partial class AgentRuntime(
     UpdateManager updates,
     AgentHealthMonitor health,
     ConnectionMonitor connection,
+    ISystemHealthProbe systemProbe,
+    INetworkReachabilityProbe networkProbe,
     IOptions<AgentOptions> options,
     TimeProvider time,
     ILogger<AgentRuntime> logger)
@@ -50,6 +53,8 @@ public sealed partial class AgentRuntime(
     private bool _inventoryRequested;
     private bool _renewalRecommended;
     private int _enrollmentFailures;
+    private NetworkReachabilitySnapshot? _network;
+    private DateTimeOffset _nextNetworkProbe = DateTimeOffset.MinValue;
 
     /// <summary>Runs every operation that is due and returns how long to wait before the next cycle.</summary>
     public async Task<TimeSpan> RunCycleAsync(CancellationToken cancellationToken)
@@ -124,7 +129,12 @@ public sealed partial class AgentRuntime(
     private async Task HeartbeatAsync(CancellationToken cancellationToken)
     {
         var state = stateStore.Load();
-        var report = health.Build(state.LastInventoryAtUtc, state.CertificateNotAfterUtc, Environment.OSVersion.Version.Build.ToString(System.Globalization.CultureInfo.InvariantCulture), connection.ConsecutiveFailures);
+        var report = health.Build(state.LastInventoryAtUtc, state.CertificateNotAfterUtc, Environment.OSVersion.Version.Build.ToString(System.Globalization.CultureInfo.InvariantCulture), connection.ConsecutiveFailures) with
+        {
+            SystemBootedAtUtc = systemProbe.GetBootTimeUtc(),
+            System = CaptureSystemHealth(),
+            Network = await ProbeNetworkAsync(cancellationToken),
+        };
         var response = await api.HeartbeatAsync(new HeartbeatRequest { AgentVersion = AgentInfo.Version, Health = report }, cancellationToken);
 
         var recoveredAfter = connection.RecordSuccess();
@@ -152,6 +162,42 @@ public sealed partial class AgentRuntime(
             LastSuccessfulContactAtUtc = time.GetUtcNow(),
             RetiredKeyName = null,
         });
+    }
+
+    private SystemHealthSnapshot? CaptureSystemHealth()
+    {
+        try
+        {
+            return systemProbe.Capture();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogProbeFailed(logger, "system", ex.Message);
+            return null;
+        }
+    }
+
+    /// <summary>Network probes run at most once per configured interval; results in between are reused.</summary>
+    private async Task<NetworkReachabilitySnapshot?> ProbeNetworkAsync(CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+        if (now < _nextNetworkProbe)
+        {
+            return _network;
+        }
+
+        _nextNetworkProbe = now.AddSeconds(Math.Clamp(options.Value.Network.IntervalSeconds, 15, 3600));
+        try
+        {
+            _network = await networkProbe.ProbeAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            LogProbeFailed(logger, "network", ex.Message);
+            _network = null;
+        }
+
+        return _network;
     }
 
     private bool IsInventoryDue(AgentState state)
@@ -296,8 +342,26 @@ public sealed partial class AgentRuntime(
 
         // Re-send the heartbeat first once connectivity returns.
         _nextHeartbeat = DateTimeOffset.MinValue;
-        return _backoff.Delay(connection.ConsecutiveFailures);
+        return RetryDelay(ex, connection.ConsecutiveFailures, Clamp(stateStore.Load().Configuration).HeartbeatIntervalSeconds);
     }
+
+    /// <summary>
+    /// When the server could not be reached at all (no HTTP response: network down,
+    /// DNS, refused connection) retrying adds no server load, so the delay is capped
+    /// at the heartbeat interval: the device is reported online again within one
+    /// interval of the network returning, instead of after a long backoff that the
+    /// server would mistake for an outage. Server-side errors (5xx, 429) keep the
+    /// full exponential backoff to protect a struggling server.
+    /// </summary>
+    internal TimeSpan RetryDelay(AgentApiException ex, int failures, int heartbeatIntervalSeconds)
+    {
+        var delay = _backoff.Delay(failures);
+        var cap = TimeSpan.FromSeconds(heartbeatIntervalSeconds);
+        return ex.Failure == AgentApiFailure.Transient && ex.Status is null && delay > cap ? cap : delay;
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The {Probe} health probe failed: {Message}")]
+    private static partial void LogProbeFailed(ILogger logger, string probe, string message);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Reconnected to the server after {Failures} failed attempt(s)")]
     private static partial void LogReconnected(ILogger logger, int failures);

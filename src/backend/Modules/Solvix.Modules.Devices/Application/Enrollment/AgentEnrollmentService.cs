@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Domain;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Abstractions;
 using Solvix.SharedKernel.Exceptions;
@@ -33,6 +34,9 @@ internal sealed partial class AgentEnrollmentService(
     ITenantDirectory tenants,
     ITenantContextMutator tenantMutator,
     IDeviceCertificateAuthority certificateAuthority,
+    PresenceTracker presence,
+    PresenceBuffer presenceBuffer,
+    MonitoringSettingsProvider monitoringSettings,
     IOptions<DevicesOptions> options,
     IClock clock,
     ILogger<AgentEnrollmentService> logger) : IAgentEnrollmentService
@@ -83,6 +87,7 @@ internal sealed partial class AgentEnrollmentService(
             var fingerprint = HardwareFingerprint.Compute(request.Device.HardwareId, request.Device.SerialNumber);
             var settings = options.Value;
 
+            var monitoring = await monitoringSettings.GetAsync(cancellationToken);
             var strategy = db.Database.CreateExecutionStrategy();
             var response = await strategy.ExecuteAsync(
                 async ct =>
@@ -107,6 +112,7 @@ internal sealed partial class AgentEnrollmentService(
                     {
                         device = Device.Enroll(tenantId, DevicePlatform.Windows, request.Device, fingerprint, tokenId, now);
                         db.Set<Device>().Add(device);
+                        presence.Enroll(device, now);
                         if (token.DeviceGroupId is { } groupId)
                         {
                             db.Set<DeviceGroupMembership>().Add(DeviceGroupMembership.Create(tenantId, groupId, device.Id));
@@ -131,6 +137,10 @@ internal sealed partial class AgentEnrollmentService(
 
                     await db.SaveChangesAsync(ct);
                     await transaction.CommitAsync(ct);
+                    if (reEnrolled)
+                    {
+                        presenceBuffer.Record(tenantId, device.Id, now, successful: true, heartbeat: false);
+                    }
 
                     LogEnrolled(logger, device.Id, tenantId, reEnrolled, issued.Thumbprint);
                     return new EnrollmentResponse
@@ -141,7 +151,7 @@ internal sealed partial class AgentEnrollmentService(
                         CaCertificatesPem = [certificateAuthority.CertificatePem],
                         CertificateNotAfterUtc = issued.NotAfterUtc,
                         ReEnrolled = reEnrolled,
-                        Configuration = AgentConfigurationFactory.From(settings.Agent),
+                        Configuration = AgentConfigurationFactory.From(settings.Agent, monitoring.Thresholds.HeartbeatIntervalSeconds),
                     };
                 },
                 cancellationToken);
@@ -168,9 +178,9 @@ internal sealed partial class AgentEnrollmentService(
 
 internal static class AgentConfigurationFactory
 {
-    public static AgentConfiguration From(AgentPolicyOptions policy) => new()
+    public static AgentConfiguration From(AgentPolicyOptions policy, int? heartbeatIntervalSeconds = null) => new()
     {
-        HeartbeatIntervalSeconds = policy.HeartbeatIntervalSeconds,
+        HeartbeatIntervalSeconds = heartbeatIntervalSeconds ?? policy.HeartbeatIntervalSeconds,
         InventoryIntervalMinutes = policy.InventoryIntervalMinutes,
         UpdateCheckIntervalMinutes = policy.UpdateCheckIntervalMinutes,
     };

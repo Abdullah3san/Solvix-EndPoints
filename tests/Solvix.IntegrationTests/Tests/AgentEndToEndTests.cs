@@ -14,6 +14,7 @@ using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
 using Solvix.IntegrationTests.Fixtures;
 using Solvix.Modules.Devices.Application.Devices;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Results;
 
@@ -42,7 +43,7 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
         var wait = await runtime.RunCycleAsync(CancellationToken.None);
         Assert.InRange(wait, TimeSpan.FromSeconds(50), TimeSpan.FromSeconds(60));
         var details = await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{deviceId}"));
-        Assert.Equal(DeviceConnectivity.Online, details.Summary.Connectivity);
+        Assert.Equal(ConnectivityState.Online, details.Summary.Connectivity);
         Assert.Equal(AgentInfo.Version, details.Summary.AgentVersion);
         Assert.True(details.Summary.AgentUpdateAvailable);
         Assert.Equal("Contoso", details.Summary.Manufacturer);
@@ -63,15 +64,15 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
         }
 
         Assert.True(delays.Zip(delays.Skip(1)).All(p => p.Second > p.First), string.Join(", ", delays));
-        await fixture.ExecutePlatformSqlAsync("UPDATE devices SET last_seen_at_utc = now() - interval '1 hour' WHERE id = @d", ("d", deviceId));
+        await fixture.SimulateSilenceAsync(deviceId, TimeSpan.FromHours(1));
         details = await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{deviceId}"));
-        Assert.Equal(DeviceConnectivity.Offline, details.Summary.Connectivity);
+        Assert.Equal(ConnectivityState.Offline, details.Summary.Connectivity);
 
         // --- Reconnection -------------------------------------------------------
         agent.Network.Offline = false;
         await runtime.RunCycleAsync(CancellationToken.None);
         details = await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{deviceId}"));
-        Assert.Equal(DeviceConnectivity.Online, details.Summary.Connectivity);
+        Assert.Equal(ConnectivityState.Online, details.Summary.Connectivity);
         Assert.Equal(4, details.Health!.ConsecutiveFailures);
         Assert.True(agent.Services.GetRequiredService<ConnectionMonitor>().IsConnected);
 

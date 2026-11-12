@@ -8,6 +8,7 @@ using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Application.Enrollment;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Domain;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Abstractions;
 using Solvix.SharedKernel.Exceptions;
@@ -34,38 +35,73 @@ internal sealed partial class AgentService(
     ICurrentDevice currentDevice,
     IDeviceCertificateAuthority certificateAuthority,
     IAgentReleaseCatalog releases,
+    PresenceTracker presence,
+    MonitoringSettingsProvider monitoringSettings,
     IOptions<DevicesOptions> options,
     IClock clock,
     ILogger<AgentService> logger) : IAgentService
 {
+    /// <summary>
+    /// Processes a heartbeat with as few writes as possible: the device row is
+    /// written only when a descriptive value changed (version, health status, OS
+    /// build) or the stored health report is due for a refresh; connectivity is
+    /// handled by the <see cref="PresenceTracker"/>, which buffers plain contact.
+    /// </summary>
     public async Task<HeartbeatResponse> HeartbeatAsync(HeartbeatRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var device = await LoadDeviceAsync(cancellationToken);
         var now = clock.UtcNow;
+        var settings = options.Value;
         var previousVersion = device.AgentVersion;
+        var healthDue = device.AgentHealthUpdatedAtUtc is not { } updated
+            || now - updated >= TimeSpan.FromSeconds(settings.Monitoring.SignalPersistIntervalSeconds)
+            || device.HealthStatus != request.Health.Status
+            || !SameIssues(device.AgentHealthJson, request.Health);
         device.RecordHeartbeat(
             request.AgentVersion,
             request.Health.Status,
-            JsonSerializer.Serialize(request.Health, DevicesJson.Options),
+            healthDue ? JsonSerializer.Serialize(request.Health with { System = null, Network = null }, DevicesJson.Options) : null,
             request.Health.OsBuild,
             now);
-        await db.SaveChangesAsync(cancellationToken);
+        await db.SaveChangesAsync(cancellationToken); // no-op unless something changed
 
         if (!string.Equals(previousVersion, device.AgentVersion, StringComparison.Ordinal))
         {
             LogAgentVersionChanged(logger, device.Id, previousVersion, device.AgentVersion);
         }
 
-        var settings = options.Value;
+        await presence.ProcessHeartbeatAsync(device, request.Health, now, cancellationToken);
+
+        var monitoring = await monitoringSettings.GetAsync(cancellationToken);
         var renewalFrom = currentDevice.CredentialNotAfterUtc.AddDays(-settings.CertificateAuthority.RenewalWindowDays);
         return new HeartbeatResponse
         {
             ServerTimeUtc = now,
-            Configuration = AgentConfigurationFactory.From(settings.Agent),
+            Configuration = AgentConfigurationFactory.From(settings.Agent, monitoring.Thresholds.HeartbeatIntervalSeconds),
             InventoryRequested = device.IsInventoryRequested,
             CertificateRenewalRecommended = now >= renewalFrom,
         };
+    }
+
+    private static bool SameIssues(string? storedJson, AgentHealthReport current)
+    {
+        if (storedJson is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var stored = JsonSerializer.Deserialize<AgentHealthReport>(storedJson, DevicesJson.Options);
+            return stored is not null
+                && stored.Issues.Count == current.Issues.Count
+                && stored.Issues.Zip(current.Issues).All(p => p.First.Component == p.Second.Component && p.First.Severity == p.Second.Severity && p.First.Message == p.Second.Message);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     public async Task SubmitInventoryAsync(InventoryReport report, CancellationToken cancellationToken)

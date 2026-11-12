@@ -44,6 +44,72 @@ public sealed record AgentHealthReport
     public string? OsBuild { get; init; }
 
     public IReadOnlyList<HealthIssue> Issues { get; init; } = [];
+
+    /// <summary>When the operating system last started (derived from the system tick count). Null from agents before 1.1.</summary>
+    public DateTimeOffset? SystemBootedAtUtc { get; init; }
+
+    /// <summary>Operating-system health as measured on the device. Independent of agent connectivity.</summary>
+    public SystemHealthSnapshot? System { get; init; }
+
+    /// <summary>Local network reachability as observed by the agent. Independent of agent connectivity.</summary>
+    public NetworkReachabilitySnapshot? Network { get; init; }
+}
+
+/// <summary>
+/// Operating-system health signal. A successful heartbeat proves only that the
+/// agent process can reach the server; these values describe the machine itself.
+/// </summary>
+public sealed record SystemHealthSnapshot
+{
+    public long? TotalMemoryBytes { get; init; }
+
+    public long? AvailableMemoryBytes { get; init; }
+
+    /// <summary>Drive holding the operating system (e.g. <c>C:\</c>).</summary>
+    public string? SystemDrive { get; init; }
+
+    public long? SystemDriveTotalBytes { get; init; }
+
+    public long? SystemDriveFreeBytes { get; init; }
+
+    /// <summary>Windows reports that a restart is required (servicing / Windows Update). Null when unknown.</summary>
+    public bool? RebootPending { get; init; }
+
+    public int? ProcessCount { get; init; }
+}
+
+public enum NetworkCheckKind
+{
+    Interface = 1,
+    Gateway = 2,
+    Dns = 3,
+    Tcp = 4,
+}
+
+/// <summary>
+/// Network reachability signal: what the device can reach on its local network.
+/// It is collected by built-in probes against locally configured targets only;
+/// the server cannot choose probe targets.
+/// </summary>
+public sealed record NetworkReachabilitySnapshot
+{
+    public DateTimeOffset CheckedAtUtc { get; init; }
+
+    public IReadOnlyList<NetworkCheck> Checks { get; init; } = [];
+}
+
+public sealed record NetworkCheck
+{
+    public required NetworkCheckKind Kind { get; init; }
+
+    /// <summary>What was probed (adapter name, gateway address, host name or host:port).</summary>
+    public required string Target { get; init; }
+
+    public bool Success { get; init; }
+
+    public int? LatencyMs { get; init; }
+
+    public string? Error { get; init; }
 }
 
 public sealed record HealthIssue

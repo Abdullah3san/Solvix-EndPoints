@@ -6,6 +6,7 @@ using Npgsql;
 using Solvix.Agent.Contracts;
 using Solvix.IntegrationTests.Fixtures;
 using Solvix.Modules.Devices.Application.Devices;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Application.Enrollment;
 using Solvix.Modules.Devices.Application.Groups;
 using Solvix.Modules.Organization.Application.Branches;
@@ -95,9 +96,9 @@ public sealed class DeviceManagementApiTests(ApiFixture fixture)
         Assert.Contains(online.Items, d => d.Id == device.DeviceId);
 
         // Agent disconnected: no contact for longer than the offline threshold.
-        await fixture.ExecutePlatformSqlAsync("UPDATE devices SET last_seen_at_utc = now() - interval '1 hour' WHERE id = @d", ("d", device.DeviceId));
+        await fixture.SimulateSilenceAsync(device.DeviceId, TimeSpan.FromHours(1));
         var details = await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{device.DeviceId}"));
-        Assert.Equal(DeviceConnectivity.Offline, details.Summary.Connectivity);
+        Assert.Equal(ConnectivityState.Offline, details.Summary.Connectivity);
         var offline = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync("/api/v1/devices?connectivity=Offline"));
         Assert.Contains(offline.Items, d => d.Id == device.DeviceId);
         var stats = await HttpAssert.OkAsync<DeviceStatsDto>(await admin.GetAsync("/api/v1/devices/stats"));
@@ -118,7 +119,7 @@ public sealed class DeviceManagementApiTests(ApiFixture fixture)
         };
         await HttpAssert.OkAsync<HeartbeatResponse>(await agent.SendAsync(reconnect));
         details = await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{device.DeviceId}"));
-        Assert.Equal(DeviceConnectivity.Online, details.Summary.Connectivity);
+        Assert.Equal(ConnectivityState.Online, details.Summary.Connectivity);
         Assert.Equal(AgentHealthStatus.Degraded, details.Summary.HealthStatus);
         Assert.Equal(7, details.Health!.ConsecutiveFailures);
         Assert.Equal("communication", Assert.Single(details.Health.Issues).Component);

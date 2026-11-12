@@ -2,12 +2,7 @@ namespace Solvix.Modules.Devices.Application.Devices;
 
 using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Domain;
-
-public enum DeviceConnectivity
-{
-    Online = 1,
-    Offline = 2,
-}
+using Solvix.Modules.Devices.Monitoring;
 
 public sealed record DeviceSummaryDto(
     Guid Id,
@@ -15,7 +10,7 @@ public sealed record DeviceSummaryDto(
     string? DisplayName,
     DevicePlatform Platform,
     DeviceStatus Status,
-    DeviceConnectivity Connectivity,
+    ConnectivityState Connectivity,
     string? OsName,
     string? OsVersion,
     string? OsDisplayVersion,
@@ -30,7 +25,8 @@ public sealed record DeviceSummaryDto(
     Guid? AssignedUserId,
     DateTimeOffset? LastSeenAtUtc,
     DateTimeOffset? LastInventoryAtUtc,
-    DateTimeOffset EnrolledAtUtc);
+    DateTimeOffset EnrolledAtUtc,
+    Guid? BranchId = null);
 
 public sealed record DeviceDetailsDto
 {
@@ -104,7 +100,7 @@ public sealed record DeviceInventoryDto(Guid DeviceId, DateTimeOffset CollectedA
 public sealed record DeviceListQuery(
     string? Search,
     DeviceStatus? Status,
-    DeviceConnectivity? Connectivity,
+    ConnectivityState? Connectivity,
     Guid? GroupId,
     string? AgentVersion,
     Guid? AssignedUserId,
@@ -122,6 +118,7 @@ public sealed record DeviceStatsDto(
     int Active,
     int Online,
     int Offline,
+    int Warning,
     int Retired,
     int UpdateAvailable,
     string? LatestAgentVersion,
