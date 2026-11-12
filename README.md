@@ -67,6 +67,20 @@ docker/postgres/init/         creates the migrator and runtime roles
 docs/                         architecture and phase summaries
 ```
 
+## Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture (implemented vs. target) |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | ADRs, risks, assumptions, open decisions |
+| [docs/DATABASE.md](docs/DATABASE.md) | Data model, MSP tenancy, partitioning, retention |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security architecture |
+| [docs/DEVICE_PLATFORM.md](docs/DEVICE_PLATFORM.md) | Windows agent, gateway, heartbeat at 10k devices |
+| [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Production deployment |
+| [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) | API surfaces and endpoints |
+| [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md) | Phases and exit criteria |
+| [CHANGELOG.md](CHANGELOG.md) | Change history |
+
 ## Tests
 
 ```bash
