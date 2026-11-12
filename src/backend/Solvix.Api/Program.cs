@@ -187,10 +187,20 @@ try
         options.OnRejected = async (context, cancellationToken) =>
         {
             var http = context.HttpContext;
-            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+
+            // Sliding windows do not report an exact wait; the length of the policy's window is a safe upper bound.
+            var limits = http.RequestServices.GetRequiredService<IOptions<RateLimitingOptions>>().Value;
+            var window = http.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName switch
             {
-                http.Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
-            }
+                RateLimitPolicies.Email => limits.Email.WindowSeconds,
+                RateLimitPolicies.Refresh => limits.Refresh.WindowSeconds,
+                RateLimitPolicies.Registration => limits.Registration.WindowSeconds,
+                _ => limits.Credentials.WindowSeconds,
+            };
+            var seconds = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+                ? (int)Math.Ceiling(retryAfter.TotalSeconds)
+                : window;
+            http.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
 
             http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Solvix.RateLimiting")
                 .LogWarning("Rate limit exceeded for {Path} from {RemoteIp}", http.Request.Path, http.Connection.RemoteIpAddress);

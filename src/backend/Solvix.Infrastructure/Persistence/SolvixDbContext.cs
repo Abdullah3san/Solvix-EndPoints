@@ -50,6 +50,14 @@ public sealed class SolvixDbContext(
                 continue;
             }
 
+            // Ids are always assigned by the application (UUIDv7). Saying so matters: otherwise EF assumes
+            // that a new child found through a navigation of a tracked parent already exists (its key is
+            // set) and issues an UPDATE instead of an INSERT.
+            if (typeof(Entity).IsAssignableFrom(entityType.ClrType))
+            {
+                modelBuilder.Entity(entityType.ClrType).Property(nameof(Entity.Id)).ValueGeneratedNever();
+            }
+
             if (typeof(ITenantScoped).IsAssignableFrom(entityType.ClrType))
             {
                 ConfigureTenantScopedEntity(modelBuilder, entityType);

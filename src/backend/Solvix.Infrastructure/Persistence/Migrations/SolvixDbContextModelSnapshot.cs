@@ -103,7 +103,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.MembershipRole", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -143,7 +142,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.PasswordHistoryEntry", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -177,7 +175,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -232,7 +229,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.Role", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -291,7 +287,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.RolePermission", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -330,7 +325,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.TenantMembership", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -377,7 +371,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.TenantSecurityPolicy", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -446,7 +439,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.User", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -545,7 +537,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.UserInvitation", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -629,7 +620,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.UserInvitationRole", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -669,7 +659,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.UserRecoveryCode", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -709,7 +698,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.UserSession", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -782,7 +770,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.UserToken", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -844,7 +831,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Organization.Domain.Branch", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -916,7 +902,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Organization.Domain.CompanyProfile", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -992,7 +977,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Organization.Domain.Department", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
@@ -1056,7 +1040,6 @@ namespace Solvix.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Solvix.Modules.Tenancy.Domain.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
