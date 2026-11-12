@@ -44,7 +44,7 @@ export async function serverApi<T>(path: string, options: ServerFetchOptions = {
   });
 
   if (response.status === 401 && redirectOnUnauthorized) {
-    redirect("/login?reason=expired");
+    redirect("/api/auth/session-ended");
   }
 
   if (!response.ok) {

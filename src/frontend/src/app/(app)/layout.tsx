@@ -18,9 +18,11 @@ export const dynamic = "force-dynamic";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   let session: CurrentUserDto;
   try {
-    session = await serverApi<CurrentUserDto>("auth/me");
+    session = await serverApi<CurrentUserDto>("auth/me", { redirectOnUnauthorized: false });
   } catch {
-    redirect("/login?reason=expired");
+    // The API rejected the session (revoked, deactivated, suspended). Clear the cookies first,
+    // or the route gate would see an unexpired token and send the browser straight back here.
+    redirect("/api/auth/session-ended");
   }
 
   return (

@@ -11,6 +11,7 @@ import { Input, Select } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Table, THead, TBody, TR, TH, TD, EmptyRow } from "@/components/ui/table";
+import { describeAgent } from "./account-security";
 
 const families = [
   { value: "", label: "All events" },
@@ -104,9 +105,9 @@ export function AuditLogView({ initial }: { initial: PagedResult<AuditEventDto> 
                   <TD className="max-w-xs truncate font-mono text-xs text-muted-foreground" title={e.detail ?? undefined}>
                     {e.detail ?? ""}
                   </TD>
-                  <TD className="text-xs text-muted-foreground">
+                  <TD className="max-w-36 text-xs text-muted-foreground">
                     {e.ipAddress ?? "—"}
-                    {e.userAgent ? <span className="block max-w-48 truncate" title={e.userAgent}>{e.userAgent}</span> : null}
+                    {e.userAgent ? <span className="block truncate" title={e.userAgent}>{describeAgent(e.userAgent)}</span> : null}
                   </TD>
                 </TR>
               ))
