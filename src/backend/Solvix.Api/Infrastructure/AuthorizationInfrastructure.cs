@@ -29,7 +29,12 @@ internal sealed partial class ProblemDetailsAuthorizationResultHandler(
 
         var reasons = authorizeResult.AuthorizationFailure?.FailureReasons.Select(r => r.Message).ToHashSet(StringComparer.Ordinal) ?? [];
         var mfaRequired = reasons.Contains(AuthorizationFailureCodes.MfaEnrollmentRequired);
-        var required = authorizeResult.AuthorizationFailure?.FailedRequirements.OfType<PermissionRequirement>().Select(r => r.Permission).ToArray() ?? [];
+        var prefix = AuthorizationFailureCodes.PermissionDenied + ":";
+        var required = reasons
+            .Where(r => r.StartsWith(prefix, StringComparison.Ordinal))
+            .Select(r => r[prefix.Length..])
+            .Order(StringComparer.Ordinal)
+            .ToArray();
 
         var userId = context.User.FindFirst(SolvixClaimTypes.Subject)?.Value;
         LogDenied(logger, userId, context.Request.Method, context.Request.Path, mfaRequired ? AuthorizationFailureCodes.MfaEnrollmentRequired : string.Join(",", required));

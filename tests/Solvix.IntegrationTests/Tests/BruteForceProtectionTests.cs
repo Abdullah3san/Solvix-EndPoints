@@ -76,17 +76,21 @@ public sealed class BruteForceProtectionTests(ApiFixture fixture)
     {
         var t = await fixture.RegisterTenantAsync();
 
-        // 40 guesses at once, the correct password hidden among them.
-        var guesses = Enumerable.Range(0, 40).Select(i => i == 37 ? t.OwnerPassword : $"Guess-Passw0rd-{i}").ToList();
-        var responses = await Task.WhenAll(guesses.Select(g => fixture.TryLoginAsync(t.OwnerEmail, g)));
+        // 40 wrong guesses at the same instant.
+        var responses = await Task.WhenAll(Enumerable.Range(0, 40).Select(i => fixture.TryLoginAsync(t.OwnerEmail, $"Guess-Passw0rd-{i}")));
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Unauthorized, r.StatusCode));
 
-        // At most MaxAttempts passwords were ever compared; the account ends up locked or with at most
-        // MaxAttempts counted failures. A flood therefore buys an attacker nothing over five tries.
+        // Only MaxAttempts of them were ever compared against the hash: each attempt is reserved
+        // atomically before verification, so a flood buys an attacker nothing over five tries.
         var verified = await fixture.ScalarAsOwnerAsync<long>(
             "SELECT count(*) FROM auth_audit_events WHERE user_id = @u AND event_type = 'login.failed' AND detail = 'wrong_password'", ("u", t.OwnerUserId));
-        var succeeded = responses.Count(r => r.StatusCode == HttpStatusCode.OK);
-        Assert.True(verified + succeeded <= MaxAttempts, $"{verified} wrong + {succeeded} right passwords were verified in parallel");
-        Assert.True(responses.Count(r => r.StatusCode == HttpStatusCode.Unauthorized) >= 40 - MaxAttempts);
+        var refused = await fixture.ScalarAsOwnerAsync<long>(
+            "SELECT count(*) FROM auth_audit_events WHERE user_id = @u AND event_type = 'login.failed' AND detail = 'locked_out'", ("u", t.OwnerUserId));
+        Assert.Equal(MaxAttempts, verified);
+        Assert.Equal(40 - MaxAttempts, refused);
+
+        // And the account is now locked, even for the right password.
+        await HttpAssert.ProblemAsync(await fixture.TryLoginAsync(t.OwnerEmail, t.OwnerPassword), HttpStatusCode.Unauthorized, "invalid_credentials");
     }
 
     [Fact]

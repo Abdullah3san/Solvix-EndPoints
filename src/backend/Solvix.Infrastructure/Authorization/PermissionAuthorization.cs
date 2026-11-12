@@ -67,7 +67,8 @@ internal sealed class PermissionAuthorizationHandler(IAccessContext access) : Au
         }
         else
         {
-            context.Fail(new AuthorizationFailureReason(this, AuthorizationFailureCodes.PermissionDenied));
+            // The reason names the permission so the response can say what is missing.
+            context.Fail(new AuthorizationFailureReason(this, $"{AuthorizationFailureCodes.PermissionDenied}:{requirement.Permission}"));
         }
 
         return Task.CompletedTask;
