@@ -50,7 +50,7 @@ public sealed class EntityTests
     [Fact]
     public void User_normalises_email_for_uniqueness()
     {
-        var user = User.Create(" Owner@Acme.io ", "Owner", "hash");
+        var user = User.Create(" Owner@Acme.io ", "Owner", "hash", DateTimeOffset.UtcNow);
         Assert.Equal("Owner@Acme.io", user.Email);
         Assert.Equal("OWNER@ACME.IO", user.NormalizedEmail);
         Assert.True(user.IsActive);

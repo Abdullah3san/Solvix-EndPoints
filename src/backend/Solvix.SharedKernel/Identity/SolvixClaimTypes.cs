@@ -8,8 +8,6 @@ public static class SolvixClaimTypes
     public const string Name = "name";
     public const string TenantId = "tid";
     public const string TenantSlug = "tslug";
-    public const string Role = "role";
-
     /// <summary>Id of the authenticated device (device certificates only).</summary>
     public const string DeviceId = "device_id";
 
@@ -18,4 +16,10 @@ public static class SolvixClaimTypes
 
     /// <summary>Expiry of the presented device certificate (unix seconds).</summary>
     public const string DeviceCredentialExpires = "device_cred_exp";
+
+    /// <summary>Id of the server-side session; a token is only honoured while that session is active.</summary>
+    public const string SessionId = "sid";
+
+    /// <summary>Authentication methods used for the session ("pwd", "mfa").</summary>
+    public const string AuthenticationMethod = "amr";
 }

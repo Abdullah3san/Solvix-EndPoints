@@ -517,15 +517,9 @@ public sealed class MonitoringTests(ApiFixture fixture) : IAsyncLifetime
 
     private async Task<HttpClient> MemberClientAsync(TenantSession tenant)
     {
-        using var owner = fixture.CreateClient(tenant.Token);
-        var email = $"member-{Guid.NewGuid():N}@example.test";
-        var add = await owner.PostAsJsonAsync(
-            "/api/v1/tenant/members",
-            new Solvix.Modules.Identity.Application.Members.AddMemberRequest(email, "Member", "Passw0rd!Secure", Solvix.SharedKernel.Identity.TenantRole.Member),
-            ApiFixture.Json);
-        Assert.True(add.IsSuccessStatusCode, await add.Content.ReadAsStringAsync());
-        var member = await fixture.LoginAsync(email, "Passw0rd!Secure", tenant.Slug);
-        return fixture.CreateClient(member.AccessToken);
+        // An ordinary member: may read devices, nothing else.
+        var member = await fixture.AddMemberWithPermissionsAsync(tenant, Solvix.SharedKernel.Authorization.Permissions.Devices.View);
+        return fixture.CreateClient(member.Token);
     }
 
     private HubConnection BuildHub(string? token) =>

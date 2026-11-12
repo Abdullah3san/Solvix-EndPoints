@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { serverApi } from "@/lib/api/server";
+import { serverApi, serverApiOrForbidden } from "@/lib/api/server";
 import { ApiError } from "@/lib/api/errors";
-import type { BranchDto, DeviceMonitoringDto, DepartmentDto, DeviceDetailsDto, DeviceGroupDto, DeviceInventoryDto, MemberDto, PagedResult } from "@/lib/api/types";
+import type { BranchDto, DeviceMonitoringDto, DepartmentDto, DeviceDetailsDto, DeviceGroupDto, DeviceInventoryDto, TenantUserDto, PagedResult } from "@/lib/api/types";
 import { DeviceDetailsView } from "@/components/features/devices/device-details-view";
 
 export const metadata: Metadata = { title: "Device" };
@@ -25,7 +25,8 @@ export default async function DevicePage({ params }: { params: Promise<{ id: str
   const [inventory, groups, members, branches, departments, monitoring] = await Promise.all([
     orNull(serverApi<DeviceInventoryDto>(`devices/${id}/inventory`)),
     serverApi<PagedResult<DeviceGroupDto>>("device-groups?pageSize=200"),
-    serverApi<PagedResult<MemberDto>>("tenant/members?pageSize=200"),
+    // Listing people needs users.view; without it the assignment dialog offers only branch/department.
+    serverApiOrForbidden<PagedResult<TenantUserDto>>("users?pageSize=200"),
     serverApi<PagedResult<BranchDto>>("branches?pageSize=200"),
     serverApi<PagedResult<DepartmentDto>>("departments?pageSize=200"),
     orNull(serverApi<DeviceMonitoringDto>(`monitoring/devices/${id}`)),
@@ -36,7 +37,7 @@ export default async function DevicePage({ params }: { params: Promise<{ id: str
       initial={device}
       inventory={inventory}
       groups={groups.items}
-      members={members.items}
+      members={members?.items ?? []}
       branches={branches.items}
       departments={departments.items}
       monitoring={monitoring}

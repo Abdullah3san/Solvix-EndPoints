@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navigation, isActivePath } from "./nav-config";
 import { SolvixWordmark } from "./logo";
-import { useCan, useSession } from "@/components/providers/session-provider";
+import { hasPermission, useSession } from "@/components/providers/session-provider";
 
 interface SidebarProps {
   open: boolean;
@@ -15,8 +15,8 @@ interface SidebarProps {
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const { tenant } = useSession();
-  const { isAdmin } = useCan();
+  const session = useSession();
+  const { tenant } = session;
 
   return (
     <>
@@ -43,14 +43,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4">
-          {navigation.map((section, index) => (
+          {navigation
+            .map((section) => ({ ...section, items: section.items.filter((item) => hasPermission(session, item.permission)) }))
+            .filter((section) => section.items.length > 0)
+            .map((section, index) => (
             <div key={section.title ?? index} className="mb-4">
               {section.title ? (
                 <p className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">{section.title}</p>
               ) : null}
               <ul className="space-y-0.5">
                 {section.items
-                  .filter((item) => !item.adminOnly || isAdmin)
                   .map((item) => {
                     const active = isActivePath(pathname, item.href);
                     return (
@@ -77,7 +79,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="border-t border-sidebar-border px-5 py-3 text-xs text-sidebar-muted">Solvix EndPoints · Phase 04</div>
+        <div className="border-t border-sidebar-border px-5 py-3 text-xs text-sidebar-muted">Solvix EndPoints · Phase 06</div>
       </aside>
     </>
   );

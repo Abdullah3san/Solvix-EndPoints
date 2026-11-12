@@ -8,27 +8,31 @@ using Microsoft.AspNetCore.Mvc;
 using Solvix.Modules.Assets.Application;
 using Solvix.Modules.Assets.Domain;
 using Solvix.Modules.Assets.Labels;
+using Solvix.SharedKernel.Authorization;
 using Solvix.SharedKernel.Results;
 using Solvix.SharedKernel.Web;
 
 /// <summary>The asset register. Administrators only: it contains purchase and financial data.</summary>
 [ApiVersion(1.0)]
-[Authorize(Policy = Policies.TenantAdmin)]
 [Route("api/v{version:apiVersion}/assets")]
 public sealed class AssetsController(IAssetService assets, IAssetMatchingService matching, IMaintenanceService maintenance) : ApiControllerBase
 {
     [HttpGet]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<PagedResult<AssetSummaryDto>>> List([FromQuery] AssetListQuery query, CancellationToken cancellationToken) =>
         Ok(await assets.ListAsync(query, cancellationToken));
 
     [HttpGet("stats")]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<AssetStatsDto>> Stats(CancellationToken cancellationToken) => Ok(await assets.GetStatsAsync(cancellationToken));
 
     [HttpGet("categories")]
+    [RequirePermission(Permissions.Assets.View)]
     public ActionResult<IReadOnlyList<CategoryDto>> Categories() =>
         Ok(AssetCategories.All.Select(c => new CategoryDto(c.Category, c.Code, c.DisplayName, c.EndpointManageable, c.DefaultUsefulLifeMonths)).ToList());
 
     [HttpGet("export")]
+    [RequirePermission(Permissions.Assets.View)]
     [Produces("text/csv")]
     public async Task<IActionResult> Export([FromQuery] AssetListQuery query, CancellationToken cancellationToken)
     {
@@ -38,10 +42,12 @@ public sealed class AssetsController(IAssetService assets, IAssetMatchingService
 
     /// <summary>Resolves a scanned asset tag, QR payload or serial number.</summary>
     [HttpGet("lookup")]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<AssetLookupDto>> Lookup([FromQuery] string code, CancellationToken cancellationToken) =>
         Ok(await assets.LookupAsync(code, cancellationToken));
 
     [HttpPost]
+    [RequirePermission(Permissions.Assets.Create)]
     [ProducesResponseType<AssetDetailsDto>(StatusCodes.Status201Created)]
     public async Task<ActionResult<AssetDetailsDto>> Create([FromBody] CreateAssetRequest request, CancellationToken cancellationToken)
     {
@@ -50,79 +56,98 @@ public sealed class AssetsController(IAssetService assets, IAssetMatchingService
     }
 
     [HttpPost("bulk")]
+    [RequirePermission(Permissions.Assets.Create)]
     public async Task<ActionResult<BulkAssetResultDto>> Bulk([FromBody] BulkAssetRequest request, CancellationToken cancellationToken) =>
         Ok(await assets.BulkAsync(request, cancellationToken));
 
     [HttpGet("{id:guid}")]
+    [RequirePermission(Permissions.Assets.View)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AssetDetailsDto>> Get(Guid id, CancellationToken cancellationToken) => Ok(await assets.GetAsync(id, cancellationToken));
 
     [HttpPut("{id:guid}")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> Update(Guid id, [FromBody] UpdateAssetRequest request, CancellationToken cancellationToken) =>
         Ok(await assets.UpdateAsync(id, request, cancellationToken));
 
     [HttpPost("{id:guid}/assign")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> Assign(Guid id, [FromBody] AssignAssetRequest request, CancellationToken cancellationToken) =>
         Ok(await assets.AssignAsync(id, request, cancellationToken));
 
     [HttpPost("{id:guid}/return")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> Return(Guid id, [FromBody] ReturnAssetRequest request, CancellationToken cancellationToken) =>
         Ok(await assets.ReturnAsync(id, request, cancellationToken));
 
     [HttpPost("{id:guid}/transfer")]
+    [RequirePermission(Permissions.Assets.Transfer)]
     public async Task<ActionResult<AssetDetailsDto>> Transfer(Guid id, [FromBody] TransferAssetRequest request, CancellationToken cancellationToken) =>
         Ok(await assets.TransferAsync(id, request, cancellationToken));
 
     [HttpPost("{id:guid}/retire")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> Retire(Guid id, [FromBody] RetireAssetRequest request, CancellationToken cancellationToken) =>
         Ok(await assets.RetireAsync(id, request, cancellationToken));
 
     [HttpPost("{id:guid}/reinstate")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> Reinstate(Guid id, CancellationToken cancellationToken) =>
         Ok(await assets.ReinstateAsync(id, cancellationToken));
 
     [HttpPost("{id:guid}/dispose")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> Dispose(Guid id, [FromBody] DisposeAssetRequest request, CancellationToken cancellationToken) =>
         Ok(await assets.DisposeAsync(id, request, cancellationToken));
 
     [HttpPost("{id:guid}/mark-missing")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> MarkMissing(Guid id, CancellationToken cancellationToken) =>
         Ok(await assets.MarkMissingAsync(id, cancellationToken));
 
     [HttpPost("{id:guid}/mark-found")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDetailsDto>> MarkFound(Guid id, CancellationToken cancellationToken) =>
         Ok(await assets.MarkFoundAsync(id, cancellationToken));
 
     [HttpGet("{id:guid}/assignments")]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<IReadOnlyList<AssignmentDto>>> Assignments(Guid id, CancellationToken cancellationToken) =>
         Ok(await assets.GetAssignmentsAsync(id, cancellationToken));
 
     [HttpGet("{id:guid}/transfers")]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<IReadOnlyList<TransferDto>>> Transfers(Guid id, CancellationToken cancellationToken) =>
         Ok(await assets.GetTransfersAsync(id, cancellationToken));
 
     [HttpGet("{id:guid}/maintenance")]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<PagedResult<MaintenanceRecordDto>>> Maintenance(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 100, CancellationToken cancellationToken = default) =>
         Ok(await maintenance.ListAsync(new MaintenanceListQuery(null, id, page, pageSize), cancellationToken));
 
     [HttpPost("{id:guid}/maintenance")]
+    [RequirePermission(Permissions.Assets.Edit)]
     [ProducesResponseType<MaintenanceRecordDto>(StatusCodes.Status201Created)]
     public async Task<ActionResult<MaintenanceRecordDto>> CreateMaintenance(Guid id, [FromBody] CreateMaintenanceRequest request, CancellationToken cancellationToken) =>
         StatusCode(StatusCodes.Status201Created, await maintenance.CreateAsync(id, request, cancellationToken));
 
     [HttpGet("{id:guid}/history")]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<PagedResult<AuditLogEntryDto>>> History(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken cancellationToken = default) =>
         Ok(await assets.GetAuditLogAsync(new AuditLogQuery(id, null, null, page, pageSize), cancellationToken));
 
     [HttpGet("{id:guid}/depreciation")]
+    [RequirePermission(Permissions.Assets.View)]
     public async Task<ActionResult<DepreciationResult>> Depreciation(Guid id, [FromQuery] DateOnly? asOf, CancellationToken cancellationToken) =>
         Ok(await assets.GetDepreciationAsync(id, asOf, cancellationToken));
 
     [HttpPut("{id:guid}/endpoint-link")]
+    [RequirePermission(Permissions.Assets.Edit)]
     public async Task<ActionResult<AssetDeviceLinkDto>> Link(Guid id, [FromBody] ManualLinkRequest request, CancellationToken cancellationToken) =>
         Ok(await matching.LinkManuallyAsync(id, request, cancellationToken));
 
     [HttpPost("{id:guid}/endpoint-link/remove")]
+    [RequirePermission(Permissions.Assets.Edit)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Unlink(Guid id, [FromBody] LinkDecisionRequest request, CancellationToken cancellationToken)
     {
@@ -131,6 +156,7 @@ public sealed class AssetsController(IAssetService assets, IAssetMatchingService
     }
 
     [HttpGet("{id:guid}/barcode.svg")]
+    [RequirePermission(Permissions.Assets.View)]
     [Produces("image/svg+xml")]
     public async Task<IActionResult> Barcode(Guid id, CancellationToken cancellationToken)
     {
@@ -139,6 +165,7 @@ public sealed class AssetsController(IAssetService assets, IAssetMatchingService
     }
 
     [HttpGet("{id:guid}/qr.svg")]
+    [RequirePermission(Permissions.Assets.View)]
     [Produces("image/svg+xml")]
     public async Task<IActionResult> Qr(Guid id, CancellationToken cancellationToken)
     {
@@ -157,6 +184,7 @@ public sealed class AssetsController(IAssetService assets, IAssetMatchingService
 
 /// <summary>Assets held by the signed-in user. Any workspace member; never exposes other people's assets or costs.</summary>
 [ApiVersion(1.0)]
+[AuthenticatedOnly]
 [Route("api/v{version:apiVersion}/my-assets")]
 public sealed class MyAssetsController(IAssetService assets) : ApiControllerBase
 {

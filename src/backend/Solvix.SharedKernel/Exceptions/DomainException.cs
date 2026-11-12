@@ -130,9 +130,18 @@ public sealed class ValidationException : DomainException
 
 public class ForbiddenException : DomainException
 {
+    private readonly string? _code;
+
     public ForbiddenException(string message)
         : base(message)
     {
+    }
+
+    /// <param name="code">Machine-readable reason, e.g. <c>insufficient_privilege</c>.</param>
+    public ForbiddenException(string message, string code)
+        : base(message)
+    {
+        _code = code;
     }
 
     public ForbiddenException()
@@ -145,7 +154,7 @@ public class ForbiddenException : DomainException
     {
     }
 
-    public override string Code => "forbidden";
+    public override string Code => _code ?? "forbidden";
 }
 
 /// <summary>Raised whenever code attempts to read or write data of a tenant other than the current one.</summary>

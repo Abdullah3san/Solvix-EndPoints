@@ -1,0 +1,160 @@
+# Production stack for a single VPS.
+#
+#   cp .env.production.example .env.production   # fill in every value
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Only Caddy publishes ports (80/443). PostgreSQL, Redis and the API have NO
+# published ports: Docker-published ports bypass host firewalls such as UFW, so
+# anything published would be reachable from the internet regardless of firewall
+# rules. The API is reachable only from the web container. See docs/DEPLOYMENT-VPS.md.
+name: solvix
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    environment:
+      SOLVIX_DOMAIN: ${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN}
+      SOLVIX_ACME_EMAIL: ${SOLVIX_ACME_EMAIL:?set SOLVIX_ACME_EMAIL}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    networks: [edge]
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: solvix
+      SOLVIX_DB_MIGRATOR_USER: solvix_migrator
+      SOLVIX_DB_MIGRATOR_PASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:?set SOLVIX_DB_MIGRATOR_PASSWORD}
+      SOLVIX_DB_APP_USER: solvix_app
+      SOLVIX_DB_APP_PASSWORD: ${SOLVIX_DB_APP_PASSWORD:?set SOLVIX_DB_APP_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    networks: [backend]
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d solvix"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    logging: *logging
+
+  migrator:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: migrator
+    environment:
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__PostgresMigrator: "Host=postgres;Port=5432;Database=solvix;Username=solvix_migrator;Password=${SOLVIX_DB_MIGRATOR_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+    networks: [backend]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+  api:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=solvix;Username=solvix_app;Password=${SOLVIX_DB_APP_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+      Solvix__Database__MigrateOnStartup: "false"
+      Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY}
+      Solvix__Jwt__AccessTokenMinutes: "15"
+      Solvix__Identity__DataProtectionKey: ${SOLVIX_IDENTITY_DATA_PROTECTION_KEY:?set SOLVIX_IDENTITY_DATA_PROTECTION_KEY}
+      Solvix__Identity__WebBaseUrl: https://${SOLVIX_DOMAIN}
+      Solvix__Identity__MfaIssuer: ${SOLVIX_MFA_ISSUER:-Solvix}
+      Solvix__Identity__RequireEmailVerification: "true"
+      Solvix__Email__FromAddress: ${SOLVIX_EMAIL_FROM:?set SOLVIX_EMAIL_FROM}
+      Solvix__Email__FromName: ${SOLVIX_EMAIL_FROM_NAME:-Solvix}
+      Solvix__Email__Smtp__Host: ${SOLVIX_SMTP_HOST:?set SOLVIX_SMTP_HOST}
+      Solvix__Email__Smtp__Port: ${SOLVIX_SMTP_PORT:-587}
+      Solvix__Email__Smtp__Security: ${SOLVIX_SMTP_SECURITY:-StartTls}
+      Solvix__Email__Smtp__Username: ${SOLVIX_SMTP_USERNAME:-}
+      Solvix__Email__Smtp__Password: ${SOLVIX_SMTP_PASSWORD:-}
+      # Only the web container (fixed address on the backend network) may state the client address.
+      Solvix__Network__TrustedProxies__0: 172.30.10.10
+      Solvix__Cors__AllowedOrigins__0: https://${SOLVIX_DOMAIN}
+      Solvix__Logging__Format: json
+    networks: [backend]
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+  web:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    environment:
+      SOLVIX_API_INTERNAL_URL: http://api:8080
+      SOLVIX_WEB_ORIGIN: https://${SOLVIX_DOMAIN}
+      SOLVIX_COOKIE_SECURE: "true"
+    networks:
+      edge: {}
+      backend:
+        ipv4_address: 172.30.10.10
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
+networks:
+  edge: {}
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.10.0/24
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { serverConfig } from "@/lib/config";
-import { SESSION_COOKIE, isSessionValid } from "@/lib/auth/session";
+import { isSessionValid } from "@/lib/auth/session";
+import { names, rejectCsrf } from "@/lib/auth/bff";
 import { isAllowedRealtimePath } from "@/lib/realtime";
 
 /**
@@ -23,8 +23,12 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
     return NextResponse.json({ title: "Not found", status: 404, code: "not_found" }, { status: 404 });
   }
 
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
+  // SignalR negotiate/send/close are POST/DELETE: same CSRF rules as every other BFF write.
+  const csrf = rejectCsrf(request);
+  if (csrf) return csrf;
+
+  // Expired access tokens are renewed by the regular /api/proxy traffic; the hub client reconnects afterwards.
+  const token = request.cookies.get(names.access)?.value;
   if (!isSessionValid(token)) {
     return NextResponse.json({ title: "Unauthorized", status: 401, code: "unauthorized" }, { status: 401 });
   }

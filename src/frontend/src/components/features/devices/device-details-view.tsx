@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { api } from "@/lib/api/client";
-import type { BranchDto, DepartmentDto, DeviceDetailsDto, DeviceGroupDto, DeviceInventoryDto, DeviceMonitoringDto, MemberDto } from "@/lib/api/types";
+import type { BranchDto, DepartmentDto, DeviceDetailsDto, DeviceGroupDto, DeviceInventoryDto, DeviceMonitoringDto, TenantUserDto } from "@/lib/api/types";
 import { connectivityTone, deviceLabel, formatBytes, formatRelative, healthTone } from "@/lib/devices";
 import { emptyToNull, fieldErrorsFrom, messageFrom } from "@/lib/forms";
 import { formatDate } from "@/lib/utils";
@@ -28,7 +28,7 @@ interface Props {
   initial: DeviceDetailsDto;
   inventory: DeviceInventoryDto | null;
   groups: DeviceGroupDto[];
-  members: MemberDto[];
+  members: TenantUserDto[];
   branches: BranchDto[];
   departments: DepartmentDto[];
   monitoring?: DeviceMonitoringDto | null;
@@ -37,7 +37,7 @@ interface Props {
 export function DeviceDetailsView({ initial, inventory, groups, members, branches, departments, monitoring = null }: Props) {
   const router = useRouter();
   const { toast } = useToast();
-  const { isAdmin } = useCan();
+  const canManage = useCan("devices.manage");
   const [device, setDevice] = React.useState(initial);
   const [tab, setTab] = React.useState<Tab>("Overview");
   const [dialog, setDialog] = React.useState<"edit" | "assign" | "groups" | "retire" | "delete" | null>(null);
@@ -66,7 +66,7 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
         title={deviceLabel(s)}
         description={[s.hostname !== deviceLabel(s) ? s.hostname : null, s.osName, [s.manufacturer, s.model].filter(Boolean).join(" ")].filter(Boolean).join(" · ")}
         actions={
-          isAdmin && s.status === "Active" ? (
+          canManage && s.status === "Active" ? (
             <>
               <Button variant="outline" onClick={() => act(() => api.post<DeviceDetailsDto>(`devices/${s.id}/inventory-request`), "Inventory requested")} loading={busy} disabled={device.inventoryRequested}>
                 <RefreshCw className="h-4 w-4" /> {device.inventoryRequested ? "Inventory requested" : "Refresh inventory"}
@@ -78,7 +78,7 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
                 <Archive className="h-4 w-4" /> Retire
               </Button>
             </>
-          ) : isAdmin ? (
+          ) : canManage ? (
             <Button variant="destructive" onClick={() => setDialog("delete")}>
               <Trash2 className="h-4 w-4" /> Delete record
             </Button>
@@ -160,7 +160,7 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
                 <CardTitle>Assignment</CardTitle>
                 <CardDescription>Primary user and organisational unit.</CardDescription>
               </div>
-              {isAdmin ? (
+              {canManage ? (
                 <Button size="sm" variant="outline" onClick={() => setDialog("assign")}>
                   Change
                 </Button>
@@ -178,7 +178,7 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
                 <CardTitle>Groups</CardTitle>
                 <CardDescription>Static device groups.</CardDescription>
               </div>
-              {isAdmin ? (
+              {canManage ? (
                 <Button size="sm" variant="outline" onClick={() => setDialog("groups")}>
                   Edit
                 </Button>
@@ -481,7 +481,7 @@ function AssignDialog({
   onSaved,
 }: {
   device: DeviceDetailsDto;
-  members: MemberDto[];
+  members: TenantUserDto[];
   branches: BranchDto[];
   departments: DepartmentDto[];
   onClose: () => void;

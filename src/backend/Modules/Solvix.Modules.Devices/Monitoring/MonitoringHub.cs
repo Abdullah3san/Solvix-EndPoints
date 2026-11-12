@@ -3,6 +3,7 @@ namespace Solvix.Modules.Devices.Monitoring;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Solvix.SharedKernel.Authorization;
 using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Web;
 
@@ -13,6 +14,7 @@ using Solvix.SharedKernel.Web;
 /// verified the membership.
 /// </summary>
 [Authorize(Policy = Policies.TenantMember)]
+[RequirePermission(Permissions.Devices.View)]
 public sealed class MonitoringHub : Hub
 {
     public const string Route = "/hubs/monitoring";

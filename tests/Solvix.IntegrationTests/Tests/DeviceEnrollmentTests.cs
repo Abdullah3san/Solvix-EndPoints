@@ -303,16 +303,10 @@ public sealed class DeviceEnrollmentTests(ApiFixture fixture)
     public async Task Members_cannot_manage_enrollment_tokens()
     {
         var tenant = await fixture.RegisterTenantAsync();
-        using var owner = fixture.CreateClient(tenant.Token);
-        var email = $"member-{Guid.NewGuid():N}@example.test";
-        var add = await owner.PostAsJsonAsync(
-            "/api/v1/tenant/members",
-            new Solvix.Modules.Identity.Application.Members.AddMemberRequest(email, "Member", "Passw0rd!Secure", Solvix.SharedKernel.Identity.TenantRole.Member),
-            ApiFixture.Json);
-        Assert.True(add.IsSuccessStatusCode, await add.Content.ReadAsStringAsync());
-        var member = await fixture.LoginAsync(email, "Passw0rd!Secure", tenant.Slug);
+        // An ordinary member: may read devices, nothing else.
+        var member = await fixture.AddMemberWithPermissionsAsync(tenant, Solvix.SharedKernel.Authorization.Permissions.Devices.View);
 
-        using var client = fixture.CreateClient(member.AccessToken);
+        using var client = fixture.CreateClient(member.Token);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("/api/v1/enrollment-tokens")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/v1/enrollment-tokens", new CreateEnrollmentTokenRequest("x", 1, 1, null), ApiFixture.Json)).StatusCode);
         // ...but can read devices.

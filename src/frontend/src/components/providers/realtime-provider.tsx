@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
+import { csrfHeader } from "@/lib/api/client";
 import { HttpTransportType, HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from "@microsoft/signalr";
 import type { MonitoringUpdateDto } from "@/lib/api/types";
 import { REALTIME_HUB_URL } from "@/lib/monitoring";
 import { useNotifications } from "./notifications-provider";
 import { useToast } from "./toast-provider";
+import { useCan } from "./session-provider";
 
 export type RealtimeStatus = "connecting" | "live" | "reconnecting" | "offline";
 
@@ -26,7 +28,9 @@ const RealtimeContext = React.createContext<RealtimeContextValue | null>(null);
  * every page.
  */
 export function RealtimeProvider({ children }: { children: React.ReactNode }) {
-  const [status, setStatus] = React.useState<RealtimeStatus>("connecting");
+  // The hub requires devices.view; without it there is nothing to receive, so do not connect.
+  const enabled = useCan("devices.view");
+  const [status, setStatus] = React.useState<RealtimeStatus>(enabled ? "connecting" : "offline");
   const listeners = React.useRef(new Set<Listener>());
   const { notify } = useNotifications();
   const { toast } = useToast();
@@ -36,10 +40,15 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
   }, [notify, toast]);
 
   React.useEffect(() => {
+    if (!enabled) return;
     let disposed = false;
     let retry: number | undefined;
     const connection: HubConnection = new HubConnectionBuilder()
-      .withUrl(REALTIME_HUB_URL, { transport: HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling, withCredentials: true })
+      .withUrl(REALTIME_HUB_URL, {
+        transport: HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling,
+        withCredentials: true,
+        headers: csrfHeader("POST"),
+      })
       .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
       .configureLogging(LogLevel.None)
       .build();
@@ -85,7 +94,7 @@ export function RealtimeProvider({ children }: { children: React.ReactNode }) {
       window.clearTimeout(retry);
       void connection.stop();
     };
-  }, []);
+  }, [enabled]);
 
   const value = React.useMemo<RealtimeContextValue>(
     () => ({

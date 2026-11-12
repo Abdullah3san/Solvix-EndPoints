@@ -1,12 +1,27 @@
 import type { LucideIcon } from "lucide-react";
-import { Activity, Boxes, Building2, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Settings2 } from "lucide-react";
+import {
+  Activity,
+  Boxes,
+  Building2,
+  GitBranch,
+  KeyRound,
+  LayoutDashboard,
+  Monitor,
+  Network,
+  ScrollText,
+  Settings2,
+  ShieldCheck,
+  UserRoundCog,
+  Users,
+} from "lucide-react";
+import type { Permission } from "@/lib/api/types";
 
 export interface NavItem {
   label: string;
   href: string;
   icon: LucideIcon;
-  /** Restrict visibility to tenant admins/owners. */
-  adminOnly?: boolean;
+  /** Shown only to users holding this permission. The API enforces it regardless. */
+  permission?: Permission;
 }
 
 export interface NavSection {
@@ -21,23 +36,35 @@ export const navigation: NavSection[] = [
   {
     title: "Organization",
     items: [
-      { label: "Company profile", href: "/organization/company", icon: Building2 },
-      { label: "Branches", href: "/organization/branches", icon: GitBranch },
-      { label: "Departments", href: "/organization/departments", icon: Network },
+      { label: "Company profile", href: "/organization/company", icon: Building2, permission: "organization.view" },
+      { label: "Branches", href: "/organization/branches", icon: GitBranch, permission: "organization.view" },
+      { label: "Departments", href: "/organization/departments", icon: Network, permission: "organization.view" },
+    ],
+  },
+  {
+    title: "Access",
+    items: [
+      { label: "Users", href: "/settings/users", icon: Users, permission: "users.view" },
+      { label: "Roles", href: "/settings/roles", icon: UserRoundCog, permission: "roles.view" },
+      { label: "Security policy", href: "/settings/security", icon: ShieldCheck, permission: "security.view" },
+      { label: "Audit log", href: "/settings/audit", icon: ScrollText, permission: "audit.view" },
     ],
   },
   {
     title: "Endpoints",
     items: [
-      { label: "Monitoring", href: "/endpoints/monitoring", icon: Activity },
-      { label: "Devices", href: "/endpoints/devices", icon: Monitor },
-      { label: "Device groups", href: "/endpoints/groups", icon: Boxes },
-      { label: "Enrollment", href: "/endpoints/enrollment", icon: KeyRound, adminOnly: true },
+      { label: "Monitoring", href: "/endpoints/monitoring", icon: Activity, permission: "devices.view" },
+      { label: "Devices", href: "/endpoints/devices", icon: Monitor, permission: "devices.view" },
+      { label: "Device groups", href: "/endpoints/groups", icon: Boxes, permission: "devices.view" },
+      { label: "Enrollment", href: "/endpoints/enrollment", icon: KeyRound, permission: "devices.enroll" },
     ],
   },
   {
     title: "Settings",
-    items: [{ label: "Workspace", href: "/settings/workspace", icon: Settings2 }],
+    items: [
+      { label: "Workspace", href: "/settings/workspace", icon: Settings2 },
+      { label: "My account", href: "/account/security", icon: KeyRound },
+    ],
   },
 ];
 
@@ -56,6 +83,11 @@ export const segmentLabels: Record<string, string> = {
   enrollment: "Enrollment",
   monitoring: "Monitoring",
   availability: "Availability",
+  users: "Users",
+  roles: "Roles",
+  security: "Security",
+  audit: "Audit log",
+  account: "My account",
 };
 
 export function isActivePath(pathname: string, href: string): boolean {

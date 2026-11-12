@@ -45,12 +45,27 @@ public sealed class SolvixDbContext(
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            if (entityType.IsOwned() || !typeof(ITenantScoped).IsAssignableFrom(entityType.ClrType))
+            if (entityType.IsOwned())
             {
                 continue;
             }
 
-            ConfigureTenantScopedEntity(modelBuilder, entityType);
+            // Ids are always assigned by the application (UUIDv7). Saying so matters: otherwise EF assumes
+            // that a new child found through a navigation of a tracked parent already exists (its key is
+            // set) and issues an UPDATE instead of an INSERT.
+            if (typeof(Entity).IsAssignableFrom(entityType.ClrType))
+            {
+                modelBuilder.Entity(entityType.ClrType).Property(nameof(Entity.Id)).ValueGeneratedNever();
+            }
+
+            if (typeof(ITenantScoped).IsAssignableFrom(entityType.ClrType))
+            {
+                ConfigureTenantScopedEntity(modelBuilder, entityType);
+            }
+            else if (typeof(ITenantVisible).IsAssignableFrom(entityType.ClrType))
+            {
+                ConfigureTenantVisibleEntity(modelBuilder, entityType);
+            }
         }
 
         SnakeCaseNaming.Apply(modelBuilder);
@@ -77,5 +92,31 @@ public sealed class SolvixDbContext(
             currentTenant);
         var lambda = Expression.Lambda(body, parameter);
         builder.HasQueryFilter(TenantFilterName, lambda);
+    }
+
+    /// <summary>
+    /// Rows with an optional tenant (<see cref="ITenantVisible"/>). A tenant sees only its own rows;
+    /// rows without a tenant belong to the platform and match no tenant.
+    /// </summary>
+    private void ConfigureTenantVisibleEntity(ModelBuilder modelBuilder, IMutableEntityType entityType)
+    {
+        var builder = modelBuilder.Entity(entityType.ClrType);
+
+        builder.HasOne(typeof(Tenant))
+            .WithMany()
+            .HasForeignKey(nameof(ITenantVisible.TenantId))
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        // e => CurrentTenantId != null && e.TenantId == CurrentTenantId
+        // The explicit null check matters: without it "no tenant resolved" would translate to
+        // "tenant_id IS NULL" and expose exactly the platform-level rows.
+        var parameter = Expression.Parameter(entityType.ClrType, "e");
+        var tenantProperty = Expression.Property(parameter, nameof(ITenantVisible.TenantId));
+        var currentTenant = Expression.Property(Expression.Constant(this), nameof(CurrentTenantId));
+        var body = Expression.AndAlso(
+            Expression.NotEqual(currentTenant, Expression.Constant(null, typeof(Guid?))),
+            Expression.Equal(tenantProperty, currentTenant));
+        builder.HasQueryFilter(TenantFilterName, Expression.Lambda(body, parameter));
     }
 }

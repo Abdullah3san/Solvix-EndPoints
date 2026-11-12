@@ -4,10 +4,9 @@ using System.Net;
 using System.Net.Http.Json;
 using Solvix.Modules.Assets.Application;
 using Solvix.Modules.Assets.Domain;
-using Solvix.Modules.Identity.Application.Members;
 using Solvix.Modules.Organization.Application.Branches;
 using Solvix.Modules.Organization.Application.Departments;
-using Solvix.SharedKernel.Identity;
+using Solvix.SharedKernel.Authorization;
 
 public static class AssetTestKit
 {
@@ -52,18 +51,16 @@ public static class AssetTestKit
         return await HttpAssert.OkAsync<AssetDetailsDto>(await client.GetAsync($"/api/v1/assets/{assetId}"));
     }
 
-    /// <summary>Adds a workspace member and returns (user id, access token).</summary>
-    public static async Task<(Guid UserId, string Token)> AddMemberAsync(this ApiFixture fixture, TenantSession tenant, TenantRole role = TenantRole.Member)
+    /// <summary>
+    /// Adds an ordinary workspace member (a custom role holding only <c>organization.view</c>,
+    /// so no asset or device permissions) and returns (user id, access token).
+    /// </summary>
+    public static async Task<(Guid UserId, string Token)> AddMemberAsync(this ApiFixture fixture, TenantSession tenant)
     {
         ArgumentNullException.ThrowIfNull(fixture);
         ArgumentNullException.ThrowIfNull(tenant);
-        using var owner = fixture.CreateClient(tenant.Token);
-        var email = $"member-{Guid.NewGuid():N}@example.test";
-        var member = await HttpAssert.OkAsync<MemberDto>(
-            await owner.PostAsJsonAsync("/api/v1/tenant/members", new AddMemberRequest(email, "Member " + email[7..12], "Passw0rd!Secure", role), ApiFixture.Json),
-            HttpStatusCode.Created);
-        var auth = await fixture.LoginAsync(email, "Passw0rd!Secure", tenant.Slug);
-        return (member.UserId, auth.AccessToken);
+        var member = await fixture.AddMemberWithPermissionsAsync(tenant, Permissions.Organization.View);
+        return (member.UserId, member.Token);
     }
 
     public static async Task<BranchDto> CreateBranchAsync(this HttpClient client, string code)

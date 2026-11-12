@@ -65,15 +65,3 @@ public sealed class DeviceManagementSecurityMigration : Migration
         }
     }
 }
-
-/// <summary>Every table protected by the tenant isolation policy, across all migrations.</summary>
-public static class TenantIsolatedTables
-{
-    public static IReadOnlyList<string> All { get; } =
-        [
-            .. RowLevelSecurityMigration.TenantTables,
-            .. DeviceManagementSecurityMigration.TenantTables,
-            .. RealTimeMonitoringSecurityMigration.TenantTables,
-            .. AssetManagementSecurityMigration.TenantTables,
-        ];
-}

@@ -9,6 +9,7 @@ using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Application.Agent;
 using Solvix.Modules.Devices.Application.Enrollment;
 using Solvix.Modules.Devices.Monitoring;
+using Solvix.SharedKernel.Authorization;
 using Solvix.SharedKernel.Web;
 
 /// <summary>
@@ -42,14 +43,14 @@ public sealed class AgentController(IAgentService agent) : ControllerBase
     }
 
     [HttpPost("heartbeat")]
-    [Authorize(Policy = Policies.Device)]
+    [DeviceAuthenticated]
     [HeartbeatEndpoint]
     [RequestSizeLimit(64 * 1024)]
     public async Task<ActionResult<HeartbeatResponse>> Heartbeat([FromBody] HeartbeatRequest request, CancellationToken cancellationToken) =>
         Ok(await agent.HeartbeatAsync(request, cancellationToken));
 
     [HttpPut("inventory")]
-    [Authorize(Policy = Policies.Device)]
+    [DeviceAuthenticated]
     [RequestSizeLimit(8 * 1024 * 1024)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Inventory([FromBody] InventoryReport report, CancellationToken cancellationToken)
@@ -59,7 +60,7 @@ public sealed class AgentController(IAgentService agent) : ControllerBase
     }
 
     [HttpPost("certificate")]
-    [Authorize(Policy = Policies.Device)]
+    [DeviceAuthenticated]
     [RequestSizeLimit(64 * 1024)]
     public async Task<ActionResult<CertificateRenewalResponse>> RenewCertificate([FromBody] CertificateRenewalRequest request, CancellationToken cancellationToken)
     {
@@ -68,7 +69,7 @@ public sealed class AgentController(IAgentService agent) : ControllerBase
     }
 
     [HttpGet("updates")]
-    [Authorize(Policy = Policies.Device)]
+    [DeviceAuthenticated]
     public async Task<ActionResult<UpdateCheckResponse>> Updates([FromQuery] string? channel, [FromQuery] string? currentVersion, CancellationToken cancellationToken) =>
         Ok(await agent.CheckForUpdateAsync(channel, currentVersion, cancellationToken));
 }

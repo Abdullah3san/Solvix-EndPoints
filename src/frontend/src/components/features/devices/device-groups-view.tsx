@@ -18,7 +18,7 @@ import { useCan } from "@/components/providers/session-provider";
 
 export function DeviceGroupsView({ initial }: { initial: DeviceGroupDto[] }) {
   const { toast } = useToast();
-  const { isAdmin } = useCan();
+  const canManage = useCan("devices.manage");
   const [groups, setGroups] = React.useState(initial);
   const [editing, setEditing] = React.useState<DeviceGroupDto | "new" | null>(null);
   const [deleting, setDeleting] = React.useState<DeviceGroupDto | null>(null);
@@ -44,7 +44,7 @@ export function DeviceGroupsView({ initial }: { initial: DeviceGroupDto[] }) {
 
   return (
     <>
-      {isAdmin ? (
+      {canManage ? (
         <div className="mb-4 flex justify-end">
           <Button onClick={() => setEditing("new")}>
             <Plus className="h-4 w-4" /> New group
@@ -58,7 +58,7 @@ export function DeviceGroupsView({ initial }: { initial: DeviceGroupDto[] }) {
               <TH>Name</TH>
               <TH>Description</TH>
               <TH>Devices</TH>
-              {isAdmin ? <TH className="text-right">Actions</TH> : null}
+              {canManage ? <TH className="text-right">Actions</TH> : null}
             </TR>
           </THead>
           <TBody>
@@ -74,7 +74,7 @@ export function DeviceGroupsView({ initial }: { initial: DeviceGroupDto[] }) {
                       {g.deviceCount}
                     </Link>
                   </TD>
-                  {isAdmin ? (
+                  {canManage ? (
                     <TD>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => setEditing(g)} aria-label={`Edit ${g.name}`}>

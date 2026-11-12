@@ -1,12 +1,17 @@
+using System.Globalization;
+using System.Net;
 using System.Security.Authentication;
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -16,6 +21,7 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Solvix.Api.Infrastructure;
 using Solvix.Api.Middleware;
+using Solvix.Infrastructure.Authorization;
 using Solvix.Infrastructure.DependencyInjection;
 using Solvix.Infrastructure.Persistence;
 using Solvix.Infrastructure.Tenancy;
@@ -76,6 +82,8 @@ try
         .AddControllers(options =>
         {
             options.Filters.Add<ValidationActionFilter>();
+            // Start-up fails if any action does not declare how it is protected.
+            options.Conventions.Add(new ExplicitAuthorizationConvention());
             // [controller] tokens become kebab-case so routes and OpenAPI paths are stable and lowercase.
             options.Conventions.Add(new RouteTokenTransformerConvention(new KebabCaseParameterTransformer()));
         })
@@ -163,21 +171,98 @@ try
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.SigningKey)),
                 ValidateLifetime = true,
+                RequireExpirationTime = true,
+                RequireSignedTokens = true,
+
+                // Only the algorithm we sign with: rules out "alg: none" and algorithm-confusion tokens.
+                ValidAlgorithms = [SecurityAlgorithms.HmacSha256],
                 ClockSkew = TimeSpan.FromSeconds(30),
                 NameClaimType = SolvixClaimTypes.Name,
-                RoleClaimType = SolvixClaimTypes.Role,
             };
         });
 
+    // Base policy on every controller: a valid token is not enough, the request must have been
+    // resolved to a live session and an active membership. Permissions are added per action with
+    // [RequirePermission], which resolves to "perm:<key>" policies built by PermissionPolicyProvider.
     builder.Services.AddAuthorizationBuilder()
-        .AddPolicy(Policies.TenantMember, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId))
-        .AddPolicy(Policies.TenantAdmin, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
-        .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner)))
+        .AddPolicy(Policies.TenantMember, p => p
+            .RequireAuthenticatedUser()
+            .RequireClaim(SolvixClaimTypes.TenantId)
+            .RequireClaim(SolvixClaimTypes.SessionId)
+            .AddRequirements(new ActiveTenantSessionRequirement()))
         .AddPolicy(Policies.Device, p => p
             .AddAuthenticationSchemes(DeviceAuthenticationDefaults.Scheme)
             .RequireAuthenticatedUser()
             .RequireClaim(SolvixClaimTypes.DeviceId)
             .RequireClaim(SolvixClaimTypes.TenantId));
+    builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthorizationResultHandler>();
+
+    // ---------------------------------------------------------- rate limiting
+    builder.Services.AddOptions<RateLimitingOptions>().Bind(builder.Configuration.GetSection(RateLimitingOptions.SectionName));
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.OnRejected = async (context, cancellationToken) =>
+        {
+            var http = context.HttpContext;
+
+            // Sliding windows do not report an exact wait; the length of the policy's window is a safe upper bound.
+            var limits = http.RequestServices.GetRequiredService<IOptions<RateLimitingOptions>>().Value;
+            var window = http.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName switch
+            {
+                RateLimitPolicies.Email => limits.Email.WindowSeconds,
+                RateLimitPolicies.Refresh => limits.Refresh.WindowSeconds,
+                RateLimitPolicies.Registration => limits.Registration.WindowSeconds,
+                _ => limits.Credentials.WindowSeconds,
+            };
+            var seconds = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+                ? (int)Math.Ceiling(retryAfter.TotalSeconds)
+                : window;
+            http.Response.Headers.RetryAfter = seconds.ToString(CultureInfo.InvariantCulture);
+
+            http.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Solvix.RateLimiting")
+                .LogWarning("Rate limit exceeded for {Path} from {RemoteIp}", http.Request.Path, http.Connection.RemoteIpAddress);
+
+            var problem = new ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "Too many requests",
+                Detail = "Too many attempts. Wait a moment and try again.",
+                Instance = http.Request.Path,
+            };
+            problem.Extensions["code"] = "too_many_requests";
+            await http.RequestServices.GetRequiredService<IProblemDetailsService>()
+                .WriteAsync(new ProblemDetailsContext { HttpContext = http, ProblemDetails = problem });
+        };
+
+        AddClientPolicy(options, RateLimitPolicies.Credentials, o => o.Credentials);
+        AddClientPolicy(options, RateLimitPolicies.Email, o => o.Email);
+        AddClientPolicy(options, RateLimitPolicies.Refresh, o => o.Refresh);
+        AddClientPolicy(options, RateLimitPolicies.Registration, o => o.Registration);
+    });
+
+    // ------------------------------------------------------ forwarded headers
+    var network = builder.Configuration.GetSection(NetworkOptions.SectionName).Get<NetworkOptions>() ?? new NetworkOptions();
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = network.ForwardLimit;
+
+        // Nothing is trusted by default (not even loopback): only the proxies listed in configuration.
+        options.KnownProxies.Clear();
+        options.KnownIPNetworks.Clear();
+        foreach (var entry in network.TrustedProxies.Where(e => !string.IsNullOrWhiteSpace(e)))
+        {
+            if (entry.Contains('/', StringComparison.Ordinal))
+            {
+                options.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(entry.Trim()));
+            }
+            else
+            {
+                options.KnownProxies.Add(IPAddress.Parse(entry.Trim()));
+            }
+        }
+    });
 
     // Behind a TLS-terminating proxy the client certificate arrives in a header.
     // Only enabled explicitly; the proxy MUST overwrite the header on every request.
@@ -192,14 +277,18 @@ try
 
         // The proxy terminated TLS: honour its X-Forwarded-Proto/For so the request is
         // seen as HTTPS (required by certificate authentication) and rate limits use the
-        // real client address. The deployment contract for this mode is that the API is
-        // reachable only through that proxy.
-        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        // real client address. When Solvix:Network:TrustedProxies lists the proxy, only it
+        // is trusted (configured above). Otherwise the deployment contract for this mode is
+        // that the API is reachable only through that proxy.
+        if (network.TrustedProxies.Length == 0)
         {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
-            options.KnownIPNetworks.Clear();
-            options.KnownProxies.Clear();
-        });
+            builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
+                options.KnownIPNetworks.Clear();
+                options.KnownProxies.Clear();
+            });
+        }
     }
 
     // ------------------------------------------------------------- SignalR
@@ -243,9 +332,25 @@ try
     }
 
     // -------------------------------------------------------------- pipeline
+    if (network.TrustedProxies.Length > 0)
+    {
+        // First in the pipeline: everything after it (logging, rate limiting, audit) sees the real client address.
+        app.UseForwardedHeaders();
+    }
+
     app.UseExceptionHandler();
     app.UseStatusCodePages();
     app.UseMiddleware<CorrelationIdMiddleware>();
+    app.Use(async (context, next) =>
+    {
+        // Responses carry tokens and tenant data: never cacheable, never sniffed, never framed.
+        context.Response.Headers.CacheControl = "no-store";
+        context.Response.Headers.Pragma = "no-cache";
+        context.Response.Headers.XContentTypeOptions = "nosniff";
+        context.Response.Headers.XFrameOptions = "DENY";
+        context.Response.Headers["Referrer-Policy"] = "no-referrer";
+        await next(context);
+    });
     app.UseSerilogRequestLogging(options =>
     {
         options.EnrichDiagnosticContext = (diagnostic, httpContext) =>
@@ -262,14 +367,23 @@ try
     app.UseCors(CorsOptions.PolicyName);
     if (!string.IsNullOrWhiteSpace(forwardedCertificateHeader))
     {
-        app.UseForwardedHeaders();
+        if (network.TrustedProxies.Length == 0)
+        {
+            app.UseForwardedHeaders();
+        }
+
         app.UseCertificateForwarding();
+    }
+
+    if (app.Services.GetRequiredService<IOptions<RateLimitingOptions>>().Value.Enabled)
+    {
+        // Before authentication: abusive callers are turned away as cheaply as possible.
+        app.UseRateLimiter();
     }
 
     app.UseAuthentication();
     app.UseMiddleware<TenantResolutionMiddleware>();
     app.UseAuthorization();
-    app.UseRateLimiter();
 
     app.MapControllers();
     app.MapHub<MonitoringHub>(MonitoringHub.Route, options =>
@@ -296,6 +410,25 @@ finally
 {
     await Log.CloseAndFlushAsync();
 }
+
+// One sliding window per policy and client address. Limits are read from options when a
+// partition is created, so they can be tuned by configuration without code changes.
+static void AddClientPolicy(RateLimiterOptions options, string policyName, Func<RateLimitingOptions, RateLimitRule> select) =>
+    options.AddPolicy(policyName, http =>
+    {
+        var rule = select(http.RequestServices.GetRequiredService<IOptions<RateLimitingOptions>>().Value);
+        var client = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetSlidingWindowLimiter(
+            $"{policyName}:{client}",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = rule.PermitLimit,
+                Window = TimeSpan.FromSeconds(rule.WindowSeconds),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            });
+    });
 
 static async Task MigrateAsync(WebApplication app)
 {

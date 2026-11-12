@@ -43,7 +43,7 @@ public sealed class AgentMutualTlsTests(ApiFixture fixture) : IAsyncLifetime
             fixture.Database,
             fixture.RedisConnection,
             $"solvix-test-{Guid.NewGuid():N}:",
-            new Dictionary<string, string>
+            extraSettings: new Dictionary<string, string>
             {
                 ["Kestrel__Endpoints__Http__Url"] = $"http://127.0.0.1:{httpPort}",
                 ["Kestrel__Endpoints__Agents__Url"] = $"https://127.0.0.1:{tlsPort}",

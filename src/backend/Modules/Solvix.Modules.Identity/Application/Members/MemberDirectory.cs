@@ -24,7 +24,7 @@ internal sealed class MemberDirectory(ISolvixDbContext db) : IMemberDirectory
         return await db.Set<TenantMembership>()
             .AsNoTracking()
             .Where(m => ids.Contains(m.UserId))
-            .Select(m => new MemberSummary(m.UserId, m.User!.DisplayName, m.User.Email, m.Role, m.IsActive && m.User.IsActive))
+            .Select(m => new MemberSummary(m.UserId, m.User!.DisplayName, m.User.Email, m.IsActive && m.User.IsActive))
             .ToDictionaryAsync(m => m.UserId, cancellationToken);
     }
 }

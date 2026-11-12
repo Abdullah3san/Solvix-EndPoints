@@ -33,3 +33,7 @@ Thumbs.db
 .docker-data/
 dump.rdb
 .solvix/
+
+# Production secrets and database dumps
+.env.production
+backups/

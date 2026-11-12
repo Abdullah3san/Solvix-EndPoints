@@ -175,7 +175,7 @@ public sealed partial class DeviceCredentialValidator(
             ],
             DeviceAuthenticationDefaults.Scheme,
             SolvixClaimTypes.DeviceId,
-            SolvixClaimTypes.Role);
+            ClaimsIdentity.DefaultRoleClaimType);
         return new DeviceValidationResult(new ClaimsPrincipal(identity), null);
     }
 

@@ -11,4 +11,4 @@ public interface IMemberDirectory
     Task<IReadOnlyDictionary<Guid, MemberSummary>> FindAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken);
 }
 
-public sealed record MemberSummary(Guid UserId, string DisplayName, string Email, TenantRole Role, bool IsActive);
+public sealed record MemberSummary(Guid UserId, string DisplayName, string Email, bool IsActive);

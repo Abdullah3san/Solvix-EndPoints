@@ -2,12 +2,10 @@ namespace Solvix.Modules.Tenancy.Application.Registration;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Solvix.Modules.Identity.Application.Auth;
 using Solvix.Modules.Identity.Application.Provisioning;
 using Solvix.Modules.Organization.Application.Provisioning;
 using Solvix.Modules.Tenancy.Domain;
 using Solvix.SharedKernel.Exceptions;
-using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Persistence;
 using Solvix.SharedKernel.Tenancy;
 
@@ -19,7 +17,9 @@ public interface ITenantRegistrationService
 }
 
 /// <summary>
-/// Creates a tenant and everything it needs to be usable, atomically. Runs in
+/// Creates a tenant and everything it needs to be usable, atomically: the
+/// tenant, its built-in roles and security policy, the owner account (as Super
+/// Administrator), the company profile and a headquarters branch. Runs in
 /// platform scope because no tenant exists yet when the operation starts; the
 /// new tenant's rows are written with an explicit tenant id and the database
 /// RLS policy accepts them because the session is flagged as platform scope.
@@ -27,9 +27,8 @@ public interface ITenantRegistrationService
 internal sealed partial class TenantRegistrationService(
     ISolvixDbContext db,
     ITenantContextMutator tenantContextMutator,
-    IUserProvisioningService users,
+    IIdentityProvisioningService identity,
     IOrganizationProvisioningService organization,
-    ITokenService tokenService,
     ILogger<TenantRegistrationService> logger) : ITenantRegistrationService
 {
     public async Task<RegisterTenantResponse> RegisterAsync(RegisterTenantRequest request, CancellationToken cancellationToken)
@@ -46,7 +45,7 @@ internal sealed partial class TenantRegistrationService(
             throw new ConflictException($"The workspace id '{slug}' is already taken.");
         }
 
-        if (await users.EmailExistsAsync(request.OwnerEmail, cancellationToken))
+        if (await identity.EmailExistsAsync(request.OwnerEmail, cancellationToken))
         {
             throw new ConflictException("An account with this e-mail address already exists. Sign in instead.");
         }
@@ -58,11 +57,11 @@ internal sealed partial class TenantRegistrationService(
 
             var tenant = Tenant.Create(request.CompanyName, slug);
             db.Set<Tenant>().Add(tenant);
-
-            var owner = await users.CreateUserAsync(request.OwnerEmail, request.OwnerDisplayName, request.OwnerPassword, ct);
-            await users.AddMembershipAsync(tenant.Id, owner.Id, TenantRole.Owner, ct);
             await organization.CreateCompanyProfileAsync(tenant.Id, request.CompanyName, ct);
             await organization.CreateHeadquartersAsync(tenant.Id, "Headquarters", ct);
+
+            var owner = await identity.CreateTenantOwnerAsync(
+                tenant.ToDescriptor(), request.OwnerEmail, request.OwnerDisplayName, request.OwnerPassword, "ownerPassword", ct);
 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -71,17 +70,15 @@ internal sealed partial class TenantRegistrationService(
 
         LogTenantRegistered(logger, result.tenant.Id, result.tenant.Slug);
 
-        var descriptor = result.tenant.ToDescriptor();
-        var token = tokenService.Issue(result.owner, descriptor, TenantRole.Owner);
-        var tenantDto = new AuthTenantDto(descriptor.Id, descriptor.Slug, descriptor.Name, TenantRole.Owner);
-        var auth = new AuthResponse(
-            token.AccessToken,
-            token.ExpiresAtUtc,
-            new UserDto(result.owner.Id, result.owner.Email, result.owner.DisplayName),
-            tenantDto,
-            [tenantDto]);
+        // Only after the commit: the link must never arrive for an account that does not exist.
+        identity.SendVerificationEmail(result.owner);
 
-        return new RegisterTenantResponse(result.tenant.Id, result.tenant.Slug, result.tenant.Name, auth);
+        return new RegisterTenantResponse(
+            result.tenant.Id,
+            result.tenant.Slug,
+            result.tenant.Name,
+            identity.EmailVerificationRequired,
+            result.owner.Session);
     }
 
     public async Task<SlugAvailabilityResponse> CheckSlugAsync(string slug, CancellationToken cancellationToken)

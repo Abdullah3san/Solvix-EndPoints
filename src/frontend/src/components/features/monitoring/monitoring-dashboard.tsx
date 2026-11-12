@@ -21,7 +21,7 @@ import { formatRelative } from "@/lib/devices";
 const REFRESH_MS = 60_000;
 
 export function MonitoringDashboard({ initial, initialAlerts }: { initial: MonitoringSummaryDto; initialAlerts: MonitoringAlertDto[] }) {
-  const { isAdmin } = useCan();
+  const canManage = useCan("devices.manage");
   const { toast } = useToast();
   const [summary, setSummary] = React.useState(initial);
   const [alerts, setAlerts] = React.useState(initialAlerts);
@@ -91,7 +91,7 @@ export function MonitoringDashboard({ initial, initialAlerts }: { initial: Monit
             <Link href="/endpoints/monitoring/availability" className={buttonClasses({ variant: "outline", size: "sm" })}>
               Availability report
             </Link>
-            {isAdmin ? (
+            {canManage ? (
               <Link href="/endpoints/monitoring/settings" className={buttonClasses({ variant: "outline", size: "sm" })}>
                 <Settings2 className="h-4 w-4" /> Settings
               </Link>
@@ -245,7 +245,7 @@ export function MonitoringDashboard({ initial, initialAlerts }: { initial: Monit
                 </div>
                 {a.acknowledgedAtUtc ? (
                   <Badge>Acknowledged</Badge>
-                ) : isAdmin ? (
+                ) : canManage ? (
                   <Button size="sm" variant="outline" onClick={() => acknowledge(a)}>
                     Acknowledge
                   </Button>

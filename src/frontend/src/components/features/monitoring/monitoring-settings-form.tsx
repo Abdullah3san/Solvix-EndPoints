@@ -24,7 +24,7 @@ export function validateThresholds(heartbeat: number, warning: number, offline: 
 }
 
 export function MonitoringSettingsForm({ initial }: { initial: MonitoringSettingsDto }) {
-  const { isAdmin } = useCan();
+  const canManage = useCan("devices.manage");
   const { toast } = useToast();
   const [values, setValues] = React.useState(initial);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -63,13 +63,13 @@ export function MonitoringSettingsForm({ initial }: { initial: MonitoringSetting
     type: "number",
     min: 15,
     value: Number.isNaN(values[key]) ? "" : values[key],
-    disabled: !isAdmin,
+    disabled: !canManage,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => set(key, e.target.valueAsNumber),
   });
 
   return (
     <form onSubmit={submit} className="max-w-2xl space-y-4">
-      {!isAdmin ? <Alert tone="info">Only workspace administrators can change monitoring settings.</Alert> : null}
+      {!canManage ? <Alert tone="info">Changing monitoring settings requires the “Manage devices” permission.</Alert> : null}
       <Card>
         <CardHeader>
           <CardTitle>Connectivity thresholds</CardTitle>
@@ -96,19 +96,19 @@ export function MonitoringSettingsForm({ initial }: { initial: MonitoringSetting
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <label className="flex items-center gap-2">
-            <Checkbox checked={values.offlineAlertsEnabled} disabled={!isAdmin} onChange={(e) => set("offlineAlertsEnabled", e.target.checked)} />
+            <Checkbox checked={values.offlineAlertsEnabled} disabled={!canManage} onChange={(e) => set("offlineAlertsEnabled", e.target.checked)} />
             Raise an alert when a device goes offline
           </label>
           <label className="flex items-center gap-2">
             <Checkbox
               checked={values.recoveryNotificationsEnabled}
-              disabled={!isAdmin}
+              disabled={!canManage}
               onChange={(e) => set("recoveryNotificationsEnabled", e.target.checked)}
             />
             Notify when an offline device recovers
           </label>
         </CardContent>
-        {isAdmin ? (
+        {canManage ? (
           <CardFooter className="justify-between">
             <span className="text-xs text-muted-foreground">{values.isDefault ? "Using platform defaults." : "Custom settings for this workspace."}</span>
             <Button type="submit" loading={busy}>

@@ -32,6 +32,8 @@
     <PackageVersion Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
     <!-- Asset labels (Code 128 / QR encoding) -->
     <PackageVersion Include="ZXing.Net" Version="0.16.11" />
+    <!-- E-mail -->
+    <PackageVersion Include="MailKit" Version="4.18.2" />
     <!-- Logging -->
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
