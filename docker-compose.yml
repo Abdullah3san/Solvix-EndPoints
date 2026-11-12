@@ -4,6 +4,7 @@
 #   postgres  - PostgreSQL 16 with the two application roles (init script)
 #   redis     - Redis 7 (password protected)
 #   migrator  - applies EF Core migrations as the schema owner, then exits
+#   mailpit   - local SMTP sink for verification / reset / invitation e-mails -> http://localhost:${MAILPIT_UI_PORT:-8025}
 #   api       - ASP.NET Core API (runtime role, RLS enforced)   -> http://localhost:${API_HTTP_PORT:-8080}
 #   web       - Next.js app                                     -> http://localhost:${WEB_PORT:-3000}
 name: solvix
@@ -43,6 +44,15 @@ services:
       timeout: 5s
       retries: 12
 
+  mailpit:
+    image: axllent/mailpit:v1.27
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    restart: unless-stopped
+
   migrator:
     build:
       context: .
@@ -69,7 +79,19 @@ services:
       Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY in .env}
       Solvix__Jwt__Issuer: ${SOLVIX_JWT_ISSUER:-solvix-endpoints}
       Solvix__Jwt__Audience: ${SOLVIX_JWT_AUDIENCE:-solvix-endpoints-web}
-      Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-60}
+      Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-15}
+      Solvix__Identity__DataProtectionKey: ${SOLVIX_IDENTITY_DATA_PROTECTION_KEY:?set SOLVIX_IDENTITY_DATA_PROTECTION_KEY in .env}
+      Solvix__Identity__WebBaseUrl: ${SOLVIX_WEB_BASE_URL:-http://localhost:3000}
+      Solvix__Identity__RequireEmailVerification: ${SOLVIX_REQUIRE_EMAIL_VERIFICATION:-true}
+      Solvix__Email__FromAddress: ${SOLVIX_EMAIL_FROM:-no-reply@solvix.local}
+      Solvix__Email__Smtp__Host: ${SOLVIX_SMTP_HOST:-mailpit}
+      Solvix__Email__Smtp__Port: ${SOLVIX_SMTP_PORT:-1025}
+      Solvix__Email__Smtp__Security: ${SOLVIX_SMTP_SECURITY:-None}
+      Solvix__Email__Smtp__Username: ${SOLVIX_SMTP_USERNAME:-}
+      Solvix__Email__Smtp__Password: ${SOLVIX_SMTP_PASSWORD:-}
+      # The web container is the only caller; it forwards the browser's address.
+      Solvix__Network__TrustedProxies__0: ${SOLVIX_TRUSTED_PROXY_1:-172.16.0.0/12}
+      Solvix__Network__TrustedProxies__1: ${SOLVIX_TRUSTED_PROXY_2:-192.168.0.0/16}
       Solvix__Cors__AllowedOrigins__0: ${SOLVIX_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       Solvix__Logging__Format: json
     ports:
@@ -79,6 +101,8 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     restart: unless-stopped
 
   web:
@@ -87,7 +111,8 @@ services:
       dockerfile: Dockerfile
     environment:
       SOLVIX_API_INTERNAL_URL: ${SOLVIX_API_INTERNAL_URL:-http://api:8080}
-      SOLVIX_COOKIE_SECURE: "false"
+      SOLVIX_COOKIE_SECURE: ${SOLVIX_COOKIE_SECURE:-false}
+      SOLVIX_WEB_ORIGIN: ${SOLVIX_WEB_BASE_URL:-http://localhost:3000}
     ports:
       - "${WEB_PORT:-3000}:3000"
     depends_on:

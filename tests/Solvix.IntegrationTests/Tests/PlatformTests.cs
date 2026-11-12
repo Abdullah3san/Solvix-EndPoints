@@ -55,7 +55,7 @@ public sealed class PlatformTests(ApiFixture fixture)
         Assert.Equal("corr-123", response.Headers.GetValues(CorrelationIdMiddleware.HeaderName).Single());
 
         var login = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest("nobody@example.test", "wrong-password-1", null), ApiFixture.Json);
-        var problem = await HttpAssert.ProblemAsync(login, HttpStatusCode.Unauthorized, "unauthorized");
+        var problem = await HttpAssert.ProblemAsync(login, HttpStatusCode.Unauthorized, "invalid_credentials");
         Assert.Equal("corr-123", problem.GetProperty("correlationId").GetString());
         Assert.True(problem.TryGetProperty("traceId", out _));
     }

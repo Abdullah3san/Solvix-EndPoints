@@ -1,5 +1,6 @@
 namespace Solvix.Infrastructure.Tenancy;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
@@ -8,11 +9,15 @@ using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Tenancy;
 
 /// <summary>
-/// Resolves the tenant for authenticated requests. The ONLY trusted source is
-/// the <c>tid</c> claim of the validated access token. An <c>X-Tenant-Id</c>
-/// header is accepted purely as a consistency check: if it is present and
-/// disagrees with the token, the request is rejected. The tenant must exist,
-/// be active, and the caller must hold an active membership in it.
+/// Resolves the tenant AND the caller's access for authenticated requests.
+///
+/// The only things trusted from the access token are three ids: user, tenant
+/// and session. Everything else is looked up on the server, on every request:
+/// the tenant must exist and be active, the session must be alive, the user
+/// must still be an active member, and the permissions are those of the roles
+/// the member holds right now. An <c>X-Tenant-Id</c> header is accepted purely
+/// as a consistency check: if it is present and disagrees with the token, the
+/// request is rejected.
 /// </summary>
 public sealed partial class TenantResolutionMiddleware(RequestDelegate next, ILogger<TenantResolutionMiddleware> logger)
 {
@@ -22,7 +27,8 @@ public sealed partial class TenantResolutionMiddleware(RequestDelegate next, ILo
         HttpContext context,
         ITenantContextMutator mutator,
         ITenantDirectory directory,
-        IMembershipLookup memberships)
+        IAccessResolver accessResolver,
+        IAccessContextMutator accessContext)
     {
         ArgumentNullException.ThrowIfNull(context);
         var principal = context.User;
@@ -32,11 +38,22 @@ public sealed partial class TenantResolutionMiddleware(RequestDelegate next, ILo
             return;
         }
 
+        // Anonymous endpoints (sign-in, refresh, sign-out, public links) run in platform scope and must
+        // keep working when the caller happens to send a token whose session has already ended.
+        if (context.GetEndpoint()?.Metadata.GetMetadata<IAllowAnonymous>() is not null)
+        {
+            await next(context);
+            return;
+        }
+
         var tenantClaim = principal.FindFirst(SolvixClaimTypes.TenantId)?.Value;
         var userClaim = principal.FindFirst(SolvixClaimTypes.Subject)?.Value;
-        if (!Guid.TryParse(tenantClaim, out var tenantId) || !Guid.TryParse(userClaim, out var userId))
+        var sessionClaim = principal.FindFirst(SolvixClaimTypes.SessionId)?.Value;
+        if (!Guid.TryParse(tenantClaim, out var tenantId)
+            || !Guid.TryParse(userClaim, out var userId)
+            || !Guid.TryParse(sessionClaim, out var sessionId))
         {
-            throw new UnauthorizedException("The access token does not carry a valid tenant.");
+            throw new UnauthorizedException("The access token does not carry a valid tenant and session.");
         }
 
         if (context.Request.Headers.TryGetValue(TenantHeader, out var headerValues))
@@ -58,15 +75,25 @@ public sealed partial class TenantResolutionMiddleware(RequestDelegate next, ILo
             throw new TenantInactiveException(tenant.Status.ToString());
         }
 
-        var membership = await memberships.FindAsync(tenantId, userId, context.RequestAborted);
-        if (membership is not { IsActive: true })
+        // Runs inside the tenant scope set above: the lookups are filtered by tenant in EF and by RLS in PostgreSQL.
+        var resolution = await accessResolver.ResolveAsync(tenantId, userId, sessionId, context.RequestAborted);
+        switch (resolution.Status)
         {
-            throw new ForbiddenException("Your membership in this workspace is no longer active.");
+            case AccessStatus.Granted when resolution.Grant is not null:
+                accessContext.Set(resolution.Grant);
+                break;
+            case AccessStatus.SessionInvalid:
+                throw new UnauthorizedException("Your session has ended. Sign in again.", "session_expired");
+            case AccessStatus.UserInactive:
+                throw new ForbiddenException("This account has been disabled.", "account_disabled");
+            default:
+                throw new ForbiddenException("Your membership in this workspace is no longer active.", "membership_inactive");
         }
 
         using (LogContext.PushProperty("TenantId", tenantId))
         using (LogContext.PushProperty("TenantSlug", tenant.Slug))
         using (LogContext.PushProperty("UserId", userId))
+        using (LogContext.PushProperty("SessionId", sessionId))
         {
             await next(context);
         }

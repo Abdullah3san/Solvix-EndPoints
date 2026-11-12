@@ -25,6 +25,8 @@ public sealed class MigrationTests(ApiFixture fixture)
         var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
         Assert.Contains(applied, m => m.EndsWith("_InitialSchema", StringComparison.Ordinal));
         Assert.Contains(applied, m => m.EndsWith("_RowLevelSecurity", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("_IdentityAccessManagement", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("_IdentityAccessRowLevelSecurity", StringComparison.Ordinal));
 
         // Guards against editing entities/configurations without adding a migration.
         Assert.False(db.Database.HasPendingModelChanges(), "The EF model has changes that are not covered by a migration.");
@@ -43,7 +45,13 @@ public sealed class MigrationTests(ApiFixture fixture)
             .ToList();
 
         Assert.NotEmpty(tenantTables);
-        Assert.Equal(tenantTables, RowLevelSecurityMigration.TenantTables.OrderBy(t => t, StringComparer.Ordinal).ToList());
+        Assert.Equal(tenantTables, RowLevelSecurity.AllTenantTables.OrderBy(t => t, StringComparer.Ordinal).ToList());
+
+        // Rows with an optional tenant (the audit trail) carry the same policy.
+        tenantTables.AddRange(db.Model.GetEntityTypes()
+            .Where(e => typeof(ITenantVisible).IsAssignableFrom(e.ClrType))
+            .Select(e => e.GetTableName()!));
+        Assert.Contains(IdentityAccessRowLevelSecurityMigration.AuditTable, tenantTables);
 
         await using var connection = new NpgsqlConnection(fixture.Database.MigratorConnectionString);
         await connection.OpenAsync();
@@ -73,7 +81,11 @@ public sealed class MigrationTests(ApiFixture fixture)
         await connection.OpenAsync();
 
         await using (var command = new NpgsqlCommand(
-            "SELECT relrowsecurity FROM pg_class WHERE relname IN ('tenants', 'users') AND relnamespace = 'public'::regnamespace", connection))
+            """
+            SELECT relrowsecurity FROM pg_class
+            WHERE relname IN ('tenants', 'users', 'user_tokens', 'user_password_history', 'user_recovery_codes')
+              AND relnamespace = 'public'::regnamespace
+            """, connection))
         await using (var reader = await command.ExecuteReaderAsync())
         {
             var rows = 0;
@@ -83,10 +95,10 @@ public sealed class MigrationTests(ApiFixture fixture)
                 Assert.False(reader.GetBoolean(0));
             }
 
-            Assert.Equal(2, rows);
+            Assert.Equal(5, rows);
         }
 
-        foreach (var table in RowLevelSecurityMigration.TenantTables)
+        foreach (var table in RowLevelSecurity.AllTenantTables)
         {
             await using var command = new NpgsqlCommand(
                 """

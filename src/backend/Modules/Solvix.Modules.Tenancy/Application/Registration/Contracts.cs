@@ -10,6 +10,15 @@ public sealed record RegisterTenantRequest(
     string OwnerDisplayName,
     string OwnerPassword);
 
-public sealed record RegisterTenantResponse(Guid TenantId, string Slug, string Name, AuthResponse Auth);
+/// <param name="EmailVerificationRequired">
+/// When true the owner must confirm their e-mail address before signing in and
+/// <paramref name="Session"/> is null.
+/// </param>
+public sealed record RegisterTenantResponse(
+    Guid TenantId,
+    string Slug,
+    string Name,
+    bool EmailVerificationRequired,
+    AuthResponse? Session);
 
 public sealed record SlugAvailabilityResponse(string Slug, bool IsAvailable);

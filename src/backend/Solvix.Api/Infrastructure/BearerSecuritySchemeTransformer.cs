@@ -23,7 +23,7 @@ internal sealed class BearerSecuritySchemeTransformer : IOpenApiDocumentTransfor
         document.Info ??= new OpenApiInfo();
         document.Info.Title = "Solvix EndPoints API";
         document.Info.Version = "v1";
-        document.Info.Description = "Multi-tenant SaaS platform API. All tenant-scoped endpoints require a bearer token issued for that tenant.";
+        document.Info.Description = "Multi-tenant SaaS platform API. All tenant-scoped endpoints require a bearer token issued for that tenant; what the caller may do is decided on the server from their current roles.";
         return Task.CompletedTask;
     }
 }
