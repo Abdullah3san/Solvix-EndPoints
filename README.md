@@ -79,6 +79,7 @@ docs/                         architecture and phase summaries
 | [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) | Production deployment |
 | [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) | API surfaces and endpoints |
 | [docs/DEVELOPMENT_ROADMAP.md](docs/DEVELOPMENT_ROADMAP.md) | Phases and exit criteria |
+| [docs/ARCHITECTURE-CONFORMANCE.md](docs/ARCHITECTURE-CONFORMANCE.md) | Per-phase conformance gates and open Phase 02 gaps |
 | [CHANGELOG.md](CHANGELOG.md) | Change history |
 
 ## Tests

@@ -7,6 +7,9 @@ releases begin.
 ## [Unreleased]
 
 ### Documentation
+- Added `docs/ARCHITECTURE-CONFORMANCE.md`: Phase 02 alignment gaps (RLS bypass
+  removal, MSP tenancy, ES256 tokens, scoped roles, audit module, command permissions,
+  module schemas) and conformance gates for Phases 03–10.
 - Finalized the target architecture for review before Phase 04, based on the product
   decisions of 2026-11-12: `docs/DECISIONS.md` (ADRs, challenges, risks, assumptions,
   open decisions), `docs/DATABASE.md` (MSP tenancy and device data model, partitioning,
