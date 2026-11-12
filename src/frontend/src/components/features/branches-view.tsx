@@ -52,7 +52,7 @@ export function BranchesView({ initial }: { initial: PagedResult<BranchDto> }) {
   const router = useRouter();
   const { toast } = useToast();
   const { notify } = useNotifications();
-  const { isAdmin } = useCan();
+  const canManage = useCan("organization.manage");
   const [data, setData] = React.useState(initial);
   const [search, setSearch] = React.useState("");
   const [includeInactive, setIncludeInactive] = React.useState(false);
@@ -128,7 +128,7 @@ export function BranchesView({ initial }: { initial: PagedResult<BranchDto> }) {
             Show inactive
           </label>
         </form>
-        {isAdmin ? (
+        {canManage ? (
           <Button onClick={() => setEditing("new")}>
             <Plus className="h-4 w-4" /> New branch
           </Button>
@@ -144,7 +144,7 @@ export function BranchesView({ initial }: { initial: PagedResult<BranchDto> }) {
               <TH>Location</TH>
               <TH>Time zone</TH>
               <TH>Status</TH>
-              {isAdmin ? <TH className="text-right">Actions</TH> : null}
+              {canManage ? <TH className="text-right">Actions</TH> : null}
             </TR>
           </THead>
           <TBody>
@@ -165,7 +165,7 @@ export function BranchesView({ initial }: { initial: PagedResult<BranchDto> }) {
                   <TD>
                     <Badge tone={branch.isActive ? "success" : "neutral"}>{branch.isActive ? "Active" : "Inactive"}</Badge>
                   </TD>
-                  {isAdmin ? (
+                  {canManage ? (
                     <TD>
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="icon" onClick={() => setEditing(branch)} aria-label={`Edit ${branch.name}`}>

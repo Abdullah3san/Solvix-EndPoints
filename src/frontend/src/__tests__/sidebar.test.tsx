@@ -1,26 +1,57 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { Sidebar } from "@/components/shell/sidebar";
-import { SessionProvider } from "@/components/providers/session-provider";
+import { SessionProvider, type Session } from "@/components/providers/session-provider";
+import type { Permission } from "@/lib/api/types";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/organization/departments" }));
 
-const session = {
-  user: { id: "u1", email: "owner@acme.test", displayName: "Owner" },
-  tenant: { id: "t1", slug: "acme", name: "Acme Corp", role: "Owner" as const },
-};
+function session(permissions: Permission[], mfaEnrollmentRequired = false): Session {
+  return {
+    user: { id: "u1", email: "owner@acme.test", displayName: "Owner" },
+    tenant: { id: "t1", slug: "acme", name: "Acme Corp" },
+    sessionId: "s1",
+    roles: ["Custom"],
+    permissions,
+    mfaEnabled: false,
+    mfaVerified: false,
+    mfaEnrollmentRequired,
+  };
+}
+
+function renderSidebar(s: Session) {
+  return render(
+    <SessionProvider session={s}>
+      <Sidebar open onClose={() => {}} />
+    </SessionProvider>,
+  );
+}
 
 describe("sidebar", () => {
   it("shows the tenant and highlights the active navigation item", () => {
-    render(
-      <SessionProvider session={session}>
-        <Sidebar open onClose={() => {}} />
-      </SessionProvider>,
-    );
+    renderSidebar(session(["organization.view", "users.view", "roles.view", "security.view", "audit.view"]));
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
     expect(screen.getByText("acme")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /departments/i })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: /branches/i })).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("link", { name: /dashboard/i })).toHaveAttribute("href", "/dashboard");
+    expect(screen.getByRole("link", { name: /audit log/i })).toHaveAttribute("href", "/settings/audit");
+  });
+
+  it("only lists what the user's permissions allow", () => {
+    renderSidebar(session(["users.view"]));
+    expect(screen.getByRole("link", { name: /^users$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /branches/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /roles/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /security policy/i })).toBeNull();
+    expect(screen.queryByText("Organization")).toBeNull();
+    expect(screen.getByRole("link", { name: /my account/i })).toBeInTheDocument();
+  });
+
+  it("hides everything but the account pages while MFA enrolment is required", () => {
+    renderSidebar(session(["organization.view", "users.view", "roles.view"], true));
+    expect(screen.queryByRole("link", { name: /^users$/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /branches/i })).toBeNull();
+    expect(screen.getByRole("link", { name: /my account/i })).toBeInTheDocument();
   });
 });

@@ -1,12 +1,9 @@
 "use client";
 
 import * as React from "react";
-import type { AuthTenantDto, UserDto } from "@/lib/api/types";
+import type { CurrentUserDto, Permission } from "@/lib/api/types";
 
-export interface Session {
-  user: UserDto;
-  tenant: AuthTenantDto;
-}
+export type Session = CurrentUserDto;
 
 const SessionContext = React.createContext<Session | null>(null);
 
@@ -20,9 +17,17 @@ export function useSession(): Session {
   return session;
 }
 
-export function useCan() {
-  const { tenant } = useSession();
-  const isOwner = tenant.role === "Owner";
-  const isAdmin = isOwner || tenant.role === "Admin";
-  return { isOwner, isAdmin, role: tenant.role };
+/**
+ * Whether the signed-in user holds a permission in the current workspace.
+ * Used ONLY to hide controls the user cannot use. Every request is authorized
+ * again by the API; hiding a button is a courtesy, not a security boundary.
+ * While the workspace requires MFA and this session has none, nothing is usable.
+ */
+export function useCan(permission: Permission): boolean {
+  const session = useSession();
+  return !session.mfaEnrollmentRequired && session.permissions.includes(permission);
+}
+
+export function hasPermission(session: Pick<Session, "permissions" | "mfaEnrollmentRequired">, permission: Permission | undefined): boolean {
+  return permission === undefined || (!session.mfaEnrollmentRequired && session.permissions.includes(permission));
 }
