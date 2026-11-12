@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/Solvix.Api/Solvix.Api.csproj" />
+    <Project Path="src/backend/Solvix.Infrastructure/Solvix.Infrastructure.csproj" />
+    <Project Path="src/backend/Solvix.Migrator/Solvix.Migrator.csproj" />
+    <Project Path="src/backend/Solvix.SharedKernel/Solvix.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/backend/Modules/">
+    <Project Path="src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Solvix.IntegrationTests/Solvix.IntegrationTests.csproj" />
+    <Project Path="tests/Solvix.UnitTests/Solvix.UnitTests.csproj" />
+  </Folder>
+</Solution>

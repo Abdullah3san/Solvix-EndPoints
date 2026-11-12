@@ -1,0 +1,26 @@
+import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { Sidebar } from "@/components/shell/sidebar";
+import { SessionProvider } from "@/components/providers/session-provider";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/organization/departments" }));
+
+const session = {
+  user: { id: "u1", email: "owner@acme.test", displayName: "Owner" },
+  tenant: { id: "t1", slug: "acme", name: "Acme Corp", role: "Owner" as const },
+};
+
+describe("sidebar", () => {
+  it("shows the tenant and highlights the active navigation item", () => {
+    render(
+      <SessionProvider session={session}>
+        <Sidebar open onClose={() => {}} />
+      </SessionProvider>,
+    );
+    expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+    expect(screen.getByText("acme")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /departments/i })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: /branches/i })).not.toHaveAttribute("aria-current");
+    expect(screen.getByRole("link", { name: /dashboard/i })).toHaveAttribute("href", "/dashboard");
+  });
+});
