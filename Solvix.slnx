@@ -7,6 +7,7 @@
     <Project Path="src/backend/Solvix.SharedKernel/Solvix.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/src/backend/Modules/">
+    <Project Path="src/backend/Modules/Solvix.Modules.Assets/Solvix.Modules.Assets.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Devices/Solvix.Modules.Devices.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj" />

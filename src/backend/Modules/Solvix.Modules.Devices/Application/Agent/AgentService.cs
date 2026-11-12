@@ -6,11 +6,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Application.Enrollment;
+using Solvix.Modules.Devices.Application.Integration;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Domain;
 using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Abstractions;
+using Solvix.SharedKernel.Endpoints;
 using Solvix.SharedKernel.Exceptions;
 using Solvix.SharedKernel.Persistence;
 
@@ -37,6 +39,7 @@ internal sealed partial class AgentService(
     IAgentReleaseCatalog releases,
     PresenceTracker presence,
     MonitoringSettingsProvider monitoringSettings,
+    EndpointIdentityPublisher identityPublisher,
     IOptions<DevicesOptions> options,
     IClock clock,
     ILogger<AgentService> logger) : IAgentService
@@ -109,6 +112,7 @@ internal sealed partial class AgentService(
         ArgumentNullException.ThrowIfNull(report);
         var device = await LoadDeviceAsync(cancellationToken);
         var now = clock.UtcNow;
+        var identityBefore = (device.SerialNumber, device.Manufacturer, device.Model);
         device.ApplyInventory(report, now);
 
         var inventory = await db.Set<DeviceInventory>().FirstOrDefaultAsync(i => i.DeviceId == device.Id, cancellationToken);
@@ -126,6 +130,11 @@ internal sealed partial class AgentService(
             report.Software.Count,
             JsonSerializer.Serialize(report, DevicesJson.Options));
         await db.SaveChangesAsync(cancellationToken);
+
+        if (identityBefore != (device.SerialNumber, device.Manufacturer, device.Model))
+        {
+            await identityPublisher.PublishAsync(device.Id, EndpointIdentityChangeKind.HardwareChanged, cancellationToken);
+        }
     }
 
     public async Task<CertificateRenewalResponse> RenewCertificateAsync(CertificateRenewalRequest request, CancellationToken cancellationToken)

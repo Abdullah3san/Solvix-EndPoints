@@ -18,6 +18,9 @@ internal sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.Property(d => d.HardwareId).HasMaxLength(64);
         builder.Property(d => d.HardwareFingerprint).HasMaxLength(Device.FingerprintLength).IsFixedLength();
         builder.Property(d => d.SerialNumber).HasMaxLength(Device.ShortTextMaxLength);
+        builder.Property(d => d.SerialNumberKey)
+            .HasMaxLength(Device.ShortTextMaxLength)
+            .HasComputedColumnSql("upper(btrim(serial_number))", stored: true);
         builder.Property(d => d.Manufacturer).HasMaxLength(Device.ShortTextMaxLength);
         builder.Property(d => d.Model).HasMaxLength(Device.ShortTextMaxLength);
         builder.Property(d => d.DomainName).HasMaxLength(Device.HostnameMaxLength);
@@ -45,6 +48,7 @@ internal sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.HasIndex(d => new { d.TenantId, d.Hostname });
         builder.HasIndex(d => new { d.TenantId, d.AgentVersion });
         builder.HasIndex(d => new { d.TenantId, d.AssignedUserId });
+        builder.HasIndex(d => new { d.TenantId, d.SerialNumberKey }).HasFilter("serial_number_key IS NOT NULL");
     }
 }
 

@@ -5,11 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Solvix.Agent.Contracts;
+using Solvix.Modules.Devices.Application.Integration;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Domain;
 using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Abstractions;
+using Solvix.SharedKernel.Endpoints;
 using Solvix.SharedKernel.Exceptions;
 using Solvix.SharedKernel.Persistence;
 using Solvix.SharedKernel.Tenancy;
@@ -37,6 +39,7 @@ internal sealed partial class AgentEnrollmentService(
     PresenceTracker presence,
     PresenceBuffer presenceBuffer,
     MonitoringSettingsProvider monitoringSettings,
+    EndpointIdentityPublisher identityPublisher,
     IOptions<DevicesOptions> options,
     IClock clock,
     ILogger<AgentEnrollmentService> logger) : IAgentEnrollmentService
@@ -154,6 +157,12 @@ internal sealed partial class AgentEnrollmentService(
                         Configuration = AgentConfigurationFactory.From(settings.Agent, monitoring.Thresholds.HeartbeatIntervalSeconds),
                     };
                 },
+                cancellationToken);
+
+            // Committed: let asset management relate the hardware to a physical asset (never fails enrollment).
+            await identityPublisher.PublishAsync(
+                response.DeviceId,
+                response.ReEnrolled ? EndpointIdentityChangeKind.ReEnrolled : EndpointIdentityChangeKind.Enrolled,
                 cancellationToken);
             return response;
         }

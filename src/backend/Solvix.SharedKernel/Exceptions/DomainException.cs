@@ -73,6 +73,13 @@ public sealed class ConflictException : DomainException
         _code = code;
     }
 
+    /// <summary>Conflict with a specific code, preserving the underlying exception.</summary>
+    public ConflictException(string message, string code, Exception? innerException)
+        : base(message, innerException)
+    {
+        _code = code;
+    }
+
     public ConflictException()
     {
     }

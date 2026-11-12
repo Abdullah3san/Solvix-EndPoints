@@ -65,6 +65,12 @@ public sealed class Device : TenantEntity
 
     public string? SerialNumber { get; private set; }
 
+    /// <summary>
+    /// Database-generated <c>upper(btrim(serial_number))</c>, indexed: the key asset
+    /// management matches physical assets on (see <c>HardwareIdentity.NormalizeSerial</c>).
+    /// </summary>
+    public string? SerialNumberKey { get; private set; }
+
     public string? Manufacturer { get; private set; }
 
     public string? Model { get; private set; }

@@ -23,6 +23,1082 @@ namespace Solvix.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.Asset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AssetTag")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("asset_tag");
+
+                    b.Property<DateTimeOffset?>("AssignedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at_utc");
+
+                    b.Property<Guid?>("AssignedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_user_id");
+
+                    b.Property<string>("AssigneeName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("assignee_name");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Condition")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("condition");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Currency")
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<string>("DepreciationMethod")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("depreciation_method");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DisposalMethod")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("disposal_method");
+
+                    b.Property<string>("DisposalNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("disposal_notes");
+
+                    b.Property<string>("DisposalReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("disposal_reference");
+
+                    b.Property<decimal?>("DisposalValue")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("disposal_value");
+
+                    b.Property<DateTimeOffset?>("DisposedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("disposed_at_utc");
+
+                    b.Property<string>("EmployeeNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("employee_number");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("invoice_number");
+
+                    b.Property<DateTimeOffset?>("LastAuditedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_audited_at_utc");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("Manufacturer")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("manufacturer");
+
+                    b.Property<string>("ManufacturerKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("manufacturer_key");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal?>("PurchaseCost")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("purchase_cost");
+
+                    b.Property<DateOnly?>("PurchaseDate")
+                        .HasColumnType("date")
+                        .HasColumnName("purchase_date");
+
+                    b.Property<string>("PurchaseOrderNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("purchase_order_number");
+
+                    b.Property<DateTimeOffset?>("RetiredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("retired_at_utc");
+
+                    b.Property<string>("RetirementReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("retirement_reason");
+
+                    b.Property<decimal?>("SalvageValue")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("salvage_value");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<string>("SerialNumberKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("serial_number_key");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StatusBeforeMaintenance")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status_before_maintenance");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<int?>("UsefulLifeMonths")
+                        .HasColumnType("integer")
+                        .HasColumnName("useful_life_months");
+
+                    b.Property<Guid?>("VendorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vendor_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateOnly?>("WarrantyEndDate")
+                        .HasColumnType("date")
+                        .HasColumnName("warranty_end_date");
+
+                    b.Property<string>("WarrantyProvider")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("warranty_provider");
+
+                    b.Property<string>("WarrantyReference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("warranty_reference");
+
+                    b.Property<DateOnly?>("WarrantyStartDate")
+                        .HasColumnType("date")
+                        .HasColumnName("warranty_start_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_assets");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_assets_tenant_id_id");
+
+                    b.HasIndex("TenantId", "AssetTag")
+                        .IsUnique()
+                        .HasDatabaseName("ux_assets_tenant_id_asset_tag");
+
+                    b.HasIndex("TenantId", "AssignedUserId")
+                        .HasDatabaseName("ix_assets_tenant_id_assigned_user_id")
+                        .HasFilter("assigned_user_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Category")
+                        .HasDatabaseName("ix_assets_tenant_id_category");
+
+                    b.HasIndex("TenantId", "SerialNumberKey")
+                        .HasDatabaseName("ix_assets_tenant_id_serial_number_key")
+                        .HasFilter("serial_number_key IS NOT NULL");
+
+                    b.HasIndex("TenantId", "VendorId")
+                        .HasDatabaseName("ix_assets_tenant_id_vendor_id")
+                        .HasFilter("vendor_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "WarrantyEndDate")
+                        .HasDatabaseName("ix_assets_tenant_id_warranty_end_date")
+                        .HasFilter("warranty_end_date IS NOT NULL");
+
+                    b.HasIndex("TenantId", "ManufacturerKey", "SerialNumberKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_assets_tenant_id_manufacturer_key_serial_number_key")
+                        .HasFilter("serial_number_key IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Status", "Category")
+                        .HasDatabaseName("ix_assets_tenant_id_status_category");
+
+                    b.ToTable("assets", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_assets_amounts_non_negative", "(purchase_cost IS NULL OR purchase_cost >= 0) AND (salvage_value IS NULL OR salvage_value >= 0) AND (disposal_value IS NULL OR disposal_value >= 0)");
+
+                            t.HasCheckConstraint("ck_assets_depreciation_inputs", "depreciation_method = 'None' OR (useful_life_months IS NOT NULL AND purchase_cost IS NOT NULL AND purchase_date IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_assets_disposed_has_details", "status <> 'Disposed' OR (disposed_at_utc IS NOT NULL AND disposal_method IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_assets_in_use_is_assigned", "status <> 'InUse' OR assigned_user_id IS NOT NULL OR assignee_name IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_assets_retired_has_date", "status NOT IN ('Retired', 'Disposed') OR retired_at_utc IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_assets_salvage_within_cost", "salvage_value IS NULL OR purchase_cost IS NULL OR salvage_value <= purchase_cost");
+
+                            t.HasCheckConstraint("ck_assets_single_assignee", "assigned_user_id IS NULL OR assignee_name IS NULL");
+
+                            t.HasCheckConstraint("ck_assets_tag_format", "asset_tag = upper(asset_tag) AND length(asset_tag) BETWEEN 1 AND 40");
+
+                            t.HasCheckConstraint("ck_assets_useful_life", "useful_life_months IS NULL OR useful_life_months BETWEEN 1 AND 600");
+
+                            t.HasCheckConstraint("ck_assets_warranty_period", "warranty_start_date IS NULL OR warranty_end_date IS NULL OR warranty_end_date >= warranty_start_date");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset>("AssignedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at_utc");
+
+                    b.Property<Guid?>("AssignedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_by_user_id");
+
+                    b.Property<Guid?>("AssignedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_user_id");
+
+                    b.Property<string>("AssigneeName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("assignee_name");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<string>("EmployeeNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("employee_number");
+
+                    b.Property<DateOnly?>("ExpectedReturnDate")
+                        .HasColumnType("date")
+                        .HasColumnName("expected_return_date");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("ReturnCondition")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("return_condition");
+
+                    b.Property<string>("ReturnNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("return_notes");
+
+                    b.Property<DateTimeOffset?>("ReturnedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("returned_at_utc");
+
+                    b.Property<Guid?>("ReturnedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("returned_by_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_assignments");
+
+                    b.HasIndex("TenantId", "AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_asset_assignments_open")
+                        .HasFilter("returned_at_utc IS NULL");
+
+                    b.HasIndex("TenantId", "AssignedUserId")
+                        .HasDatabaseName("ix_asset_assignments_tenant_id_assigned_user_id")
+                        .HasFilter("assigned_user_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "AssetId", "AssignedAtUtc")
+                        .HasDatabaseName("ix_asset_assignments_tenant_id_asset_id_assigned_at_utc");
+
+                    b.ToTable("asset_assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_asset_assignments_assignee", "assigned_user_id IS NOT NULL OR assignee_name IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_asset_assignments_period", "returned_at_utc IS NULL OR returned_at_utc >= assigned_at_utc");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetAuditLogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("action");
+
+                    b.Property<string>("ActorKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("actor_kind");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<Guid?>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("ChangesJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("changes_json");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("entity_type");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_audit_log");
+
+                    b.HasIndex("TenantId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_asset_audit_log_tenant_id_occurred_at_utc");
+
+                    b.HasIndex("TenantId", "AssetId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_asset_audit_log_tenant_id_asset_id_occurred_at_utc");
+
+                    b.HasIndex("TenantId", "EntityType", "EntityId")
+                        .HasDatabaseName("ix_asset_audit_log_tenant_id_entity_type_entity_id");
+
+                    b.ToTable("asset_audit_log", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetDeviceLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("confidence");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at_utc");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<DateTimeOffset>("DetectedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("detected_at_utc");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("EvidenceJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("evidence_json");
+
+                    b.Property<bool>("IsAmbiguous")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_ambiguous");
+
+                    b.Property<DateTimeOffset>("LastEvaluatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_evaluated_at_utc");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer")
+                        .HasColumnName("score");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_device_links");
+
+                    b.HasIndex("TenantId", "AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_asset_device_links_approved_asset")
+                        .HasFilter("status = 'Approved'");
+
+                    b.HasIndex("TenantId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_asset_device_links_approved_device")
+                        .HasFilter("status = 'Approved'");
+
+                    b.HasIndex("TenantId", "AssetId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_device_links_tenant_id_asset_id_device_id");
+
+                    b.HasIndex("TenantId", "Status", "DetectedAtUtc")
+                        .HasDatabaseName("ix_asset_device_links_tenant_id_status_detected_at_utc");
+
+                    b.ToTable("asset_device_links", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AutoApproveHighConfidenceMatches")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_approve_high_confidence_matches");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DefaultCurrency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("default_currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("TagPrefix")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("tag_prefix");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<int>("WarrantyAlertDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("warranty_alert_days");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_settings");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_settings_tenant_id");
+
+                    b.ToTable("asset_settings", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_asset_settings_warranty_alert_days", "warranty_alert_days BETWEEN 1 AND 365");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetTagSequence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<long>("LastValue")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_value");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("scope");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_tag_sequences");
+
+                    b.HasIndex("TenantId", "Scope")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_tag_sequences_tenant_id_scope");
+
+                    b.ToTable("asset_tag_sequences", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_asset_tag_sequences_positive", "last_value >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetTransfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("FromBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_branch_id");
+
+                    b.Property<Guid?>("FromDepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_department_id");
+
+                    b.Property<string>("FromLocation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("from_location");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid?>("ToBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_branch_id");
+
+                    b.Property<Guid?>("ToDepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_department_id");
+
+                    b.Property<string>("ToLocation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("to_location");
+
+                    b.Property<DateTimeOffset>("TransferredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("transferred_at_utc");
+
+                    b.Property<Guid?>("TransferredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transferred_by_user_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_transfers");
+
+                    b.HasIndex("TenantId", "AssetId", "TransferredAtUtc")
+                        .HasDatabaseName("ix_asset_transfers_tenant_id_asset_id_transferred_at_utc");
+
+                    b.ToTable("asset_transfers", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.MaintenanceRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<decimal?>("Cost")
+                        .HasColumnType("numeric(14,2)")
+                        .HasColumnName("cost");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("PerformedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("performed_by");
+
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("resolution");
+
+                    b.Property<DateOnly?>("ScheduledFor")
+                        .HasColumnType("date")
+                        .HasColumnName("scheduled_for");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("VendorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vendor_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_maintenance_records");
+
+                    b.HasIndex("TenantId", "AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_asset_maintenance_records_in_progress")
+                        .HasFilter("status = 'InProgress'");
+
+                    b.HasIndex("TenantId", "VendorId")
+                        .HasDatabaseName("ix_asset_maintenance_records_tenant_id_vendor_id");
+
+                    b.HasIndex("TenantId", "AssetId", "CreatedAtUtc")
+                        .HasDatabaseName("ix_asset_maintenance_records_tenant_id_asset_id_created_at_utc");
+
+                    b.HasIndex("TenantId", "Status", "ScheduledFor")
+                        .HasDatabaseName("ix_asset_maintenance_records_tenant_id_status_scheduled_for");
+
+                    b.ToTable("asset_maintenance_records", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_asset_maintenance_records_cost", "cost IS NULL OR cost >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.PhysicalAudit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<Guid?>("CompletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("completed_by_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTimeOffset>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at_utc");
+
+                    b.Property<Guid?>("StartedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("started_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_physical_audits");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_asset_physical_audits_tenant_id_id");
+
+                    b.HasIndex("TenantId", "Status", "StartedAtUtc")
+                        .HasDatabaseName("ix_asset_physical_audits_tenant_id_status_started_at_utc");
+
+                    b.ToTable("asset_physical_audits", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.PhysicalAuditItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AssetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("asset_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<bool>("Expected")
+                        .HasColumnType("boolean")
+                        .HasColumnName("expected");
+
+                    b.Property<Guid?>("ExpectedBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("expected_branch_id");
+
+                    b.Property<string>("ExpectedLocation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("expected_location");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("ObservedCondition")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("observed_condition");
+
+                    b.Property<string>("ObservedLocation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("observed_location");
+
+                    b.Property<Guid>("PhysicalAuditId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("physical_audit_id");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("result");
+
+                    b.Property<DateTimeOffset?>("ScannedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scanned_at_utc");
+
+                    b.Property<Guid?>("ScannedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("scanned_by_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_physical_audit_items");
+
+                    b.HasIndex("TenantId", "AssetId")
+                        .HasDatabaseName("ix_asset_physical_audit_items_tenant_id_asset_id");
+
+                    b.HasIndex("TenantId", "PhysicalAuditId", "AssetId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_asset_physical_audit_items_tenant_id_physical_audit_id_asse~");
+
+                    b.HasIndex("TenantId", "PhysicalAuditId", "Result")
+                        .HasDatabaseName("ix_asset_physical_audit_items_tenant_id_physical_audit_id_resu~");
+
+                    b.ToTable("asset_physical_audit_items", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.Vendor", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("account_number");
+
+                    b.Property<string>("ContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("contact_name");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("phone");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("website");
+
+                    b.HasKey("Id")
+                        .HasName("pk_asset_vendors");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_asset_vendors_tenant_id_id");
+
+                    b.HasIndex("TenantId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ux_asset_vendors_tenant_id_normalized_name");
+
+                    b.ToTable("asset_vendors", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Devices.Domain.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -194,6 +1270,13 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(128)")
                         .HasColumnName("serial_number");
 
+                    b.Property<string>("SerialNumberKey")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("serial_number_key")
+                        .HasComputedColumnSql("upper(btrim(serial_number))", true);
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(16)
@@ -231,6 +1314,10 @@ namespace Solvix.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Hostname")
                         .HasDatabaseName("ix_devices_tenant_id_hostname");
+
+                    b.HasIndex("TenantId", "SerialNumberKey")
+                        .HasDatabaseName("ix_devices_tenant_id_serial_number_key")
+                        .HasFilter("serial_number_key IS NOT NULL");
 
                     b.ToTable("devices", (string)null);
                 });
@@ -1300,6 +2387,178 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_tenants_slug");
 
                     b.ToTable("tenants", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.Asset", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_assets_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.Vendor", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "VendorId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_assets_asset_vendors_tenant_id_vendor_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetAssignment", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_assignments_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AssetId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_assignments_assets_tenant_id_asset_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetAuditLogEntry", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_audit_log_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetDeviceLink", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_device_links_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AssetId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_device_links_assets_tenant_id_asset_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetSettings", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_settings_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetTagSequence", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_tag_sequences_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.AssetTransfer", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_transfers_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AssetId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_transfers_assets_tenant_id_asset_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.MaintenanceRecord", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_maintenance_records_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AssetId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_maintenance_records_assets_tenant_id_asset_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.Vendor", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "VendorId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_asset_maintenance_records_asset_vendors_tenant_id_vendor_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.PhysicalAudit", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_physical_audits_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.PhysicalAuditItem", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_physical_audit_items_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.Asset", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AssetId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_physical_audit_items_assets_tenant_id_asset_id");
+
+                    b.HasOne("Solvix.Modules.Assets.Domain.PhysicalAudit", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PhysicalAuditId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_physical_audit_items_asset_physical_audits_tenant_id_~");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Assets.Domain.Vendor", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_asset_vendors_tenants_tenant_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Devices.Domain.Device", b =>
