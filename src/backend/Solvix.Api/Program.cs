@@ -1,7 +1,10 @@
+using System.Security.Authentication;
 using System.Text;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.EntityFrameworkCore;
@@ -16,6 +19,8 @@ using Solvix.Api.Middleware;
 using Solvix.Infrastructure.DependencyInjection;
 using Solvix.Infrastructure.Persistence;
 using Solvix.Infrastructure.Tenancy;
+using Solvix.Modules.Devices.Configuration;
+using Solvix.Modules.Devices.Security;
 using Solvix.Modules.Identity.Configuration;
 using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Tenancy;
@@ -53,6 +58,13 @@ try
             configuration.WriteTo.Console(new CompactJsonFormatter());
         }
     });
+
+    // ------------------------------------------------- agent TLS (mutual TLS)
+    // Agents connect to a dedicated HTTPS endpoint named "Agents"
+    // (Kestrel:Endpoints:Agents). The TLS layer asks for a client certificate but
+    // accepts any: chain (device CA only), validity, EKU and revocation are all
+    // enforced by the DeviceCertificate authentication handler.
+    ConfigureAgentTls(builder);
 
     // --------------------------------------------------------- infrastructure
     builder.Services.AddSolvixInfrastructure(builder.Configuration);
@@ -136,6 +148,7 @@ try
     // ------------------------------------------------------- authentication
     builder.Services
         .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddDeviceCertificate()
         .AddJwtBearer(options =>
         {
             var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
@@ -158,7 +171,35 @@ try
     builder.Services.AddAuthorizationBuilder()
         .AddPolicy(Policies.TenantMember, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId))
         .AddPolicy(Policies.TenantAdmin, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
-        .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner)));
+        .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner)))
+        .AddPolicy(Policies.Device, p => p
+            .AddAuthenticationSchemes(DeviceAuthenticationDefaults.Scheme)
+            .RequireAuthenticatedUser()
+            .RequireClaim(SolvixClaimTypes.DeviceId)
+            .RequireClaim(SolvixClaimTypes.TenantId));
+
+    // Behind a TLS-terminating proxy the client certificate arrives in a header.
+    // Only enabled explicitly; the proxy MUST overwrite the header on every request.
+    var forwardedCertificateHeader = builder.Configuration[$"{DevicesOptions.SectionName}:{nameof(DevicesOptions.ForwardedClientCertificateHeader)}"];
+    if (!string.IsNullOrWhiteSpace(forwardedCertificateHeader))
+    {
+        builder.Services.AddCertificateForwarding(options =>
+        {
+            options.CertificateHeader = forwardedCertificateHeader;
+            options.HeaderConverter = value => ClientCertificateHeader.Parse(value)!;
+        });
+
+        // The proxy terminated TLS: honour its X-Forwarded-Proto/For so the request is
+        // seen as HTTPS (required by certificate authentication) and rate limits use the
+        // real client address. The deployment contract for this mode is that the API is
+        // reachable only through that proxy.
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedFor;
+            options.KnownIPNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
+    }
 
     // ------------------------------------------------------------------ CORS
     builder.Services.AddCors(options =>
@@ -200,9 +241,16 @@ try
         };
     });
     app.UseCors(CorsOptions.PolicyName);
+    if (!string.IsNullOrWhiteSpace(forwardedCertificateHeader))
+    {
+        app.UseForwardedHeaders();
+        app.UseCertificateForwarding();
+    }
+
     app.UseAuthentication();
     app.UseMiddleware<TenantResolutionMiddleware>();
     app.UseAuthorization();
+    app.UseRateLimiter();
 
     app.MapControllers();
     app.MapOpenApi().WithDocumentPerVersion();
@@ -235,6 +283,39 @@ static async Task MigrateAsync(WebApplication app)
     }
 
     await db.Database.MigrateAsync();
+}
+
+static void ConfigureAgentTls(WebApplicationBuilder builder)
+{
+    var agentEndpoint = builder.Configuration.GetSection("Kestrel:Endpoints:Agents");
+    if (!agentEndpoint.Exists())
+    {
+        return;
+    }
+
+    // Development / evaluation only: create a self-signed server certificate on first start.
+    var certificatePath = agentEndpoint["Certificate:Path"];
+    if (builder.Configuration.GetValue<bool>("Solvix:Devices:GenerateDevelopmentTlsCertificate") && !string.IsNullOrWhiteSpace(certificatePath))
+    {
+        if (builder.Environment.IsProduction())
+        {
+            throw new InvalidOperationException("GenerateDevelopmentTlsCertificate must not be used in Production.");
+        }
+
+        var hosts = (builder.Configuration["Solvix:Devices:DevelopmentTlsHostNames"] ?? "localhost")
+            .Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        DevelopmentServerCertificate.EnsureExists(certificatePath, agentEndpoint["Certificate:Password"], hosts);
+    }
+
+    builder.WebHost.ConfigureKestrel((context, kestrel) =>
+        kestrel.Configure(context.Configuration.GetSection("Kestrel"), reloadOnChange: false)
+            .Endpoint("Agents", endpoint =>
+            {
+                endpoint.HttpsOptions.SslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13;
+                endpoint.HttpsOptions.ClientCertificateMode = ClientCertificateMode.AllowCertificate;
+                endpoint.HttpsOptions.CheckCertificateRevocation = false;
+                endpoint.HttpsOptions.ClientCertificateValidation = static (_, _, _) => true;
+            }));
 }
 
 /// <summary>Entry point marker used by integration tests (WebApplicationFactory).</summary>

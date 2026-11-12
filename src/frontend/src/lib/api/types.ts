@@ -150,3 +150,185 @@ export const emptyAddress: AddressDto = {
   postalCode: null,
   countryCode: null,
 };
+
+// ---------------------------------------------------------------- devices (Phase 03)
+
+export type DeviceStatus = "Active" | "Retired";
+export type DeviceConnectivity = "Online" | "Offline";
+export type AgentHealthStatus = "Healthy" | "Degraded" | "Unhealthy";
+export type EnrollmentTokenState = "Active" | "Expired" | "Exhausted" | "Revoked";
+export type CredentialRevocationReason = "ReEnrolled" | "Superseded" | "DeviceRetired" | "Revoked";
+
+export interface DeviceSummaryDto {
+  id: string;
+  hostname: string;
+  displayName: string | null;
+  platform: "Windows";
+  status: DeviceStatus;
+  connectivity: DeviceConnectivity;
+  osName: string | null;
+  osVersion: string | null;
+  osDisplayVersion: string | null;
+  osBuild: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  agentVersion: string;
+  agentUpdateAvailable: boolean;
+  healthStatus: AgentHealthStatus | null;
+  ipAddresses: string[];
+  assignedUserId: string | null;
+  lastSeenAtUtc: string | null;
+  lastInventoryAtUtc: string | null;
+  enrolledAtUtc: string;
+}
+
+export interface HealthIssue {
+  component: string;
+  severity: "Info" | "Warning" | "Error";
+  message: string;
+}
+
+export interface AgentHealthReport {
+  status: AgentHealthStatus;
+  startedAtUtc: string;
+  uptimeSeconds: number;
+  lastInventoryAtUtc: string | null;
+  lastSuccessfulContactAtUtc: string | null;
+  consecutiveFailures: number;
+  workingSetBytes: number;
+  certificateNotAfterUtc: string | null;
+  osBuild: string | null;
+  issues: HealthIssue[];
+}
+
+export interface DeviceCredentialDto {
+  id: string;
+  thumbprint: string;
+  serialNumber: string;
+  notBeforeUtc: string;
+  notAfterUtc: string;
+  issuedAtUtc: string;
+  firstUsedAtUtc: string | null;
+  revokedAtUtc: string | null;
+  revocationReason: CredentialRevocationReason | null;
+}
+
+export interface DeviceDetailsDto {
+  summary: DeviceSummaryDto;
+  notes: string | null;
+  hardwareId: string | null;
+  domainName: string | null;
+  architecture: string | null;
+  processorName: string | null;
+  totalMemoryBytes: number | null;
+  lastBootAtUtc: string | null;
+  macAddresses: string[];
+  agentVersionChangedAtUtc: string | null;
+  health: AgentHealthReport | null;
+  groups: { id: string; name: string }[];
+  assignment: {
+    user: { id: string; displayName: string | null; email: string | null; isMember: boolean } | null;
+    branch: { id: string; name: string | null; code: string | null } | null;
+    department: { id: string; name: string | null; code: string | null } | null;
+  };
+  credentials: DeviceCredentialDto[];
+  lastEnrolledAtUtc: string;
+  enrollmentCount: number;
+  inventoryRequested: boolean;
+  retiredAtUtc: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface InventoryReport {
+  collectedAtUtc: string;
+  agentVersion: string;
+  hostname: string;
+  system?: { manufacturer?: string; model?: string; serialNumber?: string; hardwareId?: string; systemSku?: string; chassisType?: string; domainName?: string; workgroup?: string } | null;
+  bios?: { manufacturer?: string; version?: string; smbiosVersion?: string; serialNumber?: string; releaseDate?: string; firmwareType?: string; secureBootEnabled?: boolean } | null;
+  operatingSystem?: {
+    name?: string;
+    family?: string;
+    edition?: string;
+    version?: string;
+    displayVersion?: string;
+    buildNumber?: string;
+    updateBuildRevision?: number;
+    architecture?: string;
+    productType?: string;
+    isSupported?: boolean;
+    installDateUtc?: string;
+    lastBootUpTimeUtc?: string;
+    locale?: string;
+    timeZone?: string;
+  } | null;
+  processors: { name?: string; manufacturer?: string; cores?: number; logicalProcessors?: number; maxClockSpeedMhz?: number; architecture?: string }[];
+  memory?: { totalPhysicalBytes?: number; availablePhysicalBytes?: number; modules: { capacityBytes?: number; speedMhz?: number; manufacturer?: string; partNumber?: string; slot?: string }[] } | null;
+  disks: { model?: string; serialNumber?: string; sizeBytes?: number; mediaType?: string; busType?: string; healthStatus?: string }[];
+  volumes: { driveLetter?: string; label?: string; fileSystem?: string; sizeBytes?: number; freeBytes?: number; driveType?: string }[];
+  networkAdapters: {
+    name?: string;
+    description?: string;
+    macAddress?: string;
+    adapterType?: string;
+    speedBitsPerSecond?: number;
+    status?: string;
+    dhcpEnabled?: boolean;
+    isPhysical: boolean;
+    iPv4Addresses: string[];
+    iPv6Addresses: string[];
+    gateways: string[];
+    dnsServers: string[];
+  }[];
+  software: { name: string; version?: string; publisher?: string; installDate?: string; scope?: string }[];
+  collectionIssues: HealthIssue[];
+}
+
+export interface DeviceInventoryDto {
+  deviceId: string;
+  collectedAtUtc: string;
+  receivedAtUtc: string;
+  contentHash: string | null;
+  report: InventoryReport;
+}
+
+export interface DeviceStatsDto {
+  total: number;
+  active: number;
+  online: number;
+  offline: number;
+  retired: number;
+  updateAvailable: number;
+  latestAgentVersion: string | null;
+  agentVersions: { version: string; deviceCount: number; isLatest: boolean; updateAvailable: boolean }[];
+}
+
+export interface DeviceGroupDto {
+  id: string;
+  name: string;
+  description: string | null;
+  deviceCount: number;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface EnrollmentTokenDto {
+  id: string;
+  name: string;
+  state: EnrollmentTokenState;
+  expiresAtUtc: string;
+  maxUses: number;
+  useCount: number;
+  lastUsedAtUtc: string | null;
+  revokedAtUtc: string | null;
+  deviceGroupId: string | null;
+  deviceGroupName: string | null;
+  createdByUserId: string;
+  createdAtUtc: string;
+}
+
+export interface CreatedEnrollmentTokenDto {
+  enrollmentToken: EnrollmentTokenDto;
+  token: string;
+}

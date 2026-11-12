@@ -34,6 +34,7 @@ public sealed class IdentityModule : IModule
         services.AddScoped<CachedMembershipLookup>();
         services.AddScoped<IMembershipLookup>(sp => sp.GetRequiredService<CachedMembershipLookup>());
         services.AddScoped<IMembershipCache>(sp => sp.GetRequiredService<CachedMembershipLookup>());
+        services.AddScoped<IMemberDirectory, MemberDirectory>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
     }
 }

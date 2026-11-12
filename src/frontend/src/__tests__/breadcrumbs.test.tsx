@@ -24,4 +24,12 @@ describe("breadcrumbs", () => {
     expect(screen.getByRole("link", { name: "Organization" })).toHaveAttribute("href", "/organization");
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/dashboard");
   });
+
+  it("labels entity ids as details", () => {
+    expect(crumbsFromPathname("/endpoints/devices/01a1d173-5268-75f6-ac1c-813ec3f338ef")).toEqual([
+      { label: "Endpoints", href: "/endpoints" },
+      { label: "Devices", href: "/endpoints/devices" },
+      { label: "Details" },
+    ]);
+  });
 });

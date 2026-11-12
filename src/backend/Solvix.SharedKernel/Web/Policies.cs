@@ -11,4 +11,11 @@ public static class Policies
 
     /// <summary>Tenant Owner only.</summary>
     public const string TenantOwner = "TenantOwner";
+
+    /// <summary>
+    /// An enrolled device authenticated by its client certificate (mutual TLS).
+    /// User tokens never satisfy this policy and device certificates never
+    /// satisfy the user policies.
+    /// </summary>
+    public const string Device = "Device";
 }
