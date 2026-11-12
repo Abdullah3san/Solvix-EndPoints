@@ -305,3 +305,124 @@ tenant carries status changes, events and alerts; routine heartbeats are never p
 browser connects through the BFF route `/api/realtime/hubs/monitoring` (Server-Sent Events, long
 polling fallback) so the session token stays in its httpOnly cookie. Multiple API nodes: enable
 `RedisBackplane`, and use sticky sessions (SSE/long polling negotiate per node).
+
+---
+
+# IT asset management (Phase 05)
+
+## Module boundaries
+
+`Solvix.Modules.Assets` owns the physical asset register. It has **no project reference** to
+`Solvix.Modules.Devices` (and vice versa); the two meet only through shared-kernel contracts:
+
+```
+Devices ──implements──► IEndpointDirectory          ◄──uses── Assets
+Devices ──publishes───► IEndpointIdentityObserver   ◄──implements── Assets (AssetEndpointObserver)
+            both use ► HardwareIdentity (serial / manufacturer / model normalisation)
+```
+
+* `IEndpointDirectory` – tenant-scoped read access to enrolled devices (by id, by normalised serial,
+  paged search, active count). Backed by an indexed generated column
+  `devices.serial_number_key = upper(btrim(serial_number))`.
+* `IEndpointIdentityObserver` – called by `EndpointIdentityPublisher` **after** an enrollment or
+  re-enrollment commits, and after an inventory upload changes serial number, manufacturer or model.
+  Observer failures are logged and swallowed: asset matching can never make enrollment fail.
+
+## Data model
+
+```
+asset_vendors ◄─┐                                 branches / departments (Organization)
+                │ (tenant_id, vendor_id)                 ▲ SET NULL (column)
+assets ─────────┴── (tenant_id, id) alternate key ───────┤
+  │  ux (tenant, asset_tag) · ux (tenant, manufacturer_key, serial_number_key) · xmin version
+  ├── asset_assignments          (one open per asset: partial unique index)
+  ├── asset_transfers            (from/to branch, department, location)
+  ├── asset_maintenance_records  (one InProgress per asset: partial unique index)
+  ├── asset_physical_audit_items ──► asset_physical_audits
+  └── asset_device_links ──(tenant_id, device_id)──► devices (CASCADE)
+        ux (tenant, asset, device) · ux (tenant, asset) WHERE Approved · ux (tenant, device) WHERE Approved
+asset_settings (one per tenant) · asset_tag_sequences (upsert counter) · asset_audit_log (append-only)
+```
+
+All 11 tables are tenant-owned: global query filter, write interceptor, FK to `tenants`, forced RLS.
+Cross-module references are tenant-safe composite foreign keys declared in
+`AssetManagementSecurity` (an asset's current holder references `users` with `NO ACTION`: a holder
+cannot vanish silently). Check constraints mirror the domain rules (non-negative amounts, salvage ≤
+cost, warranty period, depreciation inputs, `InUse` ⇒ assignee, one assignee kind, disposal
+details, upper-case tags).
+
+## Lifecycle
+
+```
+            assign ┌────────┐ return
+ register ─► InStock ◄────► InUse ──┐
+     │         ▲  │ maintenance     │ maintenance (status restored afterwards)
+     │         │  ▼                 ▼
+     │      found  InMaintenance ◄──┘
+     │         │
+     │       Missing (manual, bulk, or physical audit completion)
+     ▼
+  Retired ──reinstate──► InStock          Retired ──dispose──► Disposed (read-only, terminal)
+```
+
+Branch, department and location change only through transfers (history rows). Assignments may
+target a workspace member or an employee without a login (name + employee number). Bulk actions
+(transfer, check-in, condition, missing, retire; ≤ 500 assets) are all-or-nothing.
+
+## Asset numbering
+
+`{prefix}-{category code}-{000001}` (e.g. `AST-LAP-000042`), from a per-tenant, per-scope counter
+incremented with `INSERT … ON CONFLICT DO UPDATE … RETURNING` (atomic under concurrency; numbers
+taken by manually entered tags are skipped). Changing the prefix starts a new sequence.
+
+## Endpoint matching
+
+`MatchEvaluator` (pure, unit-tested) scores an asset/endpoint pair:
+
+| Evidence | Effect |
+|----------|--------|
+| Serial number (normalised, placeholders such as "To be filled by O.E.M." rejected) | **required** for a suggestion |
+| Manufacturer ("Dell Inc." = "DELL", "Hewlett-Packard" = "HP", corporate suffixes ignored) | match / mismatch / unknown |
+| Model (letters + digits; containment counts as partial) | supporting only — OEMs often report machine-type codes |
+| Category that does not run the agent (monitor, switch …) | warning, never High |
+| More than one asset or endpoint with the serial, or either side already linked | ambiguous |
+
+Confidence: **High** = serial + manufacturer match, model not contradicting, agent-capable category;
+**Medium** = serial match, manufacturer not contradicting; **Low** otherwise.
+
+Evaluation runs from both sides (endpoint enrolled / hardware changed; asset created / identity
+edited; admin "rescan"). It creates `Suggested` links with the evidence (jsonb) and withdraws
+suggestions whose serials no longer match. Decisions are remembered per pair (`Rejected`,
+`Superseded`, `Unlinked`) and never re-suggested. Approving a link supersedes competing
+suggestions; partial unique indexes guarantee one approved endpoint per asset and vice versa.
+
+Nothing is linked without an administrator unless the tenant enables
+`AutoApproveHighConfidenceMatches` — and even then only for a High-confidence pair that is
+unambiguous on both sides. The asset and device records are never merged or synchronised; the
+link exposes discrepancies (serial, manufacturer, model, branch, assigned user) for the reviewer.
+Unregistered endpoints can be turned into assets (pre-filled from inventory, then linked).
+
+## Audit log
+
+Every change writes an `asset_audit_log` row in the same transaction (action code, summary,
+`{field: {from, to}}` change set, actor user or `System` for agent-triggered matching,
+correlation id). A trigger rejects UPDATE and TRUNCATE always and DELETE outside platform scope,
+for the application role *and* the schema owner.
+
+## Labels, export, depreciation
+
+* `GET /assets/{id}/barcode.svg` (Code 128 of the tag) and `/qr.svg` (QR, error correction M),
+  encoded by ZXing.Net and rendered as compact SVG paths; served with `nosniff` and a sandboxing
+  CSP. QR payload: `{LabelBaseUrl}/assets/{id}` when configured, else `SOLVIX-ASSET:{tag}`.
+  Scanning accepts the tag, either QR payload or the serial number.
+* CSV exports (register with all filters, depreciation) are RFC 4180 with a UTF-8 BOM and
+  spreadsheet formula-injection protection.
+* Depreciation: straight-line or double-declining balance (switching to straight-line), monthly
+  from the purchase date, rounded per month with the final month landing exactly on salvage value;
+  disposed assets stop depreciating.
+
+## Access
+
+All register, matching, audit, maintenance, vendor, report and settings endpoints require
+`TenantAdmin` (they contain financial data). Members get `GET /my-assets` (their own assets, no
+costs). Device certificates satisfy no user policy. Other tenants' ids resolve to 404.

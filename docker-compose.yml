@@ -84,6 +84,8 @@ services:
       Solvix__Devices__CertificateAuthority__AutoGenerate: ${SOLVIX_DEVICE_CA_AUTOGENERATE:-true}
       Solvix__Devices__CertificateAuthority__PfxPath: /var/lib/solvix/device-ca.pfx
       Solvix__Devices__CertificateAuthority__PfxPassword: ${SOLVIX_DEVICE_CA_PASSWORD:-dev-only-device-ca}
+      # Asset labels: QR codes encode {web URL}/assets/{id} when set, otherwise "SOLVIX-ASSET:{tag}".
+      Solvix__Assets__LabelBaseUrl: ${SOLVIX_ASSET_LABEL_BASE_URL:-}
     volumes:
       - solvix-pki:/var/lib/solvix
     ports:

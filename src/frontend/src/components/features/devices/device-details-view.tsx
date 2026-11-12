@@ -18,6 +18,7 @@ import { Checkbox, Input, Select, Textarea } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, THead, TBody, TR, TH, TD, EmptyRow } from "@/components/ui/table";
 import { DeviceMonitoringPanel } from "@/components/features/monitoring/device-monitoring-panel";
+import { DeviceAssetCard } from "@/components/features/assets/device-asset-card";
 import { useToast } from "@/components/providers/toast-provider";
 import { useCan } from "@/components/providers/session-provider";
 
@@ -198,6 +199,7 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
               ["Reconnect attempts before last contact", device.health ? String(device.health.consecutiveFailures) : null],
             ]}
           />
+          {isAdmin ? <DeviceAssetCard deviceId={s.id} /> : null}
           <InfoCard
             title="Enrollment"
             rows={[

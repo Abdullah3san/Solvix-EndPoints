@@ -43,4 +43,25 @@ describe("sidebar", () => {
     expect(screen.getByRole("link", { name: /^devices$/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /enrollment/i })).not.toBeInTheDocument();
   });
+
+  it("shows the asset register to admins and only 'My assets' to members", () => {
+    const { unmount } = render(
+      <SessionProvider session={session}>
+        <Sidebar open onClose={() => {}} />
+      </SessionProvider>,
+    );
+    expect(screen.getByRole("link", { name: /asset register/i })).toHaveAttribute("href", "/assets");
+    expect(screen.getByRole("link", { name: /endpoint matching/i })).toHaveAttribute("href", "/assets/matching");
+    expect(screen.getByRole("link", { name: /my assets/i })).toHaveAttribute("href", "/my-assets");
+    unmount();
+
+    render(
+      <SessionProvider session={{ ...session, tenant: { ...session.tenant, role: "Member" as const } }}>
+        <Sidebar open onClose={() => {}} />
+      </SessionProvider>,
+    );
+    expect(screen.queryByRole("link", { name: /asset register/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /physical audits/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /my assets/i })).toBeInTheDocument();
+  });
 });

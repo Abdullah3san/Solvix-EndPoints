@@ -15,6 +15,12 @@ Multi-tenant SaaS platform for endpoint management.
   OS-health signals, connection history, uptime/downtime and availability reports, automatic
   offline alerts and recovery notifications, and a live dashboard over SignalR. See
   [`docs/PHASE-04-SUMMARY.md`](docs/PHASE-04-SUMMARY.md).
+* **Phase 05** – IT asset management: an asset register for 14 categories (desktops to Zebra
+  handhelds and firewalls) with automatic numbering, Code 128 / QR labels, assignment to employees,
+  branches and departments, purchase, warranty, vendors, maintenance, transfers, physical audits,
+  retirement, disposal, depreciation, reports and CSV export, and reviewed association of physical
+  assets with managed Windows endpoints by serial number and manufacturer/model. See
+  [`docs/PHASE-05-SUMMARY.md`](docs/PHASE-05-SUMMARY.md).
 
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|
@@ -81,6 +87,7 @@ src/backend/
     Solvix.Modules.Identity/     users, memberships, JWT auth, member management
     Solvix.Modules.Organization/ company profile, branches, departments
     Solvix.Modules.Devices/      devices, enrollment, device CA, mTLS device auth, inventory, groups
+    Solvix.Modules.Assets/       asset register, lifecycle, audits, depreciation, labels, endpoint matching
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/shared/Solvix.Agent.Contracts/  wire contracts shared by agent and API

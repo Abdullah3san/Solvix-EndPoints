@@ -503,3 +503,458 @@ export interface MonitoringUpdateDto {
   events: ConnectionEventDto[];
   alerts: MonitoringAlertDto[];
 }
+
+// ---------------------------------------------------------------- Asset management (Phase 05)
+
+export type AssetCategory =
+  | "Desktop"
+  | "Laptop"
+  | "Server"
+  | "Printer"
+  | "Monitor"
+  | "MobilePhone"
+  | "Tablet"
+  | "ZebraHandheld"
+  | "NetworkSwitch"
+  | "Router"
+  | "Firewall"
+  | "AccessPoint"
+  | "StorageDevice"
+  | "Other";
+export type AssetStatus = "InStock" | "InUse" | "InMaintenance" | "Missing" | "Retired" | "Disposed";
+export type AssetCondition = "New" | "Good" | "Fair" | "Poor" | "Damaged";
+export type DepreciationMethod = "None" | "StraightLine" | "DecliningBalance";
+export type DisposalMethod = "Recycled" | "Sold" | "Donated" | "Destroyed" | "ReturnedToVendor" | "TradedIn" | "Lost";
+export type WarrantyState = "None" | "Active" | "ExpiringSoon" | "Expired";
+export type EndpointLinkState = "NotApplicable" | "Unlinked" | "Suggested" | "Linked";
+export type MaintenanceType = "Preventive" | "Repair" | "Upgrade" | "Inspection" | "WarrantyClaim";
+export type MaintenanceStatus = "Scheduled" | "InProgress" | "Completed" | "Cancelled";
+export type PhysicalAuditStatus = "InProgress" | "Completed" | "Cancelled";
+export type PhysicalAuditResult = "Pending" | "Found" | "Missing" | "Unexpected";
+export type AssetDeviceLinkStatus = "Suggested" | "Approved" | "Rejected" | "Superseded" | "Unlinked";
+export type AssetDeviceLinkSource = "Automatic" | "Manual";
+export type MatchConfidence = "Low" | "Medium" | "High";
+export type EvidenceOutcome = "Match" | "Partial" | "Mismatch" | "Unknown" | "Warning";
+export type AuditActorKind = "User" | "System";
+export type AssetSortField =
+  | "AssetTag"
+  | "Name"
+  | "Category"
+  | "Status"
+  | "Manufacturer"
+  | "Model"
+  | "SerialNumber"
+  | "PurchaseDate"
+  | "PurchaseCost"
+  | "WarrantyEndDate"
+  | "LastAuditedAt"
+  | "CreatedAt"
+  | "UpdatedAt";
+export type BulkAssetAction = "Transfer" | "Return" | "Retire" | "SetCondition" | "MarkMissing";
+
+export interface RefDto {
+  id: string;
+  name: string | null;
+  code?: string | null;
+}
+
+export interface AssigneeDto {
+  userId: string | null;
+  displayName: string | null;
+  email: string | null;
+  employeeNumber: string | null;
+  isMember: boolean;
+}
+
+export interface AssetSummaryDto {
+  id: string;
+  assetTag: string;
+  name: string;
+  category: AssetCategory;
+  status: AssetStatus;
+  condition: AssetCondition;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  branch: RefDto | null;
+  department: RefDto | null;
+  location: string | null;
+  assignee: AssigneeDto | null;
+  vendor: RefDto | null;
+  purchaseDate: string | null;
+  purchaseCost: number | null;
+  currency: string | null;
+  warrantyEndDate: string | null;
+  warranty: WarrantyState;
+  endpointLink: EndpointLinkState;
+  linkedDeviceId: string | null;
+  lastAuditedAtUtc: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface DepreciationYear {
+  year: number;
+  openingValue: number;
+  depreciation: number;
+  closingValue: number;
+}
+
+export interface DepreciationResult {
+  method: DepreciationMethod;
+  cost: number;
+  salvageValue: number;
+  usefulLifeMonths: number;
+  startDate: string;
+  asOf: string;
+  monthsElapsed: number;
+  accumulatedDepreciation: number;
+  bookValue: number;
+  currentMonthlyCharge: number;
+  fullyDepreciatedOn: string;
+  schedule: DepreciationYear[];
+}
+
+export interface EndpointDto {
+  id: string;
+  hostname: string;
+  displayName: string | null;
+  isActive: boolean;
+  serialNumber: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  osName: string | null;
+  connectivity: DeviceConnectivity;
+  lastSeenAtUtc: string | null;
+  enrolledAtUtc: string;
+}
+
+export interface LinkDiscrepancyDto {
+  field: string;
+  asset: string | null;
+  endpoint: string | null;
+}
+
+export interface AssetEndpointLinkDto {
+  linkId: string;
+  endpoint: EndpointDto;
+  source: AssetDeviceLinkSource;
+  confidence: MatchConfidence;
+  approvedAtUtc: string | null;
+  discrepancies: LinkDiscrepancyDto[];
+}
+
+export interface MaintenanceRecordDto {
+  id: string;
+  assetId: string;
+  assetTag: string | null;
+  assetName: string | null;
+  type: MaintenanceType;
+  status: MaintenanceStatus;
+  title: string;
+  description: string | null;
+  vendor: RefDto | null;
+  performedBy: string | null;
+  cost: number | null;
+  scheduledFor: string | null;
+  startedAtUtc: string | null;
+  completedAtUtc: string | null;
+  resolution: string | null;
+  createdBy: RefDto | null;
+  createdAtUtc: string;
+}
+
+export interface AssetDetailsDto {
+  summary: AssetSummaryDto;
+  version: number;
+  description: string | null;
+  purchaseOrderNumber: string | null;
+  invoiceNumber: string | null;
+  warrantyStartDate: string | null;
+  warrantyProvider: string | null;
+  warrantyReference: string | null;
+  depreciationMethod: DepreciationMethod;
+  usefulLifeMonths: number | null;
+  salvageValue: number | null;
+  depreciation: DepreciationResult | null;
+  assignedAtUtc: string | null;
+  retiredAtUtc: string | null;
+  retirementReason: string | null;
+  disposedAtUtc: string | null;
+  disposalMethod: DisposalMethod | null;
+  disposalValue: number | null;
+  disposalReference: string | null;
+  disposalNotes: string | null;
+  endpointManageable: boolean;
+  endpointLink: AssetEndpointLinkDto | null;
+  pendingSuggestions: number;
+  openMaintenance: MaintenanceRecordDto | null;
+  qrPayload: string;
+}
+
+export interface AssetInput {
+  assetTag?: string | null;
+  name: string;
+  category: AssetCategory;
+  condition: AssetCondition;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  description: string | null;
+  location: string | null;
+  branchId: string | null;
+  departmentId: string | null;
+  vendorId: string | null;
+  purchaseDate: string | null;
+  purchaseCost: number | null;
+  currency: string | null;
+  purchaseOrderNumber: string | null;
+  invoiceNumber: string | null;
+  warrantyStartDate: string | null;
+  warrantyEndDate: string | null;
+  warrantyProvider: string | null;
+  warrantyReference: string | null;
+  depreciationMethod: DepreciationMethod;
+  usefulLifeMonths: number | null;
+  salvageValue: number | null;
+}
+
+export interface AssignAssetRequest {
+  assignedUserId: string | null;
+  assigneeName: string | null;
+  employeeNumber: string | null;
+  expectedReturnDate: string | null;
+  notes: string | null;
+}
+
+export interface AssetStatsDto {
+  total: number;
+  inStock: number;
+  inUse: number;
+  inMaintenance: number;
+  missing: number;
+  retired: number;
+  disposed: number;
+  warrantyExpiringSoon: number;
+  pendingEndpointMatches: number;
+}
+
+export interface AssignmentDto {
+  id: string;
+  assignee: AssigneeDto;
+  branch: RefDto | null;
+  department: RefDto | null;
+  assignedAtUtc: string;
+  assignedBy: RefDto | null;
+  expectedReturnDate: string | null;
+  notes: string | null;
+  returnedAtUtc: string | null;
+  returnedBy: RefDto | null;
+  returnNotes: string | null;
+  returnCondition: AssetCondition | null;
+}
+
+export interface TransferDto {
+  id: string;
+  fromBranch: RefDto | null;
+  fromDepartment: RefDto | null;
+  fromLocation: string | null;
+  toBranch: RefDto | null;
+  toDepartment: RefDto | null;
+  toLocation: string | null;
+  transferredAtUtc: string;
+  transferredBy: RefDto | null;
+  reason: string | null;
+}
+
+export interface AuditChangeDto {
+  from: string | null;
+  to: string | null;
+}
+
+export interface AuditLogEntryDto {
+  id: string;
+  occurredAtUtc: string;
+  entityType: string;
+  entityId: string;
+  assetId: string | null;
+  action: string;
+  summary: string;
+  changes: Record<string, AuditChangeDto> | null;
+  actorKind: AuditActorKind;
+  actor: RefDto | null;
+  correlationId: string | null;
+}
+
+export interface MyAssetDto {
+  id: string;
+  assetTag: string;
+  name: string;
+  category: AssetCategory;
+  status: AssetStatus;
+  condition: AssetCondition;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  assignedAtUtc: string | null;
+  warrantyEndDate: string | null;
+  location: string | null;
+}
+
+export interface VendorDto {
+  id: string;
+  name: string;
+  contactName: string | null;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  accountNumber: string | null;
+  notes: string | null;
+  isActive: boolean;
+  assetCount: number;
+  createdAtUtc: string;
+}
+
+export interface PhysicalAuditDto {
+  id: string;
+  name: string;
+  branch: RefDto | null;
+  department: RefDto | null;
+  category: AssetCategory | null;
+  status: PhysicalAuditStatus;
+  startedAtUtc: string;
+  startedBy: RefDto | null;
+  completedAtUtc: string | null;
+  completedBy: RefDto | null;
+  notes: string | null;
+  expected: number;
+  found: number;
+  missing: number;
+  pending: number;
+  unexpected: number;
+}
+
+export interface PhysicalAuditItemDto {
+  id: string;
+  assetId: string;
+  assetTag: string;
+  assetName: string;
+  category: AssetCategory;
+  assetStatus: AssetStatus;
+  expected: boolean;
+  result: PhysicalAuditResult;
+  expectedBranch: RefDto | null;
+  expectedLocation: string | null;
+  observedLocation: string | null;
+  observedCondition: AssetCondition | null;
+  scannedAtUtc: string | null;
+  notes: string | null;
+}
+
+export interface ScanResultDto {
+  item: PhysicalAuditItemDto;
+  alreadyScanned: boolean;
+  audit: PhysicalAuditDto;
+}
+
+export interface MatchEvidence {
+  kind: string;
+  outcome: EvidenceOutcome;
+  detail: string;
+}
+
+export interface AssetRefDto {
+  id: string;
+  assetTag: string;
+  name: string;
+  category: AssetCategory;
+  status: AssetStatus;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+}
+
+export interface AssetDeviceLinkDto {
+  id: string;
+  asset: AssetRefDto;
+  endpoint: EndpointDto | null;
+  status: AssetDeviceLinkStatus;
+  source: AssetDeviceLinkSource;
+  confidence: MatchConfidence;
+  score: number;
+  isAmbiguous: boolean;
+  evidence: MatchEvidence[];
+  discrepancies: LinkDiscrepancyDto[];
+  detectedAtUtc: string;
+  decidedAtUtc: string | null;
+  decidedBy: RefDto | null;
+  decisionNote: string | null;
+}
+
+export interface DeviceAssetDto {
+  approved: AssetDeviceLinkDto | null;
+  suggestions: AssetDeviceLinkDto[];
+}
+
+export interface RescanResultDto {
+  endpointsEvaluated: number;
+  suggestionsCreated: number;
+  autoApproved: number;
+}
+
+export interface CountValueDto {
+  key: string;
+  label: string | null;
+  count: number;
+  cost: number;
+}
+
+export interface EndpointCoverageDto {
+  manageableAssets: number;
+  linkedAssets: number;
+  pendingSuggestions: number;
+  activeEndpoints: number;
+  endpointsWithoutAsset: number;
+}
+
+export interface AssetSummaryReportDto {
+  asOf: string;
+  totalAssets: number;
+  activeAssets: number;
+  totalPurchaseCost: number;
+  totalBookValue: number;
+  byStatus: CountValueDto[];
+  byCategory: CountValueDto[];
+  byBranch: CountValueDto[];
+  warrantyActive: number;
+  warrantyExpiringSoon: number;
+  warrantyExpired: number;
+  warrantyNone: number;
+  openMaintenance: number;
+  maintenanceCostThisYear: number;
+  notAuditedIn365Days: number;
+  endpointCoverage: EndpointCoverageDto;
+}
+
+export interface DepreciationReportRowDto {
+  category: AssetCategory;
+  assets: number;
+  cost: number;
+  accumulatedDepreciation: number;
+  bookValue: number;
+}
+
+export interface DepreciationReportDto {
+  asOf: string;
+  rows: DepreciationReportRowDto[];
+  cost: number;
+  accumulatedDepreciation: number;
+  bookValue: number;
+}
+
+export interface AssetSettingsDto {
+  tagPrefix: string;
+  defaultCurrency: string;
+  autoApproveHighConfidenceMatches: boolean;
+  warrantyAlertDays: number;
+}
