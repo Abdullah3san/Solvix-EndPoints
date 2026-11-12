@@ -28,6 +28,9 @@ WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080 \
     DOTNET_EnableDiagnostics=0
 # Alpine ships no tz database; .NET resolves IANA ids (e.g. "Europe/Berlin") from it.
+# Note: Npgsql probes libgssapi_krb5 once at start-up and logs a load error on Alpine;
+# password authentication is unaffected. Add `apk add --no-cache krb5-libs` here if
+# GSSAPI/Kerberos authentication to PostgreSQL is ever required.
 COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=build /out/api .
 USER app

@@ -109,7 +109,7 @@ Dockerfiles; alternate host ports were used because the sandbox already occupied
 |-------|--------|
 | `docker compose config` | valid |
 | `postgres` init script | creates `solvix_migrator` (owner of db + schema) and `solvix_app` (NOSUPERUSER, NOBYPASSRLS); default privileges granted |
-| `migrator` | exits 0, applies `InitialSchema` + `RowLevelSecurity` on an empty database |
+| Cold start (`docker compose down -v && up -d`) | all five services healthy after ~21 s; `migrator` exits 0 and applies `InitialSchema` + `RowLevelSecurity` on the empty database |
 | `api` | healthy (`/health/ready` = Healthy, `/openapi/v1.json` served), starts only after the migrator succeeded |
 | `web` | healthy; `/dashboard` → 307 to `/login` when anonymous |
 | End-to-end | tenant registered through the containerized API; login through the Next.js BFF sets an `HttpOnly` cookie and returns no token in the body; the dashboard server-renders tenant data through the BFF (sidebar, breadcrumbs, theme and notification controls present); `/api/proxy/v1/branches` returns the tenant's branches with the cookie and 401 without it; mismatching `X-Tenant-Id` → 403 |
@@ -420,3 +420,10 @@ src/frontend/vitest.setup.ts
   the shell, session parsing, API client and notification centre.
 * Tenant deletion is not implemented (`PendingDeletion` status reserved; FKs are
   `Restrict` on purpose).
+* **Alpine runtime images log one Npgsql probe error at start-up** (`Cannot load library
+  libgssapi_krb5.so.2`): GSSAPI/Kerberos authentication is not used, password auth works.
+  Adding `krb5-libs` to the runtime stages removes the message; it was left out because
+  this sandbox cannot reach the Alpine package mirror during image builds.
+* **Docker images could only be built here with host networking through the sandbox
+  proxy**; the committed Dockerfiles and compose file contain no proxy settings and are
+  expected to build unchanged in a normal environment.

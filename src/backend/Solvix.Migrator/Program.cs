@@ -1,13 +1,12 @@
 // Applies pending EF Core migrations and exits. Used as a one-shot container in
 // Docker Compose (and in CI/CD) so the API never needs schema-owner credentials.
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Solvix.Infrastructure.DependencyInjection;
 using Solvix.Infrastructure.Persistence;
@@ -15,6 +14,12 @@ using Solvix.SharedKernel.Tenancy;
 
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
+    // EF Core probes "__EFMigrationsHistory" with a plain SELECT on an empty database and
+    // logs the expected failure at Error level; hide that single, well-known probe.
+    .Filter.ByExcluding(e =>
+        e.Level == LogEventLevel.Error
+        && e.Properties.TryGetValue("commandText", out var text)
+        && text.ToString().Contains("__EFMigrationsHistory", StringComparison.Ordinal))
     .WriteTo.Console(new CompactJsonFormatter())
     .CreateLogger();
 
@@ -44,16 +49,8 @@ try
     using var platform = scope.ServiceProvider.GetRequiredService<ITenantContextMutator>().BeginPlatformScope();
     var db = scope.ServiceProvider.GetRequiredService<SolvixDbContext>();
 
-    // Only query the history table when it exists; EF logs a (harmless) command error otherwise.
-    if (await db.GetService<IHistoryRepository>().ExistsAsync())
-    {
-        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
-        logger.LogInformation("Pending migrations: {Count} {Migrations}", pending.Count, pending);
-    }
-    else
-    {
-        logger.LogInformation("Empty database: applying all migrations");
-    }
+    var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+    logger.LogInformation("Pending migrations: {Count} {Migrations}", pending.Count, pending);
 
     var attempts = 0;
     while (true)
