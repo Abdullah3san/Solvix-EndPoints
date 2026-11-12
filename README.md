@@ -10,6 +10,11 @@ Multi-tenant SaaS platform for endpoint management.
   (mutual TLS), hardware/OS/software/network/disk inventory, agent health and version tracking,
   device groups and assignment. See [`docs/PHASE-03-SUMMARY.md`](docs/PHASE-03-SUMMARY.md) and
   [`src/agent/README.md`](src/agent/README.md).
+* **Phase 04** – real-time endpoint monitoring: Online / Warning / Offline from agent heartbeats
+  with tenant-configurable thresholds (defaults 2 min / 5 min), separate network-reachability and
+  OS-health signals, connection history, uptime/downtime and availability reports, automatic
+  offline alerts and recovery notifications, and a live dashboard over SignalR. See
+  [`docs/PHASE-04-SUMMARY.md`](docs/PHASE-04-SUMMARY.md).
 
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|
@@ -128,3 +133,8 @@ production: `ConnectionStrings__Postgres`, `ConnectionStrings__Redis`,
 `Solvix__Jwt__SigningKey` (≥ 32 chars), and for device management a device CA bundle
 (`Solvix__Devices__CertificateAuthority__PfxPath`/`PfxBase64` + `PfxPassword`) and a TLS
 certificate for the `Kestrel__Endpoints__Agents` endpoint. See `.env.example` and `docs/ARCHITECTURE.md`.
+
+Monitoring (`Solvix__Devices__Monitoring__*`): default thresholds, sweep/flush intervals, outage
+grace, retention, and `RedisBackplane=true` when more than one API node serves the SignalR hub.
+Tenant administrators change thresholds, heartbeat interval and notifications under
+*Endpoints → Monitoring → Settings*.

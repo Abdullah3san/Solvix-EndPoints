@@ -222,3 +222,86 @@ been seen within `Agent:OfflineAfterSeconds` (default 300 s, i.e. 5 missed heart
 
 The options are validated at start-up (ranges, release URLs/hashes, CA presence) and the CA is
 loaded eagerly, so misconfiguration fails fast.
+
+
+# Real-time monitoring (Phase 04)
+
+## Three independent signals
+
+| Signal | Source | Statuses |
+|--------|--------|----------|
+| **A. Agent connectivity** | authenticated agent contact only (heartbeat or any other agent call) | Online · Warning · Offline |
+| **B. Network reachability** | the agent's built-in probes on the device: operational adapter, default gateway (ICMP), DNS, TCP to *locally configured* targets | Reachable · Degraded · Unreachable · Unknown |
+| **C. Operating-system health** | measured on the device: available memory, system-drive free space, pending restart; boot time | Healthy · Warning · Critical · Unknown |
+
+A heartbeat is never treated as evidence for B or C. When the agent is not online, B and C are
+shown as *last known* (stale) and counted as Unknown in fleet totals. Probe targets come from
+local agent configuration; the server cannot choose them or trigger probes.
+
+## Connectivity rules
+
+`silence = now − last contact`: **Online** below the warning threshold, **Warning** from the
+warning threshold up to and including the offline threshold, **Offline** only once the offline
+threshold is exceeded (`PresencePolicy.Evaluate`). Defaults 120 s / 300 s, heartbeat 60 s;
+tenants change them in `monitoring_settings` (warning ≥ 2 × heartbeat, offline > warning).
+
+Displayed state is the **persisted** state (`device_presence.state`), the same one that drives
+events and alerts, so the UI never shows a device offline before the monitor has established it.
+
+## Heartbeat pipeline (write-avoiding)
+
+```
+agent ─heartbeat─► AgentService
+   ├─ devices row: written only if version / health status / OS build / issues changed,
+   │               or the stored health report is older than SignalPersistIntervalSeconds
+   └─ PresenceTracker.ProcessHeartbeatAsync
+        ├─ state ≠ Online, agent restart, reboot, signal change, snapshot refresh due
+        │     → one SaveChanges: presence + connection event + availability days + alert
+        └─ otherwise → PresenceBuffer (memory, no DB write)
+PresenceBuffer ─every FlushIntervalSeconds─► one UPDATE … FROM unnest(…) RETURNING per tenant
+   (tenant scope ⇒ RLS); rows returned in a non-Online state are recovered via the tracker
+```
+
+* `device_presence` is a narrow table with `fillfactor = 70` and **no index on
+  `last_seen_at_utc`**, so contact updates are HOT updates.
+* Transitions use optimistic concurrency (`revision` and `last_seen_at_utc` are concurrency
+  tokens); a conflicting decision is retried with fresh data. A partial unique index allows at
+  most one open alert per device.
+* Every agent request is recorded (`RecordAgentContact` filter): *last seen* for any
+  authenticated request, *last successful communication* for 2xx/3xx.
+
+## Monitor sweep (`PresenceMonitor`, every `SweepIntervalSeconds`)
+
+1. Flush the local buffer; take a PostgreSQL advisory lock (one sweeping node at a time).
+2. **Outage detection:** if the previous sweep is older than `OutageDetectionSeconds`, nobody was
+   observing; silence then counts only from `now + min(gap, MaxRecoveryGraceSeconds)` (the
+   *evidence floor*), so agents still in retry backoff are not declared offline.
+3. One platform-scoped query pre-selects candidates (thresholds joined per tenant); each tenant's
+   devices are evaluated in a tenant scope. A tolerance of flush interval + 2 s is added, so
+   buffered-but-unflushed contact can never cause an early transition.
+4. Day rollover closes the availability ledger at UTC midnight; hourly retention purge.
+
+The agent caps its retry delay at the heartbeat interval when the server is unreachable (no HTTP
+response), so a network interruption is not followed by minutes of self-imposed silence; server
+errors (5xx/429) keep the full exponential backoff.
+
+## History, availability, alerts
+
+* `device_connection_events`: Enrolled, HeartbeatDelayed, HeartbeatRestored, WentOffline,
+  Recovered, Reconnected (failed attempts bridged without a warning), AgentRestarted,
+  DeviceRebooted, NetworkStatusChanged, OsHealthChanged.
+* `device_availability_days`: online / warning / offline seconds and offline count per device and
+  UTC day, written on transitions and at rollover; reports add each device's open interval.
+  Availability = (online + warning) / monitored time; downtime is counted from the start of the
+  Warning that preceded an outage.
+* `monitoring_alerts`: opened on Offline (if enabled), resolved on recovery (recovery
+  notification if enabled), acknowledgeable by admins.
+
+## Live updates
+
+SignalR hub `/hubs/monitoring` (authenticated, tenant group from the token, server → client
+only, `CloseOnAuthenticationExpiration`). One `monitoringUpdate` message per unit of work and
+tenant carries status changes, events and alerts; routine heartbeats are never pushed. The
+browser connects through the BFF route `/api/realtime/hubs/monitoring` (Server-Sent Events, long
+polling fallback) so the session token stays in its httpOnly cookie. Multiple API nodes: enable
+`RedisBackplane`, and use sticky sessions (SSE/long polling negotiate per node).

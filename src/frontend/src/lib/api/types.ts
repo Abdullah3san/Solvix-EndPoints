@@ -151,10 +151,10 @@ export const emptyAddress: AddressDto = {
   countryCode: null,
 };
 
-// ---------------------------------------------------------------- devices (Phase 03)
+// ---------------------------------------------------------------- devices (Phase 04)
 
 export type DeviceStatus = "Active" | "Retired";
-export type DeviceConnectivity = "Online" | "Offline";
+export type DeviceConnectivity = "Online" | "Warning" | "Offline";
 export type AgentHealthStatus = "Healthy" | "Degraded" | "Unhealthy";
 export type EnrollmentTokenState = "Active" | "Expired" | "Exhausted" | "Revoked";
 export type CredentialRevocationReason = "ReEnrolled" | "Superseded" | "DeviceRetired" | "Revoked";
@@ -181,6 +181,7 @@ export interface DeviceSummaryDto {
   lastSeenAtUtc: string | null;
   lastInventoryAtUtc: string | null;
   enrolledAtUtc: string;
+  branchId: string | null;
 }
 
 export interface HealthIssue {
@@ -298,6 +299,7 @@ export interface DeviceStatsDto {
   active: number;
   online: number;
   offline: number;
+  warning: number;
   retired: number;
   updateAvailable: number;
   latestAgentVersion: string | null;
@@ -331,4 +333,173 @@ export interface EnrollmentTokenDto {
 export interface CreatedEnrollmentTokenDto {
   enrollmentToken: EnrollmentTokenDto;
   token: string;
+}
+
+// ------------------------------------------------------------ monitoring (Phase 04)
+
+export type NetworkStatus = "Unknown" | "Reachable" | "Degraded" | "Unreachable";
+export type OsHealthStatus = "Unknown" | "Healthy" | "Warning" | "Critical";
+export type MonitoringSignal = "Agent" | "Network" | "OperatingSystem";
+export type ConnectionEventType =
+  | "Enrolled"
+  | "HeartbeatDelayed"
+  | "HeartbeatRestored"
+  | "WentOffline"
+  | "Recovered"
+  | "Reconnected"
+  | "AgentRestarted"
+  | "DeviceRebooted"
+  | "NetworkStatusChanged"
+  | "OsHealthChanged";
+export type MonitoringAlertStatus = "Open" | "Resolved";
+
+export interface MonitoringSettingsDto {
+  heartbeatIntervalSeconds: number;
+  warningAfterSeconds: number;
+  offlineAfterSeconds: number;
+  offlineAlertsEnabled: boolean;
+  recoveryNotificationsEnabled: boolean;
+  isDefault: boolean;
+}
+
+export interface StateCountsDto {
+  total: number;
+  online: number;
+  warning: number;
+  offline: number;
+}
+
+export interface BranchMonitoringDto {
+  branchId: string | null;
+  name: string;
+  code: string | null;
+  devices: StateCountsDto;
+  availability7dPercent: number | null;
+}
+
+export interface OperatingSystemMonitoringDto {
+  operatingSystem: string;
+  devices: StateCountsDto;
+}
+
+export interface ConnectionEventDto {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  type: ConnectionEventType;
+  signal: MonitoringSignal;
+  occurredAtUtc: string;
+  fromStatus: string | null;
+  toStatus: string | null;
+  detail: string | null;
+  lastSeenAtUtc: string | null;
+  durationSeconds: number | null;
+  failedAttempts: number | null;
+}
+
+export interface MonitoringAlertDto {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  type: "DeviceOffline";
+  status: MonitoringAlertStatus;
+  message: string;
+  openedAtUtc: string;
+  lastSeenAtUtc: string;
+  resolvedAtUtc: string | null;
+  downtimeSeconds: number | null;
+  acknowledgedAtUtc: string | null;
+}
+
+export interface MonitoringSummaryDto {
+  generatedAtUtc: string;
+  devices: StateCountsDto;
+  retiredDevices: number;
+  availability7dPercent: number | null;
+  availability30dPercent: number | null;
+  branches: BranchMonitoringDto[];
+  operatingSystems: OperatingSystemMonitoringDto[];
+  signals: { network: Record<NetworkStatus, number>; operatingSystem: Record<OsHealthStatus, number> };
+  recentEvents: ConnectionEventDto[];
+  openAlerts: number;
+  settings: MonitoringSettingsDto;
+}
+
+export interface SignalDto<T> {
+  status: T;
+  checkedAtUtc: string | null;
+  stale: boolean;
+  issues: string[];
+}
+
+export interface AvailabilityTotalsDto {
+  onlineSeconds: number;
+  warningSeconds: number;
+  offlineSeconds: number;
+  offlineCount: number;
+  availabilityPercent: number | null;
+  downtimeSeconds: number;
+  uptimeSeconds: number;
+}
+
+export interface DeviceMonitoringDto {
+  deviceId: string;
+  deviceName: string;
+  monitored: boolean;
+  connectivity: DeviceConnectivity;
+  stateChangedAtUtc: string;
+  lastSeenAtUtc: string;
+  lastCommunicationAtUtc: string | null;
+  lastHeartbeatAtUtc: string | null;
+  onlineSinceUtc: string | null;
+  currentUptimeSeconds: number | null;
+  offlineSinceUtc: string | null;
+  currentDowntimeSeconds: number | null;
+  agentStartedAtUtc: string | null;
+  systemBootedAtUtc: string | null;
+  systemUptimeSeconds: number | null;
+  network: SignalDto<NetworkStatus>;
+  operatingSystem: SignalDto<OsHealthStatus>;
+  today: AvailabilityTotalsDto;
+  last7Days: AvailabilityTotalsDto;
+  last30Days: AvailabilityTotalsDto;
+  openAlert: MonitoringAlertDto | null;
+  recentEvents: ConnectionEventDto[];
+  thresholds: MonitoringSettingsDto;
+}
+
+export type AvailabilityGrouping = "Device" | "Branch";
+
+export interface AvailabilityRowDto {
+  id: string;
+  name: string;
+  branchName: string | null;
+  operatingSystem: string | null;
+  totals: AvailabilityTotalsDto;
+}
+
+export interface AvailabilityReportDto {
+  from: string;
+  to: string;
+  generatedAtUtc: string;
+  groupBy: AvailabilityGrouping;
+  totals: AvailabilityTotalsDto;
+  rows: AvailabilityRowDto[];
+  days: { day: string; totals: AvailabilityTotalsDto }[];
+}
+
+export interface DeviceStatusChangeDto {
+  deviceId: string;
+  deviceName: string;
+  branchId: string | null;
+  from: DeviceConnectivity;
+  to: DeviceConnectivity;
+  changedAtUtc: string;
+  lastSeenAtUtc: string;
+}
+
+export interface MonitoringUpdateDto {
+  statusChanges: DeviceStatusChangeDto[];
+  events: ConnectionEventDto[];
+  alerts: MonitoringAlertDto[];
 }

@@ -3,6 +3,7 @@ import { serverApi } from "@/lib/api/server";
 import type { CurrentUserDto } from "@/lib/api/types";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { NotificationsProvider } from "@/components/providers/notifications-provider";
+import { RealtimeProvider } from "@/components/providers/realtime-provider";
 import { AppShell } from "@/components/shell/app-shell";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +24,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <SessionProvider session={session}>
       <NotificationsProvider>
-        <AppShell>{children}</AppShell>
+        <RealtimeProvider>
+          <AppShell>{children}</AppShell>
+        </RealtimeProvider>
       </NotificationsProvider>
     </SessionProvider>
   );

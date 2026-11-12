@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowUpCircle, CircleCheck, CircleSlash, Monitor, WifiOff } from "lucide-react";
+import { ArrowUpCircle, CircleCheck, CircleSlash, Monitor, WifiOff, TriangleAlert } from "lucide-react";
 import { api } from "@/lib/api/client";
 import type { DeviceConnectivity, DeviceGroupDto, DeviceStatsDto, DeviceStatus, DeviceSummaryDto, PagedResult } from "@/lib/api/types";
 import { connectivityTone, deviceLabel, formatRelative, healthTone } from "@/lib/devices";
@@ -26,15 +26,19 @@ export function DevicesView({
   stats,
   groups,
   initialGroupId = "",
+  initialConnectivity = "",
+  initialStatus = "",
 }: {
   initial: PagedResult<DeviceSummaryDto>;
   stats: DeviceStatsDto;
   groups: DeviceGroupDto[];
   initialGroupId?: string;
+  initialConnectivity?: DeviceConnectivity | "";
+  initialStatus?: DeviceStatus | "";
 }) {
   const { toast } = useToast();
   const [data, setData] = React.useState(initial);
-  const [filters, setFilters] = React.useState<Filters>({ search: "", connectivity: "", status: "", groupId: initialGroupId });
+  const [filters, setFilters] = React.useState<Filters>({ search: "", connectivity: initialConnectivity, status: initialStatus, groupId: initialGroupId });
   const [loading, setLoading] = React.useState(false);
 
   const reload = React.useCallback(
@@ -69,6 +73,7 @@ export function DevicesView({
   const tiles = [
     { label: "Enrolled", value: stats.active, icon: Monitor, onClick: () => update({ connectivity: "", status: "Active" }) },
     { label: "Online", value: stats.online, icon: CircleCheck, onClick: () => update({ connectivity: "Online", status: "" }) },
+    { label: "Warning", value: stats.warning, icon: TriangleAlert, onClick: () => update({ connectivity: "Warning", status: "" }) },
     { label: "Offline", value: stats.offline, icon: WifiOff, onClick: () => update({ connectivity: "Offline", status: "" }) },
     { label: "Agent update available", value: stats.updateAvailable, icon: ArrowUpCircle, onClick: undefined },
     { label: "Retired", value: stats.retired, icon: CircleSlash, onClick: () => update({ connectivity: "", status: "Retired" }) },
@@ -107,6 +112,7 @@ export function DevicesView({
         <Select aria-label="Connectivity" value={filters.connectivity} onChange={(e) => update({ connectivity: e.target.value as Filters["connectivity"] })} className="sm:w-44">
           <option value="">Any connectivity</option>
           <option value="Online">Online</option>
+          <option value="Warning">Warning</option>
           <option value="Offline">Offline</option>
         </Select>
         <Select aria-label="Status" value={filters.status} onChange={(e) => update({ status: e.target.value as Filters["status"] })} className="sm:w-32">

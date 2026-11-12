@@ -23,7 +23,8 @@ describe("device helpers", () => {
 
   it("maps statuses to badge tones", () => {
     expect(connectivityTone("Active", "Online")).toBe("success");
-    expect(connectivityTone("Active", "Offline")).toBe("warning");
+    expect(connectivityTone("Active", "Warning")).toBe("warning");
+    expect(connectivityTone("Active", "Offline")).toBe("danger");
     expect(connectivityTone("Retired", "Online")).toBe("neutral");
     expect(healthTone("Unhealthy")).toBe("danger");
     expect(healthTone(null)).toBe("neutral");
