@@ -37,6 +37,12 @@ docker compose up --build
 only starts once it succeeded. Register a workspace at http://localhost:3000/register,
 then open the confirmation e-mail in Mailpit before signing in.
 
+## Production (single VPS)
+
+`docker-compose.prod.yml` runs the whole platform on one server behind Caddy (automatic
+HTTPS); only ports 80/443 are exposed. Configuration template: `.env.production.example`;
+backups: `scripts/backup-db.sh`. Step-by-step guide: **`docs/DEPLOYMENT-VPS.md`**.
+
 ## Running without Docker
 
 Prerequisites: .NET 10 SDK, Node 22, PostgreSQL 16, Redis 7.

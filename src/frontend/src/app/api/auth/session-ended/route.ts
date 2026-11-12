@@ -20,9 +20,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (!rejected) return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (!rejected) return localRedirect("/dashboard");
 
-  const response = NextResponse.redirect(new URL("/login?reason=expired", request.url));
+  const response = localRedirect("/login?reason=expired");
   clearSessionCookies(response);
   return response;
+}
+
+/**
+ * Same-origin relative redirect. Behind a reverse proxy, request.url carries the
+ * container's bind address (e.g. http://0.0.0.0:3000), so absolute redirects
+ * built from it would send the browser to an unreachable host.
+ */
+function localRedirect(path: string) {
+  return new NextResponse(null, { status: 307, headers: { location: path, "cache-control": "no-store" } });
 }

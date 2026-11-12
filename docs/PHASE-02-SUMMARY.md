@@ -184,7 +184,7 @@ Run in this environment against PostgreSQL 16 and Redis 7 (two-role layout, RLS 
 | Frontend `tsc` / `eslint` / `vitest` | clean / clean / **38 / 38 passed** | CSRF verifier, cookie names/flags, permission helpers, sidebar filtering, open-redirect guard |
 | `next build` | succeeds | 24 routes |
 | Browser end-to-end (Playwright, built app + API) | **21 / 21 checks passed** | see below |
-| `docker compose config` | valid with `.env.example` | images not rebuilt: no Docker daemon in this session |
+| Production stack (`docker-compose.prod.yml`) | built and run; 21 / 21 browser checks over HTTPS | images built from the committed Dockerfiles; see `docs/DEPLOYMENT-VPS.md` |
 
 Integration coverage by area:
 
@@ -233,20 +233,21 @@ audit log shows the trail; after sign-out the old access token is rejected by th
 Defects found and fixed during verification: EF Core issued UPDATE instead of INSERT for children added to a
 tracked parent (ids are now declared application-generated); `Retry-After` was missing on sliding-window
 rejections; 403 bodies did not name the missing permission; a revoked-but-unexpired session caused a redirect loop
-between `/login` and `/dashboard` (fixed with the server-verified `/api/auth/session-ended`).
+between `/login` and `/dashboard` (fixed with the server-verified `/api/auth/session-ended`); behind a reverse
+proxy that route redirected to the container's bind address `0.0.0.0:3000` (now a relative redirect).
 
 ## Known limitations / next steps
 
-* **Rate limits are per API instance** (in-memory). With several API replicas, use a distributed limiter (Redis) or
-  enforce limits at the gateway; account lockout is already database-backed and global.
-* **Client address**: per-IP limits rely on `X-Forwarded-For`. Next.js only fills it when absent, so the web
-  container must sit behind a reverse proxy that overwrites the header; otherwise a client can choose its own
-  address for rate limiting (lockout still applies per account).
+* **Rate limits are per API instance** (in-memory). This is fine for the single-VPS deployment (one API
+  container); scaling out to several API replicas would need a shared limiter (Redis) or limits at the gateway.
+  Account lockout is database-backed and global either way.
+* **Client address**: per-IP limits rely on `X-Forwarded-For`. In the VPS deployment Caddy overwrites it with
+  the real address (tested with spoofed headers); exposing the web container without such a proxy would let a
+  client choose its own address for rate limiting.
 * **Platform administration** (operator console, tenant suspension endpoint, platform-level audit view, unlocking
   accounts by support) is not part of this phase; platform-level audit rows are queryable in the database only.
 * **WebAuthn / passkeys and SMS** are not implemented; TOTP + recovery codes only. "Remember this device" is not offered.
 * **Breached-password check** uses a built-in list of very common passwords, not a k-anonymity lookup (e.g. HIBP).
 * **No SSO** (OIDC/SAML) or SCIM provisioning yet.
 * **Audit retention/export** – the trail is append-only with no retention job or export endpoint.
-* **Docker images were not rebuilt** in this session (no daemon); compose configuration was validated.
 * Frontend has no Playwright suite in the repository yet; the browser checks above were run from a script outside it.

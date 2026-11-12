@@ -1,0 +1,31 @@
+# Public entry point. Caddy obtains and renews the TLS certificate automatically
+# (Let's Encrypt) for SOLVIX_DOMAIN, redirects HTTP to HTTPS and forwards to the
+# web container. The API is NOT routed here: browsers only ever talk to the web
+# app, which calls the API over the private network.
+{
+	email {$SOLVIX_ACME_EMAIL}
+}
+
+{$SOLVIX_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+		-X-Powered-By
+	}
+
+	# Caddy is the first hop. It ignores any X-Forwarded-For a client sends and
+	# sets it to the real client address, which the web app and the API rely on
+	# for per-client rate limiting and the audit log.
+	reverse_proxy web:3000 {
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
