@@ -11,6 +11,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
     <PackageReference Include="AspNetCore.HealthChecks.Redis" />
+    <PackageReference Include="MailKit" />
     <PackageReference Include="Serilog.AspNetCore" />
   </ItemGroup>
   <ItemGroup>
@@ -18,6 +19,10 @@
     <ProjectReference Include="..\Modules\Solvix.Modules.Tenancy\Solvix.Modules.Tenancy.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Identity\Solvix.Modules.Identity.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Organization\Solvix.Modules.Organization.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Devices\Solvix.Modules.Devices.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Assets\Solvix.Modules.Assets.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.RemoteManagement\Solvix.Modules.RemoteManagement.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Software\Solvix.Modules.Software.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Solvix.UnitTests" />

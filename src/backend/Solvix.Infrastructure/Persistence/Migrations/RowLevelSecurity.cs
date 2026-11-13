@@ -10,6 +10,22 @@ public static class RowLevelSecurity
 {
     public const string PolicyName = "tenant_isolation";
 
+    /// <summary>
+    /// Every tenant-owned table that must carry the tenant isolation policy, across all
+    /// migrations. A new tenant-owned table belongs in the list of the migration that
+    /// protects it; <c>MigrationTests</c> compares this with the EF model and fails on a gap.
+    /// </summary>
+    public static IReadOnlyList<string> AllTenantTables { get; } =
+    [
+        .. RowLevelSecurityMigration.TenantTables,
+        .. IdentityAccessRowLevelSecurityMigration.TenantTables,
+        .. DeviceManagementSecurityMigration.TenantTables,
+        .. RealTimeMonitoringSecurityMigration.TenantTables,
+        .. AssetManagementSecurityMigration.TenantTables,
+        .. RemoteManagementSecurityMigration.TenantTables,
+        .. SoftwareManagementSecurityMigration.TenantTables,
+    ];
+
     public static void CreateHelperFunctions(MigrationBuilder migrationBuilder)
     {
         ArgumentNullException.ThrowIfNull(migrationBuilder);

@@ -5,9 +5,18 @@
 export const serverConfig = {
   apiBaseUrl: (process.env.SOLVIX_API_INTERNAL_URL ?? "http://localhost:8080").replace(/\/+$/, ""),
   apiVersion: "v1",
-  // An explicit SOLVIX_COOKIE_SECURE always wins (needed for plain-HTTP testing);
-  // otherwise Secure is on in production builds.
+  /** Public HTTPS URL agents use (mutual TLS endpoint); shown in install instructions. */
+  agentServerUrl: process.env.SOLVIX_AGENT_SERVER_URL ?? "https://localhost:8443/",
+  /** Optional SHA-256 pin of a private agent TLS certificate, shown in install instructions. */
+  agentServerCertificateSha256: process.env.SOLVIX_AGENT_SERVER_CERT_SHA256 || null,
+  /**
+   * Secure (and `__Host-` prefixed) session cookies. An explicit SOLVIX_COOKIE_SECURE
+   * always wins, so plain-HTTP test deployments can turn it off; otherwise it is on in
+   * production builds.
+   */
   cookieSecure: process.env.SOLVIX_COOKIE_SECURE
     ? process.env.SOLVIX_COOKIE_SECURE === "true"
     : process.env.NODE_ENV === "production",
+  /** Public origin of this site (e.g. https://app.example.com). Used to verify the Origin of state-changing requests. */
+  webOrigin: (process.env.SOLVIX_WEB_ORIGIN ?? "").replace(/\/+$/, "") || null,
 } as const;

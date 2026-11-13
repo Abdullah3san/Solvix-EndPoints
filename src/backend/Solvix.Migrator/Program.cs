@@ -39,6 +39,9 @@ try
         ["ConnectionStrings:Postgres"] = migratorConnection,
         ["ConnectionStrings:Redis"] = builder.Configuration.GetConnectionString(InfrastructureServiceCollectionExtensions.RedisConnectionName) ?? "localhost:6379",
         ["Solvix:Jwt:SigningKey"] = builder.Configuration["Solvix:Jwt:SigningKey"] ?? new string('x', 32),
+
+        // The migrator never issues tokens or touches secrets; these only satisfy option validation.
+        ["Solvix:Identity:DataProtectionKey"] = builder.Configuration["Solvix:Identity:DataProtectionKey"] ?? new string('x', 32),
     });
     builder.Services.AddSolvixInfrastructure(builder.Configuration);
 

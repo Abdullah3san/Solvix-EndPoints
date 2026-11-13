@@ -1,127 +1,226 @@
-# Production stack for a single VPS. Only Caddy (80/443) is published to the host;
-# PostgreSQL, Redis and the API are reachable only on the internal compose network.
+# Production stack for a single VPS.
 #
-#   cp .env.production.example .env.production   # then fill in every CHANGE_ME value
-#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#   cp .env.production.example .env.production   # fill in every value
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 #
-# See docs/DEPLOY-VPS.md for the full runbook.
-name: solvix-prod
+# Published ports: Caddy (80/443) and the API's agent endpoint (8443, mutual TLS,
+# terminated by Kestrel itself). PostgreSQL, Redis and the API's plain-HTTP port
+# 8080 have NO published ports: Docker-published ports bypass host firewalls such
+# as UFW, so anything published is reachable from the internet regardless of
+# firewall rules. Port 8080 is reachable only from the web container.
+#
+# Before the first start, create the agent PKI and TLS files in ./secrets:
+#   ./scripts/init-agent-pki.sh        # device CA + command signing key (once)
+#   ./scripts/sync-agent-tls.sh        # agent TLS certificate (Caddy's certificate; cron)
+# See docs/DEPLOYMENT-VPS.md, "Windows agents".
+name: solvix
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
 
 services:
+  caddy:
+    image: caddy:2.10-alpine
+    environment:
+      SOLVIX_DOMAIN: ${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN}
+      SOLVIX_ACME_EMAIL: ${SOLVIX_ACME_EMAIL:?set SOLVIX_ACME_EMAIL}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    networks: [edge]
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    logging: *logging
+
   postgres:
     image: postgres:16-alpine
-    restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env.production}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
-      POSTGRES_DB: ${POSTGRES_DB:-solvix}
-      SOLVIX_DB_MIGRATOR_USER: ${SOLVIX_DB_MIGRATOR_USER:?set in .env.production}
-      SOLVIX_DB_MIGRATOR_PASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:?set in .env.production}
-      SOLVIX_DB_APP_USER: ${SOLVIX_DB_APP_USER:?set in .env.production}
-      SOLVIX_DB_APP_PASSWORD: ${SOLVIX_DB_APP_PASSWORD:?set in .env.production}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: solvix
+      SOLVIX_DB_MIGRATOR_USER: solvix_migrator
+      SOLVIX_DB_MIGRATOR_PASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:?set SOLVIX_DB_MIGRATOR_PASSWORD}
+      SOLVIX_DB_APP_USER: solvix_app
+      SOLVIX_DB_APP_PASSWORD: ${SOLVIX_DB_APP_PASSWORD:?set SOLVIX_DB_APP_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    networks: [backend]
+    shm_size: 256mb
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d solvix"]
+      interval: 10s
       timeout: 5s
       retries: 12
-    networks: [internal]
+    restart: unless-stopped
+    logging: *logging
 
   redis:
     image: redis:7-alpine
-    restart: unless-stopped
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env.production}", "--appendonly", "yes"]
+    command: ["sh", "-c", "exec redis-server --requirepass \"$$REDIS_PASSWORD\" --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru"]
     environment:
-      REDISCLI_AUTH: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
     volumes:
       - redis-data:/data
+    networks: [backend]
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
-      interval: 5s
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"]
+      interval: 10s
       timeout: 5s
       retries: 12
-    networks: [internal]
+    restart: unless-stopped
+    logging: *logging
 
   migrator:
     build:
       context: .
       dockerfile: src/backend/Dockerfile
       target: migrator
-    image: solvix-migrator:latest
     environment:
-      ConnectionStrings__PostgresMigrator: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_MIGRATOR_USER};Password=${SOLVIX_DB_MIGRATOR_PASSWORD}"
+      DOTNET_ENVIRONMENT: Production
+      ConnectionStrings__PostgresMigrator: "Host=postgres;Port=5432;Database=solvix;Username=solvix_migrator;Password=${SOLVIX_DB_MIGRATOR_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+    networks: [backend]
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
-    networks: [internal]
+    logging: *logging
 
   api:
     build:
       context: .
       dockerfile: src/backend/Dockerfile
       target: api
-    image: solvix-api:latest
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_APP_USER};Password=${SOLVIX_DB_APP_PASSWORD}"
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=solvix;Username=solvix_app;Password=${SOLVIX_DB_APP_PASSWORD}"
       ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
       Solvix__Database__MigrateOnStartup: "false"
-      Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY in .env.production}
-      Solvix__Jwt__Issuer: ${SOLVIX_JWT_ISSUER:-solvix-endpoints}
-      Solvix__Jwt__Audience: ${SOLVIX_JWT_AUDIENCE:-solvix-endpoints-web}
-      Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-60}
-      Solvix__Cors__AllowedOrigins__0: ${SOLVIX_PUBLIC_ORIGIN:?set SOLVIX_PUBLIC_ORIGIN in .env.production}
+      Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY}
+      Solvix__Jwt__AccessTokenMinutes: "15"
+      Solvix__Identity__DataProtectionKey: ${SOLVIX_IDENTITY_DATA_PROTECTION_KEY:?set SOLVIX_IDENTITY_DATA_PROTECTION_KEY}
+      Solvix__Identity__WebBaseUrl: https://${SOLVIX_DOMAIN}
+      Solvix__Identity__MfaIssuer: ${SOLVIX_MFA_ISSUER:-Solvix}
+      Solvix__Identity__RequireEmailVerification: "true"
+      Solvix__Email__FromAddress: ${SOLVIX_EMAIL_FROM:?set SOLVIX_EMAIL_FROM}
+      Solvix__Email__FromName: ${SOLVIX_EMAIL_FROM_NAME:-Solvix}
+      Solvix__Email__Smtp__Host: ${SOLVIX_SMTP_HOST:?set SOLVIX_SMTP_HOST}
+      Solvix__Email__Smtp__Port: ${SOLVIX_SMTP_PORT:-587}
+      Solvix__Email__Smtp__Security: ${SOLVIX_SMTP_SECURITY:-StartTls}
+      Solvix__Email__Smtp__Username: ${SOLVIX_SMTP_USERNAME:-}
+      Solvix__Email__Smtp__Password: ${SOLVIX_SMTP_PASSWORD:-}
+      # Only the web container (fixed address on the backend network) may state the client address.
+      # Agents connect directly (port 8443), so their address is the TCP peer, never a header.
+      Solvix__Network__TrustedProxies__0: 172.30.10.10
+      Solvix__Cors__AllowedOrigins__0: https://${SOLVIX_DOMAIN}
       Solvix__Logging__Format: json
+
+      # --- Agents (Phase 03): Kestrel terminates mutual TLS itself --------------------
+      # The device certificate is checked in the TLS handshake (proof of possession) and
+      # then by the DeviceCertificate handler (device CA chain, EKU, validity, revocation
+      # in the database). No proxy sits in between, so no client-certificate header is
+      # trusted: the forwarding header is set to empty to keep header mode off even if a
+      # configuration file were to enable it.
+      Kestrel__Endpoints__Http__Url: http://+:8080
+      Kestrel__Endpoints__Agents__Url: https://+:8443
+      # Publicly trusted certificate for SOLVIX_DOMAIN (PEM chain + key), copied from
+      # Caddy by scripts/sync-agent-tls.sh. Windows trusts it, so agents need no pin.
+      Kestrel__Endpoints__Agents__Certificate__Path: /run/secrets/agent_tls_cert
+      Kestrel__Endpoints__Agents__Certificate__KeyPath: /run/secrets/agent_tls_key
+      Solvix__Devices__GenerateDevelopmentTlsCertificate: "false"
+      Solvix__Devices__ForwardedClientCertificateHeader: ""
+      # Device CA (ECDSA P-384 PKCS#12) created once by scripts/init-agent-pki.sh. Never
+      # auto-generated in production: losing it forces every device to re-enroll.
+      Solvix__Devices__CertificateAuthority__AutoGenerate: "false"
+      Solvix__Devices__CertificateAuthority__PfxPath: /run/secrets/device_ca_pfx
+      Solvix__Devices__CertificateAuthority__PfxPassword: ${SOLVIX_DEVICE_CA_PASSWORD:?set SOLVIX_DEVICE_CA_PASSWORD}
+
+      # --- Remote management (Phase 06): command signing key ----------------------------
+      # ECDSA P-256 private key (PEM) that signs every command sent to devices. Agents pin
+      # the published key set at first contact and never accept a new key afterwards, so
+      # the public key of an offline standby key is published from day one: it is what
+      # makes a later rotation possible without re-enrolling (docs/DEPLOYMENT-VPS.md).
+      Solvix__RemoteManagement__CommandSigning__AutoGenerate: "false"
+      Solvix__RemoteManagement__CommandSigning__KeyPath: /run/secrets/command_signing_key
+      Solvix__RemoteManagement__CommandSigning__AdditionalPublicKeys__0: ${SOLVIX_COMMAND_STANDBY_PUBLIC_KEY:-}
+
+      # --- Software management (Phase 07) -----------------------------------------------
+      # Uploaded installer packages: a dedicated volume, never served by the web server,
+      # only readable by the API. Back it up together with the database.
+      Solvix__Software__Storage__RootPath: /var/lib/solvix-packages
+      Solvix__Software__MaxPackageBytes: ${SOLVIX_MAX_PACKAGE_BYTES:-2147483648}
+    volumes:
+      - solvix-packages:/var/lib/solvix-packages
+    secrets:
+      - agent_tls_cert
+      - agent_tls_key
+      - device_ca_pfx
+      - command_signing_key
+    ports:
+      # Agent endpoint only (mutual TLS). The HTTP port 8080 is NOT published.
+      - "${SOLVIX_AGENT_PORT:-8443}:8443"
+    networks: [backend]
     depends_on:
       migrator:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
     restart: unless-stopped
-    networks: [internal]
+    logging: *logging
 
   web:
     build:
       context: ./src/frontend
       dockerfile: Dockerfile
-    image: solvix-web:latest
     environment:
       SOLVIX_API_INTERNAL_URL: http://api:8080
-      # Session cookie must be Secure over HTTPS. Set SOLVIX_COOKIE_SECURE=false only for
-      # plain-HTTP testing on an IP address (browsers reject Secure cookies over HTTP).
-      SOLVIX_COOKIE_SECURE: ${SOLVIX_COOKIE_SECURE:-true}
+      SOLVIX_WEB_ORIGIN: https://${SOLVIX_DOMAIN}
+      SOLVIX_COOKIE_SECURE: "true"
+      # Shown in the device enrollment install command (agents use the mutual-TLS endpoint).
+      SOLVIX_AGENT_SERVER_URL: https://${SOLVIX_DOMAIN}:${SOLVIX_AGENT_PORT:-8443}/
+    networks:
+      edge: {}
+      backend:
+        ipv4_address: 172.30.10.10
     depends_on:
       api:
         condition: service_healthy
     restart: unless-stopped
-    networks: [internal]
-
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    depends_on:
-      - web
-    environment:
-      SOLVIX_DOMAIN: ${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN in .env.production (use :80 for IP-only testing)}
-    ports:
-      # Defaults to 80/443. Set SOLVIX_HTTP_PORT / SOLVIX_HTTPS_PORT when the host ports are taken.
-      - "${SOLVIX_HTTP_PORT:-80}:80"
-      - "${SOLVIX_HTTPS_PORT:-443}:443"
-      - "${SOLVIX_HTTPS_PORT:-443}:443/udp"
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy-data:/data
-      - caddy-config:/config
-    networks: [internal]
+    logging: *logging
 
 networks:
-  internal:
+  edge: {}
+  backend:
+    ipam:
+      config:
+        - subnet: 172.30.10.0/24
+
+# File secrets, mounted read-only at /run/secrets/<name> in the api container. The
+# scripts create them owned by the container's "app" user (uid 1654), mode 0600.
+secrets:
+  agent_tls_cert:
+    file: ${SOLVIX_SECRETS_DIR:-./secrets}/agent-tls.crt
+  agent_tls_key:
+    file: ${SOLVIX_SECRETS_DIR:-./secrets}/agent-tls.key
+  device_ca_pfx:
+    file: ${SOLVIX_SECRETS_DIR:-./secrets}/device-ca.pfx
+  command_signing_key:
+    file: ${SOLVIX_SECRETS_DIR:-./secrets}/command-signing.pem
 
 volumes:
+  solvix-packages:
   postgres-data:
   redis-data:
   caddy-data:

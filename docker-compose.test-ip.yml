@@ -1,0 +1,42 @@
+# TEST MODE: run the production stack on a bare server IP before a domain and an
+# SMTP server exist. Layered on top of docker-compose.prod.yml:
+#
+#   scripts/setup-test-ip.sh <server-ip>      # once: secrets, agent PKI, .env.production
+#   docker compose -f docker-compose.prod.yml -f docker-compose.test-ip.yml \
+#     --env-file .env.production up -d --build
+#
+# What changes compared with production:
+#   * Caddy serves plain HTTP on SOLVIX_HTTP_PORT (default 8080) instead of 80/443,
+#     so it can share a server whose 80/443 belong to another project. No TLS.
+#   * Session cookies are not Secure (browsers drop Secure cookies over HTTP).
+#   * E-mail is not sent (it is only logged) and e-mail verification is off, so
+#     accounts can sign in right after registering. Password reset and invitations
+#     by e-mail do not work in this mode.
+#   * The agent endpoint uses a self-signed certificate for the IP; agents must be
+#     installed with -ServerCertificateSha256 (shown on the enrollment page).
+#
+# Traffic is unencrypted: use test data only. Switch to the normal production
+# command (without this file) once the domain and SMTP are configured.
+#
+# Requires Docker Compose 2.24.4+ (for !override).
+services:
+  caddy:
+    environment:
+      SOLVIX_DOMAIN: ":80"
+    ports: !override
+      - "${SOLVIX_HTTP_PORT:-8080}:80"
+
+  api:
+    environment:
+      Solvix__Identity__WebBaseUrl: http://${SOLVIX_PUBLIC_HOST:?set SOLVIX_PUBLIC_HOST}:${SOLVIX_HTTP_PORT:-8080}
+      Solvix__Identity__RequireEmailVerification: "false"
+      Solvix__Cors__AllowedOrigins__0: http://${SOLVIX_PUBLIC_HOST}:${SOLVIX_HTTP_PORT:-8080}
+      # Empty host = messages are logged instead of sent.
+      Solvix__Email__Smtp__Host: ""
+
+  web:
+    environment:
+      SOLVIX_WEB_ORIGIN: http://${SOLVIX_PUBLIC_HOST}:${SOLVIX_HTTP_PORT:-8080}
+      SOLVIX_COOKIE_SECURE: "false"
+      SOLVIX_AGENT_SERVER_URL: https://${SOLVIX_PUBLIC_HOST}:${SOLVIX_AGENT_PORT:-8443}/
+      SOLVIX_AGENT_SERVER_CERT_SHA256: ${SOLVIX_AGENT_SERVER_CERT_SHA256:-}

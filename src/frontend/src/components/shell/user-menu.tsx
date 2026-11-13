@@ -2,27 +2,59 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, LogOut, Settings2, UserRound } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, KeyRound, LogOut, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { Menu, MenuItem, MenuLabel, MenuPanel, MenuSeparator, MenuTrigger } from "@/components/ui/menu";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/components/providers/session-provider";
+import { useToast } from "@/components/providers/toast-provider";
+import { api, authPost } from "@/lib/api/client";
+import type { AuthTenantDto } from "@/lib/api/types";
+import { messageFrom } from "@/lib/forms";
 import { initials } from "@/lib/utils";
 
 export function UserMenu() {
-  const { user, tenant } = useSession();
+  const { user, tenant, roles } = useSession();
   const router = useRouter();
+  const { toast } = useToast();
   const [signingOut, setSigningOut] = React.useState(false);
+  const [workspaces, setWorkspaces] = React.useState<AuthTenantDto[] | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    api
+      .get<AuthTenantDto[]>("auth/workspaces")
+      .then((list) => !cancelled && setWorkspaces(list))
+      .catch(() => !cancelled && setWorkspaces([]));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function signOut() {
     setSigningOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      // Ends the session on the server, not just in this browser.
+      await authPost("/api/auth/logout");
+    } catch {
+      // The cookies are cleared either way.
     } finally {
       router.replace("/login");
       router.refresh();
     }
   }
+
+  async function switchTo(slug: string) {
+    try {
+      await authPost("/api/auth/switch-tenant", { tenantSlug: slug });
+      router.replace("/dashboard");
+      router.refresh();
+    } catch (e) {
+      toast({ tone: "error", title: "Could not switch workspace", description: messageFrom(e) });
+    }
+  }
+
+  const others = (workspaces ?? []).filter((w) => w.id !== tenant.id);
 
   return (
     <Menu>
@@ -33,25 +65,41 @@ export function UserMenu() {
         <span className="hidden max-w-32 truncate text-sm font-medium md:inline">{user.displayName}</span>
         <ChevronDown className="hidden h-4 w-4 text-muted-foreground md:inline" />
       </MenuTrigger>
-      <MenuPanel label="Account" className="w-64">
+      <MenuPanel label="Account" className="w-72">
         <div className="px-2.5 py-2">
           <p className="truncate text-sm font-medium">{user.displayName}</p>
           <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="truncate">{tenant.name}</span>
-            <Badge tone="brand">{tenant.role}</Badge>
+          <p className="mt-2 truncate text-xs text-muted-foreground">{tenant.name}</p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {roles.map((role) => (
+              <Badge key={role} tone="brand">
+                {role}
+              </Badge>
+            ))}
           </div>
         </div>
         <MenuSeparator />
-        <MenuLabel>Workspace</MenuLabel>
+        <Link href="/account/security" className="block">
+          <MenuItem>
+            <KeyRound className="h-4 w-4" /> Password, MFA &amp; sessions
+          </MenuItem>
+        </Link>
         <Link href="/settings/workspace" className="block">
           <MenuItem>
             <Settings2 className="h-4 w-4" /> Workspace settings
           </MenuItem>
         </Link>
-        <MenuItem disabled>
-          <UserRound className="h-4 w-4" /> Profile (coming soon)
-        </MenuItem>
+        {others.length > 0 ? (
+          <>
+            <MenuSeparator />
+            <MenuLabel>Switch workspace</MenuLabel>
+            {others.map((w) => (
+              <MenuItem key={w.id} onSelect={() => switchTo(w.slug)}>
+                <ArrowLeftRight className="h-4 w-4" /> <span className="truncate">{w.name}</span>
+              </MenuItem>
+            ))}
+          </>
+        ) : null}
         <MenuSeparator />
         <MenuItem tone="danger" onSelect={signOut} disabled={signingOut}>
           <LogOut className="h-4 w-4" /> Sign out

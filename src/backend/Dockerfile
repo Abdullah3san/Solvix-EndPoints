@@ -14,9 +14,14 @@ COPY src/backend/Solvix.Migrator/Solvix.Migrator.csproj src/backend/Solvix.Migra
 COPY src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj src/backend/Modules/Solvix.Modules.Tenancy/
 COPY src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj src/backend/Modules/Solvix.Modules.Identity/
 COPY src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj src/backend/Modules/Solvix.Modules.Organization/
+COPY src/backend/Modules/Solvix.Modules.Devices/Solvix.Modules.Devices.csproj src/backend/Modules/Solvix.Modules.Devices/
+COPY src/backend/Modules/Solvix.Modules.Assets/Solvix.Modules.Assets.csproj src/backend/Modules/Solvix.Modules.Assets/
+COPY src/backend/Modules/Solvix.Modules.RemoteManagement/Solvix.Modules.RemoteManagement.csproj src/backend/Modules/Solvix.Modules.RemoteManagement/
+COPY src/shared/Solvix.Agent.Contracts/Solvix.Agent.Contracts.csproj src/shared/Solvix.Agent.Contracts/
 RUN dotnet restore src/backend/Solvix.Api/Solvix.Api.csproj && dotnet restore src/backend/Solvix.Migrator/Solvix.Migrator.csproj
 
 COPY src/backend/ src/backend/
+COPY src/shared/ src/shared/
 RUN dotnet publish src/backend/Solvix.Api/Solvix.Api.csproj -c Release --no-restore -o /out/api \
  && dotnet publish src/backend/Solvix.Migrator/Solvix.Migrator.csproj -c Release --no-restore -o /out/migrator
 
@@ -33,8 +38,10 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 # GSSAPI/Kerberos authentication to PostgreSQL is ever required.
 COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=build /out/api .
+# PKI volume (device CA, development agent TLS certificate) writable by the app user only.
+RUN mkdir -p /var/lib/solvix /var/lib/solvix-packages && chown app /var/lib/solvix /var/lib/solvix-packages && chmod 700 /var/lib/solvix /var/lib/solvix-packages
 USER app
-EXPOSE 8080
+EXPOSE 8080 8443
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD wget -qO- http://localhost:8080/health/live >/dev/null || exit 1
 ENTRYPOINT ["dotnet", "Solvix.Api.dll"]

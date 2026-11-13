@@ -30,7 +30,7 @@ export function DepartmentsView({ branches, initialBranchId, initialDepartments,
   const router = useRouter();
   const { toast } = useToast();
   const { notify } = useNotifications();
-  const { isAdmin } = useCan();
+  const canManage = useCan("organization.manage");
   const [branchId, setBranchId] = React.useState(initialBranchId);
   const [departments, setDepartments] = React.useState(initialDepartments);
   const [tree, setTree] = React.useState(initialTree);
@@ -109,7 +109,7 @@ export function DepartmentsView({ branches, initialBranchId, initialDepartments,
             ))}
           </Select>
         </div>
-        {isAdmin && branchId ? (
+        {canManage && branchId ? (
           <Button onClick={() => setEditing("new")}>
             <Plus className="h-4 w-4" /> New department
           </Button>
@@ -141,7 +141,7 @@ export function DepartmentsView({ branches, initialBranchId, initialDepartments,
                 <TH>Code</TH>
                 <TH>Parent</TH>
                 <TH>Status</TH>
-                {isAdmin ? <TH className="text-right">Actions</TH> : null}
+                {canManage ? <TH className="text-right">Actions</TH> : null}
               </TR>
             </THead>
             <TBody>
@@ -156,7 +156,7 @@ export function DepartmentsView({ branches, initialBranchId, initialDepartments,
                     <TD>
                       <Badge tone={d.isActive ? "success" : "neutral"}>{d.isActive ? "Active" : "Inactive"}</Badge>
                     </TD>
-                    {isAdmin ? (
+                    {canManage ? (
                       <TD>
                         <div className="flex justify-end gap-1">
                           <Button variant="ghost" size="icon" onClick={() => setEditing(d)} aria-label={`Edit ${d.name}`}>

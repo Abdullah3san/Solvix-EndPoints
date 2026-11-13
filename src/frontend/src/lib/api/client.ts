@@ -1,11 +1,13 @@
 "use client";
 
+import { CSRF_HEADER, readCsrfCookie } from "@/lib/auth/csrf";
 import { ApiError, problemFromResponse } from "./errors";
 
 /**
  * Browser API client. All calls go through the Next.js BFF at /api/proxy,
  * which attaches the httpOnly session cookie as a bearer token, so the access
- * token is never exposed to client-side JavaScript.
+ * token is never exposed to client-side JavaScript. State-changing calls echo
+ * the CSRF cookie in a header.
  */
 export const PROXY_PREFIX = "/api/proxy/v1";
 
@@ -27,6 +29,25 @@ function buildUrl(path: string, query?: ClientOptions["query"]): string {
   return qs ? `${url}?${qs}` : url;
 }
 
+export function csrfHeader(method: string | undefined): Record<string, string> {
+  if (!method || method.toUpperCase() === "GET" || typeof document === "undefined") return {};
+  const token = readCsrfCookie(document.cookie);
+  return token ? { [CSRF_HEADER]: token } : {};
+}
+
+/** POST to one of this site's own /api/auth routes. */
+export async function authPost<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json", Accept: "application/json", ...csrfHeader("POST") },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!response.ok) throw new ApiError(response.status, await problemFromResponse(response));
+  if (response.status === 204 || response.status === 202) return undefined as T;
+  return (await response.json()) as T;
+}
+
 export async function apiFetch<T>(path: string, options: ClientOptions = {}): Promise<T> {
   const { body, query, headers, ...init } = options;
   const response = await fetch(buildUrl(path, query), {
@@ -35,6 +56,7 @@ export async function apiFetch<T>(path: string, options: ClientOptions = {}): Pr
     headers: {
       Accept: "application/json",
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...csrfHeader(init.method),
       ...(headers as Record<string, string> | undefined),
     },
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -52,7 +74,7 @@ export async function apiFetch<T>(path: string, options: ClientOptions = {}): Pr
     throw new ApiError(response.status, await problemFromResponse(response));
   }
 
-  if (response.status === 204) {
+  if (response.status === 204 || response.status === 202) {
     return undefined as T;
   }
 

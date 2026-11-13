@@ -18,6 +18,8 @@
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Tenancy\Solvix.Modules.Tenancy.csproj" />
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Identity\Solvix.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Organization\Solvix.Modules.Organization.csproj" />
+    <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Assets\Solvix.Modules.Assets.csproj" />
+    <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Software\Solvix.Modules.Software.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />
