@@ -125,6 +125,705 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.DeviceCommand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at_utc");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset?>("DispatchedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dispatched_at_utc");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("ParametersJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("parameters_json");
+
+                    b.Property<string>("ProviderReference")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("provider_reference");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("state");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_device_commands");
+
+                    b.HasIndex("TenantId", "State")
+                        .HasDatabaseName("ix_mobile_device_commands_tenant_id_state");
+
+                    b.HasIndex("TenantId", "DeviceId", "State")
+                        .HasDatabaseName("ix_mobile_device_commands_tenant_id_device_id_state");
+
+                    b.ToTable("mobile_device_commands", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.DeviceEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<Guid?>("CommandId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("command_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_device_events");
+
+                    b.HasIndex("TenantId", "DeviceId", "CreatedAtUtc")
+                        .HasDatabaseName("ix_mobile_device_events_tenant_id_device_id_created_at_utc");
+
+                    b.ToTable("mobile_device_events", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.EnrollmentToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<int>("MaxUses")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_uses");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("method");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Ownership")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("ownership");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("platform");
+
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("policy_id");
+
+                    b.Property<string>("ProviderReference")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("provider_reference");
+
+                    b.Property<DateTimeOffset?>("RevokedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at_utc");
+
+                    b.Property<string>("SecretHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("secret_hash");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<int>("UseCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("use_count");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_enrollment_tokens");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_mobile_enrollment_tokens_tenant_id_id");
+
+                    b.HasIndex("ProviderReference")
+                        .HasDatabaseName("ix_mobile_enrollment_tokens_provider_reference")
+                        .HasFilter("provider_reference IS NOT NULL");
+
+                    b.HasIndex("SecretHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mobile_enrollment_tokens_secret_hash")
+                        .HasFilter("secret_hash IS NOT NULL");
+
+                    b.HasIndex("TenantId", "PolicyId")
+                        .HasDatabaseName("ix_mobile_enrollment_tokens_tenant_id_policy_id");
+
+                    b.ToTable("mobile_enrollment_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobileApp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Identifier")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("identifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("platform");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("source");
+
+                    b.Property<long?>("StoreId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("store_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_apps");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_mobile_apps_tenant_id_id");
+
+                    b.HasIndex("TenantId", "Platform", "Identifier")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mobile_apps_tenant_id_platform_identifier");
+
+                    b.ToTable("mobile_apps", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobileDevice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AppInventoryAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("app_inventory_at_utc");
+
+                    b.Property<int?>("AppliedPolicyVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("applied_policy_version");
+
+                    b.Property<string>("Compliance")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("compliance");
+
+                    b.Property<DateTimeOffset?>("ComplianceEvaluatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("compliance_evaluated_at_utc");
+
+                    b.Property<string>("ComplianceViolationsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("compliance_violations_json");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<DateTimeOffset?>("EnrolledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("enrolled_at_utc");
+
+                    b.Property<Guid?>("EnrollmentTokenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("enrollment_token_id");
+
+                    b.Property<bool?>("HasPasscode")
+                        .HasColumnType("boolean")
+                        .HasColumnName("has_passcode");
+
+                    b.Property<string>("IdentityThumbprint")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("identity_thumbprint");
+
+                    b.Property<string>("InstalledAppsJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("installed_apps_json");
+
+                    b.Property<string>("Integrity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("integrity");
+
+                    b.Property<bool?>("IsEncrypted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_encrypted");
+
+                    b.Property<bool?>("IsSupervised")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_supervised");
+
+                    b.Property<DateTimeOffset?>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<string>("ManagementIdentifier")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("management_identifier");
+
+                    b.Property<string>("Manufacturer")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("manufacturer");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("OsVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("os_version");
+
+                    b.Property<string>("Ownership")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("ownership");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("platform");
+
+                    b.Property<Guid?>("PolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("policy_id");
+
+                    b.Property<string>("ProtectedUnlockToken")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)")
+                        .HasColumnName("protected_unlock_token");
+
+                    b.Property<string>("ProviderDeviceId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("provider_device_id");
+
+                    b.Property<string>("PushMagic")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("push_magic");
+
+                    b.Property<string>("PushToken")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("push_token");
+
+                    b.Property<string>("PushTopic")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("push_topic");
+
+                    b.Property<DateTimeOffset?>("RetiredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("retired_at_utc");
+
+                    b.Property<string>("SecurityPatchLevel")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("security_patch_level");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("state");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_devices");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_mobile_devices_tenant_id_id");
+
+                    b.HasIndex("Platform", "ProviderDeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mobile_devices_platform_provider_device_id");
+
+                    b.HasIndex("TenantId", "Compliance")
+                        .HasDatabaseName("ix_mobile_devices_tenant_id_compliance");
+
+                    b.HasIndex("TenantId", "PolicyId")
+                        .HasDatabaseName("ix_mobile_devices_tenant_id_policy_id");
+
+                    b.HasIndex("TenantId", "State")
+                        .HasDatabaseName("ix_mobile_devices_tenant_id_state");
+
+                    b.ToTable("mobile_devices", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobileEnterprise", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("BoundAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("bound_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("EnterpriseName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("enterprise_name");
+
+                    b.Property<DateTimeOffset?>("LastSyncAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_sync_at_utc");
+
+                    b.Property<string>("PendingSignupUrlName")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("pending_signup_url_name");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("platform");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_enterprises");
+
+                    b.HasIndex("EnterpriseName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mobile_enterprises_enterprise_name")
+                        .HasFilter("enterprise_name IS NOT NULL");
+
+                    b.HasIndex("TenantId", "Platform")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mobile_enterprises_tenant_id_platform");
+
+                    b.ToTable("mobile_enterprises", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobilePolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Ownership")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("ownership");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("platform");
+
+                    b.Property<DateTimeOffset?>("PublishedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at_utc");
+
+                    b.Property<int>("PublishedVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("published_version");
+
+                    b.Property<string>("Settings")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("settings");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_policies");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_mobile_policies_tenant_id_id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mobile_policies_tenant_id_name");
+
+                    b.ToTable("mobile_policies", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobilePolicyApp", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AppId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("app_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("InstallType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("install_type");
+
+                    b.Property<string>("ManagedConfigurationJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("managed_configuration_json");
+
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("policy_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_mobile_policy_apps");
+
+                    b.HasIndex("TenantId", "AppId")
+                        .HasDatabaseName("ix_mobile_policy_apps_tenant_id_app_id");
+
+                    b.HasIndex("TenantId", "PolicyId", "AppId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_mobile_policy_apps_tenant_id_policy_id_app_id");
+
+                    b.ToTable("mobile_policy_apps", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Organization.Domain.Branch", b =>
                 {
                     b.Property<Guid>("Id")
@@ -401,6 +1100,133 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_tenant_memberships_users_user_id");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.DeviceCommand", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_device_commands_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Mdm.Domain.MobileDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_device_commands_mobile_devices_tenant_id_device_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.DeviceEvent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_device_events_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Mdm.Domain.MobileDevice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeviceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_device_events_mobile_devices_tenant_id_device_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.EnrollmentToken", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_enrollment_tokens_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Mdm.Domain.MobilePolicy", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PolicyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_enrollment_tokens_mobile_policies_tenant_id_policy_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobileApp", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_apps_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobileDevice", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_devices_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Mdm.Domain.MobilePolicy", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PolicyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_mobile_devices_mobile_policies_tenant_id_policy_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobileEnterprise", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_enterprises_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobilePolicy", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_policies_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Mdm.Domain.MobilePolicyApp", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_policy_apps_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Mdm.Domain.MobileApp", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AppId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_policy_apps_mobile_apps_tenant_id_app_id");
+
+                    b.HasOne("Solvix.Modules.Mdm.Domain.MobilePolicy", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PolicyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_mobile_policy_apps_mobile_policies_tenant_id_policy_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Organization.Domain.Branch", b =>

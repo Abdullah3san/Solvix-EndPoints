@@ -10,7 +10,8 @@ listed in `SolvixModules.All`.
 
 ```
 Solvix.Api ──► Solvix.Infrastructure ──► Modules.Tenancy ──► Modules.Identity
-                                     │                   └──► Modules.Organization
+                                     │                   ├──► Modules.Organization
+                                     │                   └──► Modules.Mdm
                                      └──► Solvix.SharedKernel ◄── every module
 ```
 
@@ -23,6 +24,10 @@ Solvix.Api ──► Solvix.Infrastructure ──► Modules.Tenancy ──► M
   login / tenant switching, member management, cached `IMembershipLookup`.
 * **Organization** – `CompanyProfile` (1:1 with tenant), `Branch`, `Department`
   (nested, per branch).
+* **Mdm** (Phase 08) – mobile device management with separate Android Enterprise and Apple MDM
+  providers behind one contract, scenario/ownership capability matrix, policies, apps,
+  enrollment, devices, approved commands, compliance. See
+  `docs/PHASE-08-MOBILE-DEVICE-MANAGEMENT.md`.
 * **Infrastructure** – `SolvixDbContext`, interceptors, migrations, Redis cache,
   tenant resolution middleware, tenant-scoped background job runner.
 

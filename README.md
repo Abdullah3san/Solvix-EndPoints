@@ -57,6 +57,7 @@ src/backend/
     Solvix.Modules.Tenancy/      tenant entity, registration, management, tenant directory
     Solvix.Modules.Identity/     users, memberships, JWT auth, member management
     Solvix.Modules.Organization/ company profile, branches, departments
+    Solvix.Modules.Mdm/          mobile device management: Android Enterprise + Apple MDM (Phase 08)
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/frontend/                 Next.js app (BFF proxy, app shell, feature pages)
@@ -64,7 +65,7 @@ tests/
   Solvix.UnitTests/           domain + interceptor + naming tests (in-memory)
   Solvix.IntegrationTests/    real PostgreSQL + Redis: migrations, RLS, API isolation, jobs
 docker/postgres/init/         creates the migrator and runtime roles
-docs/                         architecture and phase summaries
+docs/                         architecture and phase summaries (Phase 08: docs/PHASE-08-MOBILE-DEVICE-MANAGEMENT.md)
 ```
 
 ## Tests

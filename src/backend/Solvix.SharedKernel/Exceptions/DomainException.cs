@@ -212,3 +212,28 @@ public sealed class TenantInactiveException : DomainException
 
     public override string Code => "tenant_inactive";
 }
+
+/// <summary>
+/// The request is well-formed but the operation is not possible for the target
+/// (for example a capability the platform or ownership model does not offer).
+/// Distinct from <see cref="ConflictException"/>: retrying will never succeed.
+/// </summary>
+public sealed class UnsupportedOperationException : DomainException
+{
+    public UnsupportedOperationException(string message)
+        : base(message)
+    {
+    }
+
+    public UnsupportedOperationException()
+        : base("The operation is not supported for this target.")
+    {
+    }
+
+    public UnsupportedOperationException(string message, Exception? innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public override string Code => "unsupported_operation";
+}

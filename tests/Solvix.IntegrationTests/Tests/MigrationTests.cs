@@ -43,7 +43,7 @@ public sealed class MigrationTests(ApiFixture fixture)
             .ToList();
 
         Assert.NotEmpty(tenantTables);
-        Assert.Equal(tenantTables, RowLevelSecurityMigration.TenantTables.OrderBy(t => t, StringComparer.Ordinal).ToList());
+        Assert.Equal(tenantTables, AllRlsTables().OrderBy(t => t, StringComparer.Ordinal).ToList());
 
         await using var connection = new NpgsqlConnection(fixture.Database.MigratorConnectionString);
         await connection.OpenAsync();
@@ -86,7 +86,7 @@ public sealed class MigrationTests(ApiFixture fixture)
             Assert.Equal(2, rows);
         }
 
-        foreach (var table in RowLevelSecurityMigration.TenantTables)
+        foreach (var table in AllRlsTables())
         {
             await using var command = new NpgsqlCommand(
                 """
@@ -115,4 +115,7 @@ public sealed class MigrationTests(ApiFixture fixture)
         await migrator.MigrateAsync();
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
     }
+
+    private static IEnumerable<string> AllRlsTables() =>
+        RowLevelSecurityMigration.TenantTables.Concat(MobileDeviceManagementRlsMigration.TenantTables);
 }

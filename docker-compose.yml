@@ -72,6 +72,19 @@ services:
       Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-60}
       Solvix__Cors__AllowedOrigins__0: ${SOLVIX_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       Solvix__Logging__Format: json
+      # Mobile device management (Phase 08). Providers stay disabled until configured; see docs/PHASE-08-MOBILE-DEVICE-MANAGEMENT.md.
+      Solvix__Mdm__SecretEncryptionKey: ${SOLVIX_MDM_SECRET_KEY:-}
+      Solvix__Mdm__PublicBaseUrl: ${SOLVIX_MDM_PUBLIC_BASE_URL:-http://localhost:8080}
+      Solvix__Mdm__AllowSelfApproval: ${SOLVIX_MDM_ALLOW_SELF_APPROVAL:-false}
+      Solvix__Mdm__Sync__Enabled: ${SOLVIX_MDM_SYNC_ENABLED:-false}
+      Solvix__Mdm__Android__ProjectId: ${SOLVIX_MDM_ANDROID_PROJECT_ID:-}
+      Solvix__Mdm__Android__ServiceAccountJson: ${SOLVIX_MDM_ANDROID_SERVICE_ACCOUNT_JSON:-}
+      Solvix__Mdm__Apple__PushTopic: ${SOLVIX_MDM_APPLE_PUSH_TOPIC:-}
+      Solvix__Mdm__Apple__ScepUrl: ${SOLVIX_MDM_APPLE_SCEP_URL:-}
+      Solvix__Mdm__Apple__ScepChallenge: ${SOLVIX_MDM_APPLE_SCEP_CHALLENGE:-}
+      Solvix__Mdm__Apple__IdentityCaCertificatePem: ${SOLVIX_MDM_APPLE_IDENTITY_CA_PEM:-}
+      Solvix__Mdm__Apple__PushCertificatePath: ${SOLVIX_MDM_APPLE_PUSH_CERT_PATH:-}
+      Solvix__Mdm__Apple__PushCertificatePassword: ${SOLVIX_MDM_APPLE_PUSH_CERT_PASSWORD:-}
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
     depends_on:
