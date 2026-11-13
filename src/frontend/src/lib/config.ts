@@ -5,6 +5,9 @@
 export const serverConfig = {
   apiBaseUrl: (process.env.SOLVIX_API_INTERNAL_URL ?? "http://localhost:8080").replace(/\/+$/, ""),
   apiVersion: "v1",
-  cookieSecure:
-    process.env.SOLVIX_COOKIE_SECURE === "true" || process.env.NODE_ENV === "production",
+  // An explicit SOLVIX_COOKIE_SECURE always wins (needed for plain-HTTP testing);
+  // otherwise Secure is on in production builds.
+  cookieSecure: process.env.SOLVIX_COOKIE_SECURE
+    ? process.env.SOLVIX_COOKIE_SECURE === "true"
+    : process.env.NODE_ENV === "production",
 } as const;
