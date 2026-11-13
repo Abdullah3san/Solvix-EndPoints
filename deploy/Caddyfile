@@ -1,0 +1,15 @@
+# Caddy terminates TLS (automatic Let's Encrypt certificates) and forwards everything
+# to the Next.js web app. The Next.js BFF is the only public entry point; the API is
+# never exposed directly.
+{$SOLVIX_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy web:3000
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+	}
+}

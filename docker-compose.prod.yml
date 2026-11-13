@@ -1,0 +1,126 @@
+# Production stack for a single VPS. Only Caddy (80/443) is published to the host;
+# PostgreSQL, Redis and the API are reachable only on the internal compose network.
+#
+#   cp .env.production.example .env.production   # then fill in every CHANGE_ME value
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+# See docs/DEPLOY-VPS.md for the full runbook.
+name: solvix-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:-solvix}
+      SOLVIX_DB_MIGRATOR_USER: ${SOLVIX_DB_MIGRATOR_USER:?set in .env.production}
+      SOLVIX_DB_MIGRATOR_PASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:?set in .env.production}
+      SOLVIX_DB_APP_USER: ${SOLVIX_DB_APP_USER:?set in .env.production}
+      SOLVIX_DB_APP_PASSWORD: ${SOLVIX_DB_APP_PASSWORD:?set in .env.production}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD in .env.production}", "--appendonly", "yes"]
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [internal]
+
+  migrator:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: migrator
+    image: solvix-migrator:latest
+    environment:
+      ConnectionStrings__PostgresMigrator: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_MIGRATOR_USER};Password=${SOLVIX_DB_MIGRATOR_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks: [internal]
+
+  api:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: api
+    image: solvix-api:latest
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_APP_USER};Password=${SOLVIX_DB_APP_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+      Solvix__Database__MigrateOnStartup: "false"
+      Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY in .env.production}
+      Solvix__Jwt__Issuer: ${SOLVIX_JWT_ISSUER:-solvix-endpoints}
+      Solvix__Jwt__Audience: ${SOLVIX_JWT_AUDIENCE:-solvix-endpoints-web}
+      Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-60}
+      Solvix__Cors__AllowedOrigins__0: ${SOLVIX_PUBLIC_ORIGIN:?set SOLVIX_PUBLIC_ORIGIN in .env.production}
+      Solvix__Logging__Format: json
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [internal]
+
+  web:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    image: solvix-web:latest
+    environment:
+      SOLVIX_API_INTERNAL_URL: http://api:8080
+      # Session cookie must be Secure when served over HTTPS (always true in production builds).
+      SOLVIX_COOKIE_SECURE: "true"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    networks: [internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment:
+      SOLVIX_DOMAIN: ${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN in .env.production}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal]
+
+networks:
+  internal:
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

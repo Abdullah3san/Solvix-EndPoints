@@ -32,3 +32,6 @@ Thumbs.db
 # Docker volumes (local)
 .docker-data/
 dump.rdb
+
+# Production env (real secrets)
+.env.production
