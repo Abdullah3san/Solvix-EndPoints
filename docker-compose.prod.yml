@@ -91,8 +91,9 @@ services:
     image: solvix-web:latest
     environment:
       SOLVIX_API_INTERNAL_URL: http://api:8080
-      # Session cookie must be Secure when served over HTTPS (always true in production builds).
-      SOLVIX_COOKIE_SECURE: "true"
+      # Session cookie must be Secure over HTTPS. Set SOLVIX_COOKIE_SECURE=false only for
+      # plain-HTTP testing on an IP address (browsers reject Secure cookies over HTTP).
+      SOLVIX_COOKIE_SECURE: ${SOLVIX_COOKIE_SECURE:-true}
     depends_on:
       api:
         condition: service_healthy
@@ -105,7 +106,7 @@ services:
     depends_on:
       - web
     environment:
-      SOLVIX_DOMAIN: ${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN in .env.production}
+      SOLVIX_DOMAIN: ${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN in .env.production (use :80 for IP-only testing)}
     ports:
       - "80:80"
       - "443:443"

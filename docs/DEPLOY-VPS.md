@@ -39,6 +39,20 @@ openssl rand -base64 48   # use a distinct output for each password and for SOLV
 
 Set `SOLVIX_DOMAIN` and `SOLVIX_PUBLIC_ORIGIN` to your real domain (`https://...`).
 
+### No domain yet? Test over plain HTTP on the IP
+
+Set these in `.env.production` instead of the domain values:
+
+```
+SOLVIX_DOMAIN=:80
+SOLVIX_PUBLIC_ORIGIN=http://<VPS_IP>
+SOLVIX_COOKIE_SECURE=false
+```
+
+Then open `http://<VPS_IP>/register`. This is for testing only: traffic is unencrypted.
+Once you have a domain, switch back to the HTTPS values, set `SOLVIX_COOKIE_SECURE=true`,
+and run the same `up -d --build` command again.
+
 ## 4. Build and start
 
 ```bash
