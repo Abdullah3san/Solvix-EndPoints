@@ -15,7 +15,7 @@ import { isSessionValid } from "@/lib/auth/session";
  * endpoints (whose responses contain tokens) are not reachable through it.
  */
 const FORWARDED_REQUEST_HEADERS = ["content-type", "accept"];
-const FORWARDED_RESPONSE_HEADERS = ["content-type", "x-correlation-id", "api-supported-versions", "location", "retry-after"];
+const FORWARDED_RESPONSE_HEADERS = ["content-type", "content-disposition", "x-correlation-id", "api-supported-versions", "location", "retry-after"];
 
 // Responses of these endpoints carry tokens; they are only ever called by the dedicated /api/auth routes.
 const TOKEN_ENDPOINTS = new Set(["auth/login", "auth/refresh", "auth/mfa/verify", "auth/switch-tenant", "auth/logout", "tenant/register"]);
@@ -53,13 +53,16 @@ async function forward(request: NextRequest, context: { params: Promise<{ path: 
   headers.set("authorization", `Bearer ${token}`);
 
   const hasBody = request.method !== "GET" && request.method !== "HEAD";
+  // Binary uploads (software packages, up to gigabytes) are streamed through instead of buffered in memory.
+  const streamBody = hasBody && request.headers.get("content-type")?.toLowerCase().startsWith("application/octet-stream") && request.body !== null;
   const response = await fetch(upstream, {
     method: request.method,
     headers,
-    body: hasBody ? await request.arrayBuffer() : undefined,
+    body: streamBody ? request.body : hasBody ? await request.arrayBuffer() : undefined,
     cache: "no-store",
     redirect: "manual",
-  });
+    ...(streamBody ? { duplex: "half" } : {}),
+  } as RequestInit);
 
   const responseHeaders = new Headers();
   for (const name of FORWARDED_RESPONSE_HEADERS) {

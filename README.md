@@ -24,6 +24,9 @@ Multi-tenant SaaS platform for endpoint management.
   physical audits, depreciation, vendors, labels, and matching of assets to enrolled endpoints.
 * **Phase 06** – secure remote endpoint administration. See
   [`docs/PHASE-06-DESIGN.md`](docs/PHASE-06-DESIGN.md).
+* **Phase 07** – enterprise software management: software inventory, a validated package repository,
+  approved and scheduled MSI/EXE deployments executed as signed commands, version detection, deployment
+  groups, reports and restriction policies. See [`docs/PHASE-07-SUMMARY.md`](docs/PHASE-07-SUMMARY.md).
 
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|
@@ -98,6 +101,7 @@ src/backend/
     Solvix.Modules.Tenancy/      tenant entity, registration, management, tenant directory
     Solvix.Modules.Identity/     users, sessions, MFA, roles & permissions, invitations, audit
     Solvix.Modules.Organization/ company profile, branches, departments
+    Solvix.Modules.Software/     packages, deployments, approvals, inventory, restriction policies
     Solvix.Modules.Devices/      devices, enrollment, device CA, mTLS device auth, inventory, groups
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)

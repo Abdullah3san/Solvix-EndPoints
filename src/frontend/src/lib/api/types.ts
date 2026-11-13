@@ -23,6 +23,11 @@ export type Permission =
   | "remote.sessions.view"
   | "remote.sessions.terminate"
   | "remote.approvals.manage"
+  | "software.view"
+  | "software.packages.manage"
+  | "software.deploy"
+  | "software.approve"
+  | "software.policies.manage"
   | "assets.view"
   | "assets.create"
   | "assets.edit"
@@ -698,4 +703,305 @@ export interface MonitoringUpdateDto {
   statusChanges: DeviceStatusChangeDto[];
   events: ConnectionEventDto[];
   alerts: MonitoringAlertDto[];
+}
+
+// --- Software management (Phase 07) -------------------------------------------------------------
+
+export type InstallerType = "Msi" | "Exe";
+export type PackageStatus = "Ready" | "Corrupted" | "Retired";
+export type SignatureState = "Unsigned" | "Signed";
+export type SilentPreset = "Msi" | "InnoSetup" | "Nsis" | "WixBurn" | "InstallShield" | "Custom";
+export type DetectionKind = "MsiProductCode" | "UninstallEntry";
+export type NameMatch = "Exact" | "Prefix" | "Contains";
+export type VersionOperator = "Any" | "Equal" | "AtLeast";
+export type DeploymentAction = "Install" | "Uninstall";
+export type DeploymentStatus =
+  | "PendingApproval"
+  | "Scheduled"
+  | "Running"
+  | "Completed"
+  | "CompletedWithErrors"
+  | "Failed"
+  | "Cancelled"
+  | "Rejected"
+  | "Expired";
+export type TargetStatus = "Pending" | "Dispatched" | "Running" | "Succeeded" | "Failed" | "Cancelled" | "Skipped" | "TimedOut" | "Expired";
+export type SoftwareOutcome = "Installed" | "AlreadyInstalled" | "Uninstalled" | "NotInstalled" | "Detected" | "NotDetected" | "Failed";
+export type RestrictionRuleType = "Blocked" | "Required";
+
+export interface DetectionRule {
+  kind: DetectionKind;
+  productCode?: string | null;
+  displayName?: string | null;
+  nameMatch?: NameMatch;
+  publisher?: string | null;
+  version?: string | null;
+  versionOperator?: VersionOperator;
+}
+
+export interface PackageDto {
+  id: string;
+  name: string;
+  publisher: string | null;
+  version: string | null;
+  description: string | null;
+  installerType: InstallerType;
+  originalFileName: string;
+  sizeBytes: number;
+  sha256: string;
+  status: PackageStatus;
+  signatureState: SignatureState;
+  signerSubject: string | null;
+  signerThumbprint: string | null;
+  signerTrusted: boolean;
+  signatureContentVerified: boolean;
+  architecture: string | null;
+  isSensitive: boolean;
+  silentPreset: SilentPreset;
+  installArguments: string[];
+  uninstallArguments: string[];
+  successExitCodes: number[];
+  rebootExitCodes: number[];
+  timeoutMinutes: number;
+  detection: DetectionRule | null;
+  isConfigured: boolean;
+  canUninstall: boolean;
+  configurationRevision: number;
+  uploadedBy: string;
+  uploadedAtUtc: string;
+  lastVerifiedAtUtc: string;
+  retiredAtUtc: string | null;
+  blockedByRule: string | null;
+}
+
+export interface ConfigurePackageRequest {
+  name: string;
+  publisher: string | null;
+  version: string | null;
+  description: string | null;
+  isSensitive: boolean;
+  silentPreset: SilentPreset;
+  installArguments: string[] | null;
+  uninstallArguments: string[] | null;
+  successExitCodes: number[] | null;
+  rebootExitCodes: number[] | null;
+  timeoutMinutes: number;
+  detection: DetectionRule;
+}
+
+export interface PackageVerification {
+  packageId: string;
+  intact: boolean;
+  expectedSha256: string;
+  actualSha256: string | null;
+  status: PackageStatus;
+}
+
+export interface CreateDeploymentRequest {
+  name: string;
+  reason?: string | null;
+  packageId: string;
+  action: DeploymentAction;
+  deploymentGroupId?: string | null;
+  deviceIds?: string[];
+  deviceGroupIds?: string[];
+  branchIds?: string[];
+  scheduledStartUtc?: string | null;
+  deadlineUtc?: string | null;
+  maxAttempts: number;
+  retryDelayMinutes: number;
+  skipConflicts: boolean;
+}
+
+export interface PlannedTargetDto {
+  deviceId: string;
+  deviceName: string;
+  osName: string | null;
+  connectivity: string;
+  willRun: boolean;
+  skipReason: string | null;
+  conflictingDeploymentId: string | null;
+}
+
+export interface DeploymentPreviewDto {
+  packageId: string;
+  packageName: string;
+  packageVersion: string | null;
+  packageSha256: string;
+  installerType: InstallerType;
+  action: DeploymentAction;
+  commandType: string;
+  arguments: string[];
+  detection: DetectionRule | null;
+  requireSignature: boolean;
+  timeoutMinutes: number;
+  scheduledStartUtc: string;
+  deadlineUtc: string;
+  maxAttempts: number;
+  targets: PlannedTargetDto[];
+  deployableCount: number;
+  conflictCount: number;
+  isSensitive: boolean;
+  sensitivityReasons: string[];
+  requiredApprovals: number;
+}
+
+export interface TargetCountsDto {
+  total: number;
+  pending: number;
+  inProgress: number;
+  succeeded: number;
+  failed: number;
+  cancelled: number;
+  skipped: number;
+  timedOut: number;
+  expired: number;
+}
+
+export interface DeploymentDto {
+  id: string;
+  name: string;
+  reason: string | null;
+  action: DeploymentAction;
+  packageId: string;
+  packageName: string;
+  packageVersion: string | null;
+  status: DeploymentStatus;
+  createdBy: string;
+  requestedAtUtc: string;
+  scheduledStartUtc: string;
+  deadlineUtc: string;
+  isSensitive: boolean;
+  sensitivityReasons: string[];
+  requiredApprovals: number;
+  approvalsReceived: number;
+  approvalExpiresAtUtc: string;
+  approvedAtUtc: string | null;
+  startedAtUtc: string | null;
+  completedAtUtc: string | null;
+  cancelledBy: string | null;
+  maxAttempts: number;
+  counts: TargetCountsDto;
+}
+
+export interface DeploymentTargetDto {
+  id: string;
+  deviceId: string;
+  deviceName: string;
+  status: TargetStatus;
+  outcome: SoftwareOutcome | null;
+  attempts: number;
+  currentExecutionId: string | null;
+  nextAttemptAtUtc: string | null;
+  exitCode: number | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  rebootRequired: boolean;
+  detectedVersion: string | null;
+  logExcerpt: string | null;
+  startedAtUtc: string | null;
+  completedAtUtc: string | null;
+}
+
+export interface DeploymentApprovalDto {
+  id: string;
+  approverId: string;
+  decision: "Approved" | "Rejected";
+  comment: string | null;
+  decidedAtUtc: string;
+}
+
+export interface DeploymentDetailDto {
+  deployment: DeploymentDto;
+  parameters: Record<string, string>;
+  approvals: DeploymentApprovalDto[];
+  targets: DeploymentTargetDto[];
+}
+
+export interface FailureSummary {
+  errorCode: string;
+  devices: number;
+  example: string | null;
+}
+
+export interface DeploymentReport {
+  deploymentId: string;
+  name: string;
+  status: DeploymentStatus;
+  counts: TargetCountsDto;
+  successRate: number;
+  rebootRequired: number;
+  averageDurationSeconds: number | null;
+  failures: FailureSummary[];
+  generatedAtUtc: string;
+  final: boolean;
+}
+
+export interface DeploymentGroupDto {
+  id: string;
+  name: string;
+  description: string | null;
+  deviceIds: string[];
+  deviceGroupIds: string[];
+  branchIds: string[];
+  excludedDeviceIds: string[];
+  resolvedDeviceCount: number;
+}
+
+export interface DeploymentPolicyDto {
+  allowExeInstallers: boolean;
+  requireSignedPackages: boolean;
+  trustedPublisherThumbprints: string[];
+  requireApproval: boolean;
+  largeDeploymentThreshold: number;
+  uninstallIsSensitive: boolean;
+  serverTargetsAreSensitive: boolean;
+  approvalTtlHours: number;
+}
+
+export interface RestrictionRuleDto {
+  id: string;
+  name: string;
+  description: string | null;
+  ruleType: RestrictionRuleType;
+  namePattern: string;
+  publisher: string | null;
+  minimumVersion: string | null;
+  deviceGroupIds: string[] | null;
+  enabled: boolean;
+}
+
+export interface ComplianceViolation {
+  ruleId: string;
+  ruleName: string;
+  ruleType: RestrictionRuleType;
+  deviceId: string;
+  deviceName: string;
+  applicationName: string | null;
+  installedVersion: string | null;
+  problem: string;
+}
+
+export interface ComplianceReport {
+  devicesEvaluated: number;
+  compliantDevices: number;
+  violations: ComplianceViolation[];
+}
+
+export interface SoftwareCatalogEntryDto {
+  name: string;
+  publisher: string | null;
+  deviceCount: number;
+  versions: string[];
+}
+
+export interface DeviceSoftwareDto {
+  deviceId: string;
+  name: string;
+  version: string | null;
+  publisher: string | null;
+  scope: string | null;
+  installDate: string | null;
+  firstSeenAtUtc: string;
+  lastSeenAtUtc: string;
 }

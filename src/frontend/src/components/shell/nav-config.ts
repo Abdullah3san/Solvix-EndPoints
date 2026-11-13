@@ -3,6 +3,10 @@ import {
   Activity,
   Boxes,
   Building2,
+  ClipboardCheck,
+  PackageOpen,
+  Rocket,
+  ShieldBan,
   GitBranch,
   KeyRound,
   LayoutDashboard,
@@ -60,6 +64,15 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Software",
+    items: [
+      { label: "Deployments", href: "/software/deployments", icon: Rocket, permission: "software.view" },
+      { label: "Packages", href: "/software/packages", icon: PackageOpen, permission: "software.view" },
+      { label: "Inventory", href: "/software/inventory", icon: ClipboardCheck, permission: "software.view" },
+      { label: "Policies", href: "/software/policies", icon: ShieldBan, permission: "software.view" },
+    ],
+  },
+  {
     title: "Settings",
     items: [
       { label: "Workspace", href: "/settings/workspace", icon: Settings2 },
@@ -88,6 +101,12 @@ export const segmentLabels: Record<string, string> = {
   security: "Security",
   audit: "Audit log",
   account: "My account",
+  software: "Software",
+  packages: "Packages",
+  deployments: "Deployments",
+  inventory: "Inventory",
+  policies: "Policies",
+  new: "New",
 };
 
 export function isActivePath(pathname: string, href: string): boolean {
