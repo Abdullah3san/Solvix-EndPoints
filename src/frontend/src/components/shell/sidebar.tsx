@@ -77,7 +77,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="border-t border-sidebar-border px-5 py-3 text-xs text-sidebar-muted">Solvix EndPoints · Phase 01</div>
+        <div className="border-t border-sidebar-border px-5 py-3 text-xs text-sidebar-muted">Solvix EndPoints</div>
       </aside>
     </>
   );

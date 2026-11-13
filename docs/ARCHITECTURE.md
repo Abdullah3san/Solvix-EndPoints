@@ -1,4 +1,4 @@
-# Architecture (Phase 01)
+# Architecture (Phases 01 and 09)
 
 ## Modular monolith
 
@@ -105,3 +105,31 @@ Serilog with compact JSON in containers (text in Development), enriched with
 environment. `GlobalExceptionHandler` turns domain exceptions and PostgreSQL
 constraint violations into RFC 9457 problem details with a stable `code` and, for
 validation, an `errors` map keyed by camelCase property.
+
+## Endpoint management (Phase 09)
+
+```
+Solvix.Api ──► Solvix.Infrastructure ──► Modules.EndpointManagement ──► Modules.Devices ──► Modules.Organization
+                                     └──► Modules.Audit                 └──► Solvix.Endpoint.Contracts ◄── Solvix.Agent.Core ◄── Solvix.Agent.Windows
+```
+
+* **Agents are tenant principals.** The default authentication scheme is a policy
+  scheme: `Authorization: Bearer` → JWT (people), `Authorization: Device` → device
+  credential (agents, claims `tid` + `act=agent`). Tenant resolution skips the
+  membership check for agents (the handler already verified an active device);
+  every other isolation layer applies unchanged. User policies reject agent
+  principals, the `Agent` policy rejects people.
+* **Shared contracts.** The setting model and `SettingRiskClassifier` live in
+  `Solvix.Endpoint.Contracts`, referenced by the server and the agent, so the risk
+  the approvers authorised and the risk the agent enforces are computed identically.
+* **Targeting.** `TargetingSnapshot` resolves all devices / branch / department
+  (with sub-departments) / device group / device, with exclusions, for both patch
+  deployments and configuration assignments. `EffectiveConfigurationResolver`
+  turns assignments into one desired-state document per device and detects conflicts.
+* **Scheduling.** `EndpointManagementWorker` (hosted service, `Solvix:EndpointManagement`)
+  ticks `IDeploymentOrchestrator` for each active tenant in a tenant-bound scope.
+  Agent work is handed out on heartbeat, so devices behind NAT need only outbound HTTPS.
+* **Audit.** `IAuditTrail.Record` stages an entry in the caller's unit of work; it
+  commits atomically with the audited change. `audit_entries` is append-only by trigger.
+
+Details, safety model and verification: `docs/PHASE-09-SUMMARY.md`.

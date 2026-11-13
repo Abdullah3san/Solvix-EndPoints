@@ -1,5 +1,17 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, GitBranch, LayoutDashboard, Network, Settings2 } from "lucide-react";
+import {
+  Building2,
+  CalendarClock,
+  GitBranch,
+  LayoutDashboard,
+  Laptop,
+  Network,
+  Rocket,
+  ScrollText,
+  Settings2,
+  ShieldCheck,
+  SlidersHorizontal,
+} from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -27,8 +39,21 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Endpoints",
+    items: [
+      { label: "Devices", href: "/endpoints/devices", icon: Laptop },
+      { label: "Patches", href: "/endpoints/patches", icon: ShieldCheck },
+      { label: "Deployments", href: "/endpoints/deployments", icon: Rocket },
+      { label: "Maintenance windows", href: "/endpoints/maintenance-windows", icon: CalendarClock },
+      { label: "Configuration", href: "/endpoints/configuration", icon: SlidersHorizontal },
+    ],
+  },
+  {
     title: "Settings",
-    items: [{ label: "Workspace", href: "/settings/workspace", icon: Settings2 }],
+    items: [
+      { label: "Workspace", href: "/settings/workspace", icon: Settings2 },
+      { label: "Audit log", href: "/settings/audit", icon: ScrollText, adminOnly: true },
+    ],
   },
 ];
 
@@ -41,6 +66,13 @@ export const segmentLabels: Record<string, string> = {
   departments: "Departments",
   settings: "Settings",
   workspace: "Workspace",
+  endpoints: "Endpoints",
+  devices: "Devices",
+  patches: "Patches",
+  deployments: "Deployments",
+  "maintenance-windows": "Maintenance windows",
+  configuration: "Configuration",
+  audit: "Audit log",
 };
 
 export function isActivePath(pathname: string, href: string): boolean {

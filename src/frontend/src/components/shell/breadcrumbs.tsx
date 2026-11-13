@@ -16,7 +16,8 @@ export function crumbsFromPathname(pathname: string): Crumb[] {
   const segments = pathname.split("/").filter(Boolean);
   return segments.map((segment, index) => {
     const href = "/" + segments.slice(0, index + 1).join("/");
-    const label = segmentLabels[segment] ?? titleCase(decodeURIComponent(segment));
+    const label =
+      segmentLabels[segment] ?? (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment) ? "Details" : titleCase(decodeURIComponent(segment)));
     return index === segments.length - 1 ? { label } : { label, href };
   });
 }

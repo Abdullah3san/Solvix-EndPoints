@@ -5,6 +5,12 @@ tenant registration and management, company profiles, branches and departments, 
 Next.js application shell, and tenant isolation enforced in the application *and*
 in PostgreSQL (Row-Level Security).
 
+**Phase 09** adds enterprise endpoint management for Windows: device enrolment and
+groups, patch inventory/approval/pilot deployments/restarts/compliance, versioned
+configuration policies (services, registry, startup apps, firewall, power, screen
+lock, USB) with risk-based approval, drift detection and rollback, an append-only
+audit log, and the Solvix Windows agent. See `docs/PHASE-09-SUMMARY.md`.
+
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|
 | Frontend   | Next.js 16 (App Router, TypeScript, Tailwind CSS 4), Vitest           |
@@ -57,8 +63,16 @@ src/backend/
     Solvix.Modules.Tenancy/      tenant entity, registration, management, tenant directory
     Solvix.Modules.Identity/     users, memberships, JWT auth, member management
     Solvix.Modules.Organization/ company profile, branches, departments
+    Solvix.Modules.Audit/        append-only audit trail
+    Solvix.Modules.Devices/      devices, device groups, enrolment, agent authentication
+    Solvix.Modules.EndpointManagement/ patches, deployments, maintenance windows, configuration policies
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
+src/shared/Solvix.Endpoint.Contracts/  setting model, risk classifier, agent wire contracts
+src/agent/
+  Solvix.Agent.Core/          platform-neutral agent logic (tested on any OS)
+  Solvix.Agent.Windows/       Windows service (WUA, SCM, registry, firewall, power providers)
+deploy/windows/               Install-/Uninstall-SolvixAgent.ps1
 src/frontend/                 Next.js app (BFF proxy, app shell, feature pages)
 tests/
   Solvix.UnitTests/           domain + interceptor + naming tests (in-memory)
@@ -94,10 +108,30 @@ dotnet ef migrations add <Name> \
   --output-dir Persistence/Migrations
 ```
 
-Every new tenant-owned table (any entity implementing `ITenantScoped`) must be added
+Every new tenant-owned table (Phase 09 tables are listed in
+`EndpointManagementSecurityMigration.TenantTables`) (any entity implementing `ITenantScoped`) must be added
 to `RowLevelSecurityMigration.TenantTables` (or protected in its own migration with
 `RowLevelSecurity.EnableTenantIsolation`). The integration test
 `MigrationTests.Every_tenant_scoped_table_has_forced_rls_policy` fails otherwise.
+
+## Windows agent
+
+```bash
+dotnet publish src/agent/Solvix.Agent.Windows -c Release -o publish/agent
+```
+
+Copy `publish/agent` and `deploy/windows/Install-SolvixAgent.ps1` to the device (or
+package them for Intune/ConfigMgr), create an enrolment token under
+*Endpoints › Devices*, then in an elevated PowerShell:
+
+```powershell
+.\Install-SolvixAgent.ps1 -ServerUrl https://solvix.example.com -EnrollmentToken sxe_... -SourcePath .\agent
+```
+
+The agent runs as the `SolvixAgent` service (LocalSystem) and keeps its DPAPI-protected
+credential, snapshots and journal in `%ProgramData%\Solvix\Agent`. Settings:
+`Solvix:Agent:*` in `appsettings.json` (`ScanIntervalHours`, `ConfigurationEvaluationMinutes`,
+`MaxAllowedRisk` – a local ceiling on what policies may change).
 
 ## Configuration
 

@@ -99,6 +99,9 @@ public sealed partial class PatchJobRunner(
     /// <summary>No new update starts when the window closes within this margin.</summary>
     public TimeSpan WindowSafetyMargin { get; init; } = TimeSpan.FromMinutes(10);
 
+    /// <summary>Progress is re-sent this often while one update installs, keeping the server lease alive.</summary>
+    public TimeSpan LeaseRenewalInterval { get; init; } = TimeSpan.FromMinutes(5);
+
     public async Task<PatchJobResult?> RunAsync(PatchJobDto job, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(job);
@@ -141,7 +144,22 @@ public sealed partial class PatchJobRunner(
 
                 var percent = (int)(i * 100.0 / job.Updates.Count);
                 await api.ReportProgressAsync(job.JobId, new PatchJobProgress(job.Attempt, PatchJobStage.Installing, percent, update.Title), cancellationToken).ConfigureAwait(false);
-                var outcome = await windowsUpdate.InstallAsync(update, cancellationToken).ConfigureAwait(false);
+                UpdateInstallOutcome outcome;
+                using (var keepAlive = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                {
+                    // A single update (cumulative or feature update) can take longer than the lease.
+                    var renewal = RenewLeaseAsync(job, percent, update.Title, keepAlive.Token);
+                    try
+                    {
+                        outcome = await windowsUpdate.InstallAsync(update, cancellationToken).ConfigureAwait(false);
+                    }
+                    finally
+                    {
+                        await keepAlive.CancelAsync().ConfigureAwait(false);
+                        await renewal.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                    }
+                }
+
                 LogInstalled(logger, update.UpdateId, outcome.ResultCode, outcome.HResult);
                 results.Add(new PatchUpdateResult(update.UpdateId, outcome.ResultCode, outcome.HResult, outcome.RebootRequired));
             }
@@ -162,6 +180,28 @@ public sealed partial class PatchJobRunner(
         var result = Summarize(job, results, aborted, abortReason);
         await DeliverAsync(job, result).ConfigureAwait(false);
         return result;
+    }
+
+    private async Task RenewLeaseAsync(PatchJobDto job, int percent, string title, CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            await Task.Delay(LeaseRenewalInterval, time, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await api.ReportProgressAsync(job.JobId, new PatchJobProgress(job.Attempt, PatchJobStage.Installing, percent, $"Still installing {title}"), cancellationToken).ConfigureAwait(false);
+            }
+            catch (AgentConflictException)
+            {
+                // The attempt was superseded; Windows Update cannot be interrupted safely mid-install, so let it finish.
+                LogStale(logger, job.JobId, job.Attempt);
+                return;
+            }
+            catch (HttpRequestException)
+            {
+                // Transient; try again on the next interval.
+            }
+        }
     }
 
     /// <summary>

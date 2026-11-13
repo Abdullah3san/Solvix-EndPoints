@@ -61,13 +61,20 @@ internal sealed class FakeWindowsUpdate : IWindowsUpdateClient
 
     public Action<string>? OnInstall { get; set; }
 
+    public TimeSpan InstallDuration { get; set; }
+
     public Task<PatchInventoryReport> ScanAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public Task<UpdateStatus> GetStatusAsync(PatchJobUpdate update, CancellationToken cancellationToken) =>
         Task.FromResult(Updates.GetValueOrDefault(update.UpdateId) ?? new UpdateStatus(false, false, false));
 
-    public Task<UpdateInstallOutcome> InstallAsync(PatchJobUpdate update, CancellationToken cancellationToken)
+    public async Task<UpdateInstallOutcome> InstallAsync(PatchJobUpdate update, CancellationToken cancellationToken)
     {
+        if (InstallDuration > TimeSpan.Zero)
+        {
+            await Task.Delay(InstallDuration, cancellationToken);
+        }
+
         OnInstall?.Invoke(update.UpdateId);
         Installed.Add(update.UpdateId);
         var outcome = Outcomes.GetValueOrDefault(update.UpdateId) ?? new UpdateInstallOutcome(OperationResultCode.Succeeded, 0, false);
@@ -76,7 +83,7 @@ internal sealed class FakeWindowsUpdate : IWindowsUpdateClient
             Updates[update.UpdateId] = new UpdateStatus(true, true, outcome.RebootRequired);
         }
 
-        return Task.FromResult(outcome);
+        return outcome;
     }
 }
 
@@ -129,6 +136,21 @@ public sealed class PatchJobRunnerTests
         Assert.Contains(_api.Progress, p => p.Progress.Stage == PatchJobStage.Installing);
         Assert.Single(_api.Results);
         Assert.Null(_journal.Read());
+    }
+
+    [Fact]
+    public async Task Long_installations_keep_renewing_the_lease()
+    {
+        _wu.Updates["a"] = new UpdateStatus(true, false, false);
+        _wu.InstallDuration = TimeSpan.FromMilliseconds(400);
+        var runner = new PatchJobRunner(_api, _wu, _reboot, _journal, TimeProvider.System, NullLogger<PatchJobRunner>.Instance)
+        {
+            LeaseRenewalInterval = TimeSpan.FromMilliseconds(80),
+        };
+
+        var result = await runner.RunAsync(Job(null, "a"), CancellationToken.None);
+        Assert.Equal(PatchJobOutcome.Succeeded, result!.Outcome);
+        Assert.True(_api.Progress.Count(p => p.Progress.Message?.StartsWith("Still installing", StringComparison.Ordinal) == true) >= 2);
     }
 
     [Fact]

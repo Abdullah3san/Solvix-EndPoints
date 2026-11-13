@@ -14,8 +14,13 @@ COPY src/backend/Solvix.Migrator/Solvix.Migrator.csproj src/backend/Solvix.Migra
 COPY src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj src/backend/Modules/Solvix.Modules.Tenancy/
 COPY src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj src/backend/Modules/Solvix.Modules.Identity/
 COPY src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj src/backend/Modules/Solvix.Modules.Organization/
+COPY src/backend/Modules/Solvix.Modules.Audit/Solvix.Modules.Audit.csproj src/backend/Modules/Solvix.Modules.Audit/
+COPY src/backend/Modules/Solvix.Modules.Devices/Solvix.Modules.Devices.csproj src/backend/Modules/Solvix.Modules.Devices/
+COPY src/backend/Modules/Solvix.Modules.EndpointManagement/Solvix.Modules.EndpointManagement.csproj src/backend/Modules/Solvix.Modules.EndpointManagement/
+COPY src/shared/Solvix.Endpoint.Contracts/Solvix.Endpoint.Contracts.csproj src/shared/Solvix.Endpoint.Contracts/
 RUN dotnet restore src/backend/Solvix.Api/Solvix.Api.csproj && dotnet restore src/backend/Solvix.Migrator/Solvix.Migrator.csproj
 
+COPY src/shared/ src/shared/
 COPY src/backend/ src/backend/
 RUN dotnet publish src/backend/Solvix.Api/Solvix.Api.csproj -c Release --no-restore -o /out/api \
  && dotnet publish src/backend/Solvix.Migrator/Solvix.Migrator.csproj -c Release --no-restore -o /out/migrator

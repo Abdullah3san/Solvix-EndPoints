@@ -25,3 +25,11 @@ describe("breadcrumbs", () => {
     expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/dashboard");
   });
 });
+
+describe("breadcrumbs for entity pages", () => {
+  it("labels id segments instead of printing GUIDs", async () => {
+    const { crumbsFromPathname } = await import("@/components/shell/breadcrumbs");
+    const crumbs = crumbsFromPathname("/endpoints/configuration/01a1d66f-3a17-7f36-9d77-c3ce3bab0d64");
+    expect(crumbs.map((c) => c.label)).toEqual(["Endpoints", "Configuration", "Details"]);
+  });
+});
