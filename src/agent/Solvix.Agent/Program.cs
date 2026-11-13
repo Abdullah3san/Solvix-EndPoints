@@ -88,6 +88,7 @@ else
 if (command == "run")
 {
     builder.Services.AddHostedService<AgentWorker>();
+    builder.Services.AddHostedService<Solvix.Agent.Core.RemoteManagement.CommandChannelWorker>();
 }
 
 try

@@ -23,6 +23,9 @@ public sealed class AgentOptions
 
     public int RequestTimeoutSeconds { get; set; } = 60;
 
+    /// <summary>Remote administration (Phase 06). Local policy that the server cannot override.</summary>
+    public RemoteManagementAgentOptions RemoteManagement { get; set; } = new();
+
     public BackoffOptions Backoff { get; set; } = new();
 
     public UpdateOptions Updates { get; set; } = new();
@@ -87,4 +90,16 @@ public sealed class NetworkProbeOptions
 
     /// <summary>Minimum seconds between probe runs; the last result is reused in between.</summary>
     public int IntervalSeconds { get; set; } = 60;
+}
+
+public sealed class RemoteManagementAgentOptions
+{
+    /// <summary>Set to false to refuse all remote commands on this device (the agent still reports inventory and health).</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Command types this device refuses regardless of what the server sends (e.g. <c>system.shutdown</c>).</summary>
+    public string[] DisabledCommands { get; set; } = [];
+
+    /// <summary>How long one command poll may be held open by the server.</summary>
+    public int PollWaitSeconds { get; set; } = 25;
 }

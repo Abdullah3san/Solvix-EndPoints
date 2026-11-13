@@ -1,6 +1,7 @@
 namespace Solvix.IntegrationTests.Tests;
 
 using System.Net;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -91,6 +92,52 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
         await runtime.RunCycleAsync(CancellationToken.None);
         var devices = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync("/api/v1/devices"));
         Assert.Equal(newState.DeviceId, Assert.Single(devices.Items).Id);
+    }
+
+    [Fact]
+    public async Task Real_agent_verifies_executes_and_reports_signed_commands_and_refuses_tampered_ones()
+    {
+        var tenant = await fixture.RegisterTenantAsync();
+        using var admin = fixture.CreateClient(tenant.Token);
+        using var agent = new InProcessAgent(fixture);
+        agent.Services.GetRequiredService<BootstrapTokenStore>().Save(await fixture.CreateTokenAsync(tenant, maxUses: 1));
+        await agent.Services.GetRequiredService<AgentRuntime>().RunCycleAsync(CancellationToken.None);
+        var deviceId = agent.Services.GetRequiredService<IAgentStateStore>().Load().DeviceId!.Value;
+        var processor = agent.Services.GetRequiredService<Solvix.Agent.Core.RemoteManagement.CommandProcessor>();
+
+        // A read-only operation runs on the device and its result reaches the technician.
+        var uptime = await admin.RequestAsync(deviceId, "uptime");
+        await processor.PollOnceAsync(CancellationToken.None);
+        await processor.DrainAsync();
+        var done = await admin.GetCommandAsync(uptime.Id);
+        Assert.Equal(Solvix.Modules.RemoteManagement.Domain.CommandExecutionStatus.Succeeded, done.Status);
+        Assert.Contains("uptimeSeconds", done.Output, StringComparison.Ordinal);
+
+        // Someone with write access to the database changes a queued command: the device refuses it.
+        var info = await admin.RequestAsync(deviceId, "system-info");
+        await fixture.ExecutePlatformSqlAsync(
+            "UPDATE remote_command_executions SET signed_command = replace(signed_command, '\"signature\":\"', '\"signature\":\"AA') WHERE id = @id",
+            ("id", info.Id));
+        await processor.PollOnceAsync(CancellationToken.None);
+        await processor.DrainAsync();
+        var refused = await admin.GetCommandAsync(info.Id);
+        Assert.Equal(Solvix.Modules.RemoteManagement.Domain.CommandExecutionStatus.Rejected, refused.Status);
+        Assert.Equal(Solvix.Agent.Contracts.RemoteManagement.CommandRejectionCodes.InvalidSignature, refused.ErrorCode);
+
+        // A privileged operation without the executor service fails cleanly (and is approved first).
+        var restart = await admin.RequestAsync(deviceId, "restart", new Solvix.Modules.RemoteManagement.CommandBroker.OperationRequest
+        {
+            ConfirmDeviceName = (await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{deviceId}"))).Summary.Hostname,
+        });
+        var approver = await fixture.AddMemberWithPermissionsAsync(tenant, Solvix.SharedKernel.Authorization.Permissions.Remote.Restart, Solvix.SharedKernel.Authorization.Permissions.Remote.ApprovalsManage);
+        using var approverClient = fixture.CreateClient(approver.Token);
+        await HttpAssert.OkAsync<Solvix.Modules.RemoteManagement.CommandBroker.ApprovalDto>(await approverClient.PostAsJsonAsync(
+            $"/api/v1/remote/approvals/{restart.ApprovalId}/approve", new Solvix.Modules.RemoteManagement.CommandBroker.ApprovalDecisionRequest(null), ApiFixture.Json));
+        await processor.PollOnceAsync(CancellationToken.None);
+        await processor.DrainAsync();
+        var failed = await admin.GetCommandAsync(restart.Id);
+        Assert.Equal(Solvix.Modules.RemoteManagement.Domain.CommandExecutionStatus.Failed, failed.Status);
+        Assert.Equal(Solvix.Agent.Core.RemoteManagement.UnavailablePrivilegedOperationHost.ErrorCode, failed.ErrorCode);
     }
 
     private sealed class InProcessAgent : IDisposable

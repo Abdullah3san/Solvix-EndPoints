@@ -10,6 +10,7 @@ using Solvix.Agent.Core.Enrollment;
 using Solvix.Agent.Core.Health;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Monitoring;
+using Solvix.Agent.Core.RemoteManagement;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
@@ -32,7 +33,9 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<DeviceCredentialStore>();
         services.TryAddSingleton<BootstrapTokenStore>();
         services.TryAddSingleton<IAgentTransport, MutualTlsTransport>();
-        services.TryAddSingleton<IAgentApiClient, AgentApiClient>();
+        services.TryAddSingleton<AgentApiClient>();
+        services.TryAddSingleton<IAgentApiClient>(sp => sp.GetRequiredService<AgentApiClient>());
+        services.TryAddSingleton<IAgentCommandClient>(sp => sp.GetRequiredService<AgentApiClient>());
         services.TryAddSingleton<ConnectionMonitor>();
         services.TryAddSingleton<AgentHealthMonitor>();
         services.TryAddSingleton<ISystemHealthProbe, PortableSystemHealthProbe>();
@@ -45,6 +48,22 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<UpdateManager>();
         services.TryAddSingleton<IPackageSignatureVerifier, UnsupportedSignatureVerifier>();
         services.TryAddSingleton<AgentRuntime>();
+
+        // Remote administration (Phase 06): signed, allow-listed commands only.
+        services.TryAddSingleton<CommandKeyStore>();
+        services.TryAddSingleton<CommandReplayStore>();
+        services.TryAddSingleton<CommandHandlerRegistry>();
+        services.TryAddSingleton<CommandVerifier>();
+        services.TryAddSingleton<CommandProcessor>();
+        services.TryAddSingleton<IPrivilegedOperationHost, UnavailablePrivilegedOperationHost>();
+        services.AddSingleton<ICommandHandler, UptimeHandler>();
+        services.AddSingleton<ICommandHandler, SystemInfoHandler>();
+        services.AddSingleton<ICommandHandler, ProcessesHandler>();
+        foreach (var type in PrivilegedCommandHandler.Types)
+        {
+            services.AddSingleton<ICommandHandler>(new PrivilegedCommandHandler(type));
+        }
+
         services.AddHttpClient(UpdateManager.DownloadClientName, c => c.Timeout = TimeSpan.FromMinutes(30))
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {

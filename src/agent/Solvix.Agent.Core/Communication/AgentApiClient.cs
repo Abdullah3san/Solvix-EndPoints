@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using Microsoft.Extensions.Options;
 using Solvix.Agent.Contracts;
+using Solvix.Agent.Contracts.RemoteManagement;
 using Solvix.Agent.Core.Configuration;
 
 public interface IAgentApiClient
@@ -22,11 +23,24 @@ public interface IAgentApiClient
     Task<UpdateCheckResponse> CheckForUpdateAsync(string channel, string currentVersion, CancellationToken cancellationToken);
 }
 
+/// <summary>The signed command channel (Phase 06). Outbound only, like everything else.</summary>
+public interface IAgentCommandClient
+{
+    /// <summary>Pending signed commands; the server holds the request up to <paramref name="waitSeconds"/> when there are none.</summary>
+    Task<AgentCommandBatch> FetchCommandsAsync(int waitSeconds, CancellationToken cancellationToken);
+
+    Task AcknowledgeCommandAsync(Guid executionId, CommandAcknowledgement acknowledgement, CancellationToken cancellationToken);
+
+    Task ReportCommandResultAsync(Guid executionId, CommandResultReport report, CancellationToken cancellationToken);
+
+    Task<CommandKeySet> GetCommandKeysAsync(CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Typed client for the agent API. All traffic is outbound; responses are
 /// deserialized into fixed contracts only (source-generated, no polymorphism).
 /// </summary>
-public sealed class AgentApiClient : IAgentApiClient, IDisposable
+public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, IDisposable
 {
     private readonly Lock _gate = new();
     private readonly IAgentTransport? _transport;
@@ -79,6 +93,35 @@ public sealed class AgentApiClient : IAgentApiClient, IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         using var response = await SendRawAsync(request, cancellationToken);
         return await ReadAsync(response, AgentJsonContext.Default.UpdateCheckResponse, cancellationToken);
+    }
+
+    public async Task<AgentCommandBatch> FetchCommandsAsync(int waitSeconds, CancellationToken cancellationToken)
+    {
+        var uri = string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Commands}?waitSeconds={Math.Clamp(waitSeconds, 0, 30)}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await ReadAsync(response, AgentJsonContext.Default.AgentCommandBatch, cancellationToken);
+    }
+
+    public async Task AcknowledgeCommandAsync(Guid executionId, CommandAcknowledgement acknowledgement, CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(acknowledgement, AgentJsonContext.Default.CommandAcknowledgement);
+        using var request = new HttpRequestMessage(HttpMethod.Post, AgentRoutes.CommandAcknowledgement(executionId)) { Content = content };
+        using var response = await SendRawAsync(request, cancellationToken);
+    }
+
+    public async Task ReportCommandResultAsync(Guid executionId, CommandResultReport report, CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(report, AgentJsonContext.Default.CommandResultReport);
+        using var request = new HttpRequestMessage(HttpMethod.Post, AgentRoutes.CommandResult(executionId)) { Content = content };
+        using var response = await SendRawAsync(request, cancellationToken);
+    }
+
+    public async Task<CommandKeySet> GetCommandKeysAsync(CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, AgentRoutes.CommandKeys);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await ReadAsync(response, AgentJsonContext.Default.CommandKeySet, cancellationToken);
     }
 
     public void Dispose() => _http.Dispose();

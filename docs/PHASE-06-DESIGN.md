@@ -242,8 +242,8 @@ versions before the first production release.
 |---|-----------|--------|
 | 0 | Integrate Phase 02 with Phases 03–05 | **Done** – agent 71, unit 198, integration 180 tests, web checks and build green |
 | 1 | Permissions, remote access policy and scope (`Authorization`), remote audit log (`Auditing`) | **Done** – see §10 |
-| 2 | Command broker: definitions, signer, envelope, sequences, delivery/ack/result, redelivery, expiry, cancellation; approvals | **Done (server side)** – see §10. No agent executes commands yet (increment 3) |
-| 3 | Agent: key pinning, verifier, replay store, command channel, read-only system operations | Planned |
+| 2 | Command broker: definitions, signer, envelope, sequences, delivery/ack/result, redelivery, expiry, cancellation; approvals | **Done** – see §10 |
+| 3 | Agent: key pinning, verifier, replay store, command channel, read-only system operations | **Done** – see §11. Windows-only handlers compiled, not run on Windows |
 | 4 | Privileged executor service + restart / shutdown / logoff; session helper + lock | Planned |
 | 5 | Session management (records, concurrency, idle/max expiry, termination, history) | Planned |
 | 6 | Approved PowerShell scripts (library, approval, hash-pinned execution) | Planned |
@@ -291,3 +291,24 @@ every new endpoint.
 
 **Known limits:** the long-poll wake-up signal is in-process (with several API nodes a poll on another node returns at
 its timeout, ≤ 30 s later). The command signing key is a file/PEM key; a KMS-backed `ICommandSigner` is still to be written.
+
+## 11. Implemented: increment 3 (agent)
+
+`src/agent/Solvix.Agent.Core/RemoteManagement`, `src/agent/Solvix.Agent.Windows/RemoteManagement`.
+
+| Piece | Behaviour |
+|-------|-----------|
+| `CommandChannelWorker` | One outbound long poll (`GET agent/commands`, ≤ 25 s) while enrolled; exponential backoff on failures. |
+| `CommandKeyStore` | Pins the server's command signing keys on first contact after enrollment (over the device-certificate channel); a pinned set is never replaced by the server. Key rotation therefore needs `AdditionalPublicKeys` on the server *before* the agent first pins, or re-enrollment. |
+| `CommandVerifier` | Pinned key → ECDSA signature over the received bytes → envelope version → key id matches → tenant and device equal the agent's own enrolled identity → validity window (±2 min skew, ≤ 8 days) → `Authorized` → approval present and not self-approved → command type implemented here and not disabled by local policy (`SolvixAgent:RemoteManagement:DisabledCommands`, `Enabled`) → execution id and nonce never seen. |
+| `CommandReplayStore` | Persisted (survives restarts), pruned after expiry, bounded. |
+| `CommandProcessor` | verify → acknowledge (refusals are reported with their code) → only after the server accepted the acknowledgement: record → execute (≤ 4 concurrent, 15 min cap) → report the result with retries; `command.cancel` cancels a running execution. |
+| Handlers | portable: `system.info`, `system.uptime`, `system.processes` (no command lines); Windows: `system.services` (WMI), `system.logged_in_users` (WTS API). |
+| Privileged operations | `system.restart`, `system.shutdown`, `system.logoff`, `system.lock` go to `IPrivilegedOperationHost` with the signed bytes. **The Windows executor service is not implemented yet (increment 4)**; until then these fail with `privileged_executor_unavailable` – they are never run by the unprivileged agent. |
+
+Tests: `tests/Solvix.Agent.Tests/RemoteCommandTests.cs` (11: valid command; other tenant/device; expired/skew/implausible;
+tampered bytes, forged signature with a trusted key id, unknown key, garbage, key-set replacement; unauthorized, unapproved,
+self-approved, unknown type, unsupported version; local disable; run-once and replay after restart incl. nonce reuse;
+server refuses acknowledgement → not executed; refusal reported; privileged without executor; signed cancel) and
+`AgentEndToEndTests.Real_agent_verifies_executes_and_reports_signed_commands_and_refuses_tampered_ones` (real agent core ↔
+real API: execution and result, command altered in the database refused by the device, approved restart failing cleanly).
