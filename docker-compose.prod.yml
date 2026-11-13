@@ -108,9 +108,10 @@ services:
     environment:
       SOLVIX_DOMAIN: ${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN in .env.production (use :80 for IP-only testing)}
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      # Defaults to 80/443. Set SOLVIX_HTTP_PORT / SOLVIX_HTTPS_PORT when the host ports are taken.
+      - "${SOLVIX_HTTP_PORT:-80}:80"
+      - "${SOLVIX_HTTPS_PORT:-443}:443"
+      - "${SOLVIX_HTTPS_PORT:-443}:443/udp"
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
