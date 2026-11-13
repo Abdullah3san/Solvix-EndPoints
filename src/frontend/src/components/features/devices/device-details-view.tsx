@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Archive, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { api } from "@/lib/api/client";
-import type { BranchDto, DepartmentDto, DeviceDetailsDto, DeviceGroupDto, DeviceInventoryDto, MemberDto } from "@/lib/api/types";
+import type { BranchDto, DepartmentDto, DeviceDetailsDto, DeviceGroupDto, DeviceInventoryDto, DeviceMonitoringDto, MemberDto } from "@/lib/api/types";
 import { connectivityTone, deviceLabel, formatBytes, formatRelative, healthTone } from "@/lib/devices";
 import { emptyToNull, fieldErrorsFrom, messageFrom } from "@/lib/forms";
 import { formatDate } from "@/lib/utils";
@@ -17,10 +17,11 @@ import { Field } from "@/components/ui/field";
 import { Checkbox, Input, Select, Textarea } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, THead, TBody, TR, TH, TD, EmptyRow } from "@/components/ui/table";
+import { DeviceMonitoringPanel } from "@/components/features/monitoring/device-monitoring-panel";
 import { useToast } from "@/components/providers/toast-provider";
 import { useCan } from "@/components/providers/session-provider";
 
-const tabs = ["Overview", "Hardware", "Network", "Storage", "Software", "Security"] as const;
+const tabs = ["Overview", "Monitoring", "Hardware", "Network", "Storage", "Software", "Security"] as const;
 type Tab = (typeof tabs)[number];
 
 interface Props {
@@ -30,9 +31,10 @@ interface Props {
   members: MemberDto[];
   branches: BranchDto[];
   departments: DepartmentDto[];
+  monitoring?: DeviceMonitoringDto | null;
 }
 
-export function DeviceDetailsView({ initial, inventory, groups, members, branches, departments }: Props) {
+export function DeviceDetailsView({ initial, inventory, groups, members, branches, departments, monitoring = null }: Props) {
   const router = useRouter();
   const { toast } = useToast();
   const { isAdmin } = useCan();
@@ -120,7 +122,9 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
         ))}
       </div>
 
-      {!report && tab !== "Overview" && tab !== "Security" ? (
+      {tab === "Monitoring" ? <DeviceMonitoringPanel deviceId={s.id} initial={monitoring} /> : null}
+
+      {!report && tab !== "Overview" && tab !== "Security" && tab !== "Monitoring" ? (
         <Alert>No inventory has been reported yet. The agent uploads it shortly after enrollment.</Alert>
       ) : null}
 

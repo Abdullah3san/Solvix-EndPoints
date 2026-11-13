@@ -75,6 +75,13 @@ internal sealed partial class DevicesOptionsValidator : IValidateOptions<Devices
         Validate(options.CertificateAuthority, "CertificateAuthority", failures);
         Validate(options.Enrollment, "Enrollment", failures);
         Validate(options.Agent, "Agent", failures);
+        Validate(options.Monitoring, "Monitoring", failures);
+        var monitoring = options.Monitoring;
+        foreach (var error in Monitoring.MonitoringSettings.Validate(options.Agent.HeartbeatIntervalSeconds, monitoring.DefaultWarningAfterSeconds, monitoring.DefaultOfflineAfterSeconds).Values)
+        {
+            failures.Add("Monitoring defaults: " + error);
+        }
+
         if (options.Enrollment.DefaultTokenLifetimeHours > options.Enrollment.MaxTokenLifetimeHours)
         {
             failures.Add("Enrollment:DefaultTokenLifetimeHours cannot exceed MaxTokenLifetimeHours.");

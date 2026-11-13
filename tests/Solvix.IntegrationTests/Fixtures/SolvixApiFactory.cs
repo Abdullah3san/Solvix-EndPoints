@@ -2,6 +2,10 @@ namespace Solvix.IntegrationTests.Fixtures;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Solvix.SharedKernel.Abstractions;
 
 /// <summary>
 /// Hosts the real API (Program.cs) in-process. Configuration is injected
@@ -41,6 +45,8 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__Devices__Releases__0__DownloadUrl"] = "https://downloads.solvix.test/agent/SolvixAgent-" + LatestAgentVersion + ".msi",
             ["Solvix__Devices__Releases__0__Sha256"] = new string('a', 64),
             ["Solvix__Devices__Releases__0__SizeBytes"] = "1048576",
+            // Tests drive the monitor explicitly (MonitoringTestKit.SweepAsync).
+            ["Solvix__Devices__Monitoring__RunMonitor"] = "false",
         };
         foreach (var (key, value) in extraSettings ?? new Dictionary<string, string>())
         {
@@ -53,8 +59,12 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
         }
     }
 
+    /// <summary>The API's clock (real time unless a test advances it).</summary>
+    public TestClock Clock { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        builder.ConfigureTestServices(services => services.Replace(ServiceDescriptor.Singleton<IClock>(Clock)));
     }
 }

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Solvix.Agent.Contracts;
 using Solvix.IntegrationTests.Fixtures;
 using Solvix.Modules.Devices.Application.Devices;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Application.Enrollment;
 using Solvix.Modules.Devices.Domain;
 using Solvix.Modules.Devices.Security;
@@ -51,7 +52,7 @@ public sealed class DeviceEnrollmentTests(ApiFixture fixture)
         using var admin = fixture.CreateClient(tenant.Token);
         var details = await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{device.DeviceId}"));
         Assert.Equal(device.Identity.Hostname, details.Summary.Hostname);
-        Assert.Equal(DeviceConnectivity.Online, details.Summary.Connectivity);
+        Assert.Equal(ConnectivityState.Online, details.Summary.Connectivity);
         Assert.Equal(DeviceStatus.Active, details.Summary.Status);
         var credential = Assert.Single(details.Credentials);
         Assert.Equal(device.Certificate.GetCertHashString(HashAlgorithmName.SHA256).ToLowerInvariant(), credential.Thumbprint);

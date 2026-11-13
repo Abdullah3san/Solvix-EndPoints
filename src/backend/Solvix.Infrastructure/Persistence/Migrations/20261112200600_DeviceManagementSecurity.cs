@@ -70,5 +70,5 @@ public sealed class DeviceManagementSecurityMigration : Migration
 public static class TenantIsolatedTables
 {
     public static IReadOnlyList<string> All { get; } =
-        [.. RowLevelSecurityMigration.TenantTables, .. DeviceManagementSecurityMigration.TenantTables];
+        [.. RowLevelSecurityMigration.TenantTables, .. DeviceManagementSecurityMigration.TenantTables, .. RealTimeMonitoringSecurityMigration.TenantTables];
 }

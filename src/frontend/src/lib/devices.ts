@@ -31,7 +31,7 @@ export function formatRelative(value: string | null | undefined, now: Date = new
 
 export function connectivityTone(status: DeviceStatus, connectivity: DeviceConnectivity): Tone {
   if (status === "Retired") return "neutral";
-  return connectivity === "Online" ? "success" : "warning";
+  return connectivity === "Online" ? "success" : connectivity === "Warning" ? "warning" : "danger";
 }
 
 export function healthTone(health: AgentHealthStatus | null): Tone {

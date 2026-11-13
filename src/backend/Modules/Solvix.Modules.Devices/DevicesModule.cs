@@ -16,6 +16,7 @@ using Solvix.Modules.Devices.Application.Devices;
 using Solvix.Modules.Devices.Application.Enrollment;
 using Solvix.Modules.Devices.Application.Groups;
 using Solvix.Modules.Devices.Configuration;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Modules;
 
@@ -44,6 +45,17 @@ public sealed class DevicesModule : IModule
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IDeviceGroupService, DeviceGroupService>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
+
+        // Real-time monitoring.
+        services.AddMemoryCache();
+        services.AddSingleton<PresenceBuffer>();
+        services.AddScoped<MonitoringSettingsProvider>();
+        services.AddScoped<PresenceTracker>();
+        services.AddScoped<PresenceMonitor>();
+        services.AddScoped<IMonitoringQueries, MonitoringQueries>();
+        services.AddScoped<IMonitoringAdministration, MonitoringAdministration>();
+        services.AddSingleton<IMonitoringNotifier, SignalRMonitoringNotifier>();
+        services.AddHostedService<MonitoringBackgroundService>();
 
         // Anonymous enrollment is the only unauthenticated device endpoint: throttle it per client address.
         var permits = section.GetSection(nameof(DevicesOptions.Enrollment)).GetValue<int?>(nameof(EnrollmentOptions.RateLimitPerMinute)) ?? 30;

@@ -8,12 +8,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Application.Enrollment;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 
 /// <summary>Simulates agents against the in-process API.</summary>
 public static class DeviceTestKit
 {
     public const string AgentVersion = "1.0.0";
+
+    /// <summary>Simulated agents of this test run all "started" once (a changing value would look like a restart).</summary>
+    public static readonly DateTimeOffset AgentStartedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
 
     public static async Task<string> CreateTokenAsync(this ApiFixture fixture, TenantSession tenant, int maxUses = 1, int? lifetimeHours = null, Guid? groupId = null)
     {
@@ -81,13 +85,16 @@ public static class DeviceTestKit
         return client;
     }
 
+    public static Task<HttpResponseMessage> HeartbeatAsync(this HttpClient client, AgentHealthReport health, string agentVersion = AgentVersion) =>
+        client.PostAsJsonAsync("/" + AgentRoutes.Heartbeat, new HeartbeatRequest { AgentVersion = agentVersion, Health = health }, ApiFixture.Json);
+
     public static Task<HttpResponseMessage> HeartbeatAsync(this HttpClient client, string agentVersion = AgentVersion) =>
         client.PostAsJsonAsync(
             "/" + AgentRoutes.Heartbeat,
             new HeartbeatRequest
             {
                 AgentVersion = agentVersion,
-                Health = new AgentHealthReport { Status = AgentHealthStatus.Healthy, StartedAtUtc = DateTimeOffset.UtcNow, UptimeSeconds = 5 },
+                Health = new AgentHealthReport { Status = AgentHealthStatus.Healthy, StartedAtUtc = AgentStartedAtUtc, UptimeSeconds = 5 },
             },
             ApiFixture.Json);
 
@@ -120,6 +127,35 @@ public static class DeviceTestKit
         }
 
         await command.ExecuteNonQueryAsync();
+    }
+}
+
+public static class MonitoringTestKit
+{
+    /// <summary>Runs one monitoring pass now (the shared fixture does not run the background monitor).</summary>
+    public static async Task<SweepResult> SweepAsync(this ApiFixture fixture, DateTimeOffset? now = null)
+    {
+        ArgumentNullException.ThrowIfNull(fixture);
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<PresenceMonitor>().SweepAsync(now ?? DateTimeOffset.UtcNow, CancellationToken.None);
+    }
+
+    public static Task FlushPresenceAsync(this ApiFixture fixture) =>
+        fixture.Factory.Services.GetRequiredService<PresenceBuffer>().FlushAsync(CancellationToken.None);
+
+    /// <summary>Makes the device's last contact <paramref name="silence"/> old and lets the monitor evaluate it.</summary>
+    public static async Task SimulateSilenceAsync(this ApiFixture fixture, Guid deviceId, TimeSpan silence)
+    {
+        await fixture.FlushPresenceAsync();
+        await fixture.SweepAsync();
+        await fixture.ExecutePlatformSqlAsync(
+            """
+            UPDATE device_presence SET last_seen_at_utc = now() - @silence, state_changed_at_utc = now() - @silence WHERE id = @d;
+            UPDATE monitor_checkpoints SET evidence_floor_utc = now() - interval '30 days', last_sweep_at_utc = now();
+            """,
+            ("d", deviceId),
+            ("silence", silence));
+        await fixture.SweepAsync();
     }
 }
 

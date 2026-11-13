@@ -21,7 +21,12 @@ export default async function DashboardPage() {
     { label: "Members", value: overview.memberCount, icon: Users, href: "/settings/workspace" },
     { label: "Branches", value: overview.branchCount, icon: GitBranch, href: "/organization/branches" },
     { label: "Departments", value: overview.departmentCount, icon: Network, href: "/organization/departments" },
-    { label: `Devices · ${devices.online} online`, value: devices.active, icon: Monitor, href: "/endpoints/devices" },
+    {
+      label: `Devices · ${devices.online} online${devices.warning ? ` · ${devices.warning} warning` : ""} · ${devices.offline} offline`,
+      value: devices.active,
+      icon: Monitor,
+      href: "/endpoints/monitoring",
+    },
   ];
 
   return (

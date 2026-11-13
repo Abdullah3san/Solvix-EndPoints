@@ -7,6 +7,7 @@ using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Application.Agent;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Domain;
+using Solvix.Modules.Devices.Monitoring;
 using Solvix.SharedKernel.Abstractions;
 using Solvix.SharedKernel.Directory;
 using Solvix.SharedKernel.Exceptions;
@@ -42,15 +43,12 @@ internal sealed class DeviceService(
     IMemberDirectory members,
     IOrganizationDirectory organization,
     IAgentReleaseCatalog releases,
-    IOptions<DevicesOptions> options,
     IClock clock) : IDeviceService
 {
     public async Task<PagedResult<DeviceSummaryDto>> ListAsync(DeviceListQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         var page = new PageRequest(query.Page, query.PageSize);
-        var now = clock.UtcNow;
-        var onlineSince = OnlineSince(now);
         var devices = db.Set<Device>().AsNoTracking();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
@@ -71,12 +69,10 @@ internal sealed class DeviceService(
             devices = devices.Where(d => d.Status == status);
         }
 
-        devices = query.Connectivity switch
+        if (query.Connectivity is { } connectivity)
         {
-            DeviceConnectivity.Online => devices.Where(d => d.Status == DeviceStatus.Active && d.LastSeenAtUtc >= onlineSince),
-            DeviceConnectivity.Offline => devices.Where(d => d.Status == DeviceStatus.Active && (d.LastSeenAtUtc == null || d.LastSeenAtUtc < onlineSince)),
-            _ => devices,
-        };
+            devices = devices.Where(d => d.Status == DeviceStatus.Active && db.Set<DevicePresence>().Any(p => p.Id == d.Id && p.State == connectivity));
+        }
 
         if (query.GroupId is { } groupId)
         {
@@ -99,16 +95,24 @@ internal sealed class DeviceService(
             .OrderBy(d => d.Hostname).ThenBy(d => d.Id)
             .Skip(page.Skip).Take(page.SafePageSize)
             .ToListAsync(cancellationToken);
-        return new PagedResult<DeviceSummaryDto>(items.Select(d => ToSummary(d, now)).ToList(), page.SafePage, page.SafePageSize, total);
+        var presence = await LoadPresenceAsync(items.Select(d => d.Id).ToList(), cancellationToken);
+        return new PagedResult<DeviceSummaryDto>(items.Select(d => ToSummary(d, presence.GetValueOrDefault(d.Id))).ToList(), page.SafePage, page.SafePageSize, total);
     }
 
     public async Task<DeviceStatsDto> GetStatsAsync(CancellationToken cancellationToken)
     {
-        var onlineSince = OnlineSince(clock.UtcNow);
         var devices = db.Set<Device>().AsNoTracking();
         var total = await devices.CountAsync(cancellationToken);
         var retired = await devices.CountAsync(d => d.Status == DeviceStatus.Retired, cancellationToken);
-        var online = await devices.CountAsync(d => d.Status == DeviceStatus.Active && d.LastSeenAtUtc >= onlineSince, cancellationToken);
+        var states = await (
+                from p in db.Set<DevicePresence>().AsNoTracking()
+                join d in devices on p.Id equals d.Id
+                where d.Status == DeviceStatus.Active
+                group p by p.State into g
+                select new { State = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.State, g => g.Count, cancellationToken);
+        var online = states.GetValueOrDefault(ConnectivityState.Online);
+        var warning = states.GetValueOrDefault(ConnectivityState.Warning);
         var versions = await devices
             .Where(d => d.Status == DeviceStatus.Active)
             .GroupBy(d => d.AgentVersion)
@@ -130,7 +134,8 @@ internal sealed class DeviceService(
             total,
             active,
             online,
-            active - online,
+            active - online - warning,
+            warning,
             retired,
             versionCounts.Where(v => v.UpdateAvailable).Sum(v => v.DeviceCount),
             latest,
@@ -260,7 +265,8 @@ internal sealed class DeviceService(
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    private DateTimeOffset OnlineSince(DateTimeOffset now) => now.AddSeconds(-options.Value.Agent.OfflineAfterSeconds);
+    private async Task<Dictionary<Guid, DevicePresence>> LoadPresenceAsync(List<Guid> ids, CancellationToken cancellationToken) =>
+        await db.Set<DevicePresence>().AsNoTracking().Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, cancellationToken);
 
     private async Task<Device> FindAsync(Guid id, bool tracking, CancellationToken cancellationToken)
     {
@@ -269,14 +275,15 @@ internal sealed class DeviceService(
             ?? throw new NotFoundException("Device", id);
     }
 
-    private DeviceSummaryDto ToSummary(Device d, DateTimeOffset now) =>
+    /// <summary>Connectivity is the persisted monitoring state; a device without monitoring data yet is reported offline.</summary>
+    private DeviceSummaryDto ToSummary(Device d, DevicePresence? presence) =>
         new(
             d.Id,
             d.Hostname,
             d.DisplayName,
             d.Platform,
             d.Status,
-            d.Status == DeviceStatus.Active && d.LastSeenAtUtc >= OnlineSince(now) ? DeviceConnectivity.Online : DeviceConnectivity.Offline,
+            d.Status == DeviceStatus.Active ? presence?.State ?? ConnectivityState.Offline : ConnectivityState.Offline,
             d.OsName,
             d.OsVersion,
             d.OsDisplayVersion,
@@ -289,9 +296,10 @@ internal sealed class DeviceService(
             d.HealthStatus,
             d.IpAddresses,
             d.AssignedUserId,
-            d.LastSeenAtUtc,
+            presence?.LastSeenAtUtc,
             d.LastInventoryAtUtc,
-            d.EnrolledAtUtc);
+            d.EnrolledAtUtc,
+            d.BranchId);
 
     private async Task<DeviceDetailsDto> ToDetailsAsync(Device d, CancellationToken cancellationToken)
     {
@@ -334,7 +342,7 @@ internal sealed class DeviceService(
 
         return new DeviceDetailsDto
         {
-            Summary = ToSummary(d, clock.UtcNow),
+            Summary = ToSummary(d, await db.Set<DevicePresence>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == deviceId, cancellationToken)),
             Notes = d.Notes,
             HardwareId = d.HardwareId,
             DomainName = d.DomainName,

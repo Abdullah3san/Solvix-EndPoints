@@ -1,3 +1,4 @@
+using Solvix.Agent.Core.Monitoring;
 namespace Solvix.Agent.Tests;
 
 using System.Net;
@@ -59,6 +60,8 @@ public sealed class FakeAgentApi : IAgentApiClient, IDisposable
     public int CertificateLifetimeDays { get; set; } = 90;
 
     public static AgentApiException Transient() => new(AgentApiFailure.Transient, null, null, "Connection refused");
+
+    public static AgentApiException ServerError() => new(AgentApiFailure.Transient, HttpStatusCode.ServiceUnavailable, null, "503 Service Unavailable");
 
     public static AgentApiException Unauthorized() => new(AgentApiFailure.Authentication, HttpStatusCode.Unauthorized, null, "401");
 
@@ -182,6 +185,8 @@ public sealed class AgentHarness : IDisposable
         services.AddSingleton<IDeviceKeyStore>(_ => Keys);
         services.AddSingleton<ISecretProtector, FilePermissionSecretProtector>();
         services.AddSingleton<IInventoryCollector>(Collector);
+        services.Replace(ServiceDescriptor.Singleton<ISystemHealthProbe>(SystemProbe));
+        services.Replace(ServiceDescriptor.Singleton<INetworkReachabilityProbe>(NetworkProbe));
         if (configure is not null)
         {
             services.PostConfigure(configure);
@@ -197,6 +202,10 @@ public sealed class AgentHarness : IDisposable
     public FakeAgentApi Api { get; } = new();
 
     public StaticCollector Collector { get; } = new();
+
+    public FakeSystemHealthProbe SystemProbe { get; } = new();
+
+    public FakeNetworkProbe NetworkProbe { get; } = new();
 
     public FileDeviceKeyStore Keys => _keys ??= new FileDeviceKeyStore(DataDirectory);
 
@@ -223,4 +232,44 @@ public sealed class AgentHarness : IDisposable
 internal static class OptionsExtensions
 {
     public static IOptions<AgentOptions> Wrap(this AgentOptions options) => Options.Create(options);
+}
+
+public sealed class FakeSystemHealthProbe : ISystemHealthProbe
+{
+    public DateTimeOffset BootTimeUtc { get; set; } = new(2026, 11, 12, 7, 0, 0, TimeSpan.Zero);
+
+    public SystemHealthSnapshot Snapshot { get; set; } = new()
+    {
+        TotalMemoryBytes = 16L << 30,
+        AvailableMemoryBytes = 8L << 30,
+        SystemDrive = "C:\\",
+        SystemDriveTotalBytes = 500L << 30,
+        SystemDriveFreeBytes = 200L << 30,
+        RebootPending = false,
+    };
+
+    public DateTimeOffset GetBootTimeUtc() => BootTimeUtc;
+
+    public SystemHealthSnapshot Capture() => Snapshot;
+}
+
+public sealed class FakeNetworkProbe : INetworkReachabilityProbe
+{
+    public int Calls { get; private set; }
+
+    public bool GatewayReachable { get; set; } = true;
+
+    public Task<NetworkReachabilitySnapshot?> ProbeAsync(CancellationToken cancellationToken)
+    {
+        Calls++;
+        return Task.FromResult<NetworkReachabilitySnapshot?>(new NetworkReachabilitySnapshot
+        {
+            CheckedAtUtc = DateTimeOffset.UnixEpoch,
+            Checks =
+            [
+                new NetworkCheck { Kind = NetworkCheckKind.Interface, Target = "Ethernet", Success = true },
+                new NetworkCheck { Kind = NetworkCheckKind.Gateway, Target = "192.168.1.1", Success = GatewayReachable, LatencyMs = GatewayReachable ? 1 : null },
+            ],
+        });
+    }
 }
