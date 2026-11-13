@@ -11,6 +11,12 @@ public interface ICurrentUser
 
     TenantRole? Role { get; }
 
+    /// <summary><c>true</c> when the caller is an endpoint agent rather than a person.</summary>
+    bool IsAgent { get; }
+
+    /// <summary>The calling device, when <see cref="IsAgent"/> is true.</summary>
+    Guid? DeviceId { get; }
+
     Guid RequireUserId();
 }
 

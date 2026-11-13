@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Solvix.SharedKernel\Solvix.SharedKernel.csproj" />
+    <ProjectReference Include="..\Solvix.Modules.Organization\Solvix.Modules.Organization.csproj" />
+    <ProjectReference Include="..\Solvix.Modules.Devices\Solvix.Modules.Devices.csproj" />
+    <ProjectReference Include="..\..\..\shared\Solvix.Endpoint.Contracts\Solvix.Endpoint.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Solvix.UnitTests" />
+    <InternalsVisibleTo Include="Solvix.IntegrationTests" />
+  </ItemGroup>
+</Project>

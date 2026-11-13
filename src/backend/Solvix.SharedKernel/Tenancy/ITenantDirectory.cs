@@ -10,6 +10,9 @@ public interface ITenantDirectory
     Task<TenantDescriptor?> FindByIdAsync(Guid tenantId, CancellationToken cancellationToken);
 
     Task<TenantDescriptor?> FindBySlugAsync(string slug, CancellationToken cancellationToken);
+
+    /// <summary>Ids of all active tenants; used by background schedulers to fan out per-tenant work.</summary>
+    Task<IReadOnlyList<Guid>> ListActiveTenantIdsAsync(CancellationToken cancellationToken);
 }
 
 public sealed record TenantDescriptor(Guid Id, string Slug, string Name, TenantStatus Status)

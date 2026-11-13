@@ -58,10 +58,16 @@ public sealed partial class TenantResolutionMiddleware(RequestDelegate next, ILo
             throw new TenantInactiveException(tenant.Status.ToString());
         }
 
-        var membership = await memberships.FindAsync(tenantId, userId, context.RequestAborted);
-        if (membership is not { IsActive: true })
+        // Endpoint agents have no membership: the device authentication handler already
+        // verified that the device is enrolled in this tenant and not retired.
+        var isAgent = principal.FindFirst(SolvixClaimTypes.ActorType)?.Value == ActorTypes.Agent;
+        if (!isAgent)
         {
-            throw new ForbiddenException("Your membership in this workspace is no longer active.");
+            var membership = await memberships.FindAsync(tenantId, userId, context.RequestAborted);
+            if (membership is not { IsActive: true })
+            {
+                throw new ForbiddenException("Your membership in this workspace is no longer active.");
+            }
         }
 
         using (LogContext.PushProperty("TenantId", tenantId))

@@ -13,9 +13,11 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Solvix.Api.Infrastructure;
 using Solvix.Api.Middleware;
+using Solvix.Endpoint.Contracts.Agent;
 using Solvix.Infrastructure.DependencyInjection;
 using Solvix.Infrastructure.Persistence;
 using Solvix.Infrastructure.Tenancy;
+using Solvix.Modules.Devices;
 using Solvix.Modules.Identity.Configuration;
 using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Tenancy;
@@ -134,8 +136,18 @@ try
         });
 
     // ------------------------------------------------------- authentication
-    builder.Services
-        .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    // "solvix" forwards to the JWT handler for people and to the Device handler for endpoint
+    // agents, so UseAuthentication (and therefore tenant resolution) covers both.
+    const string DefaultScheme = "solvix";
+    var authentication = builder.Services
+        .AddAuthentication(DefaultScheme)
+        .AddPolicyScheme(DefaultScheme, "JWT or device credential", options =>
+        {
+            options.ForwardDefaultSelector = context =>
+                context.Request.Headers.Authorization.ToString().StartsWith(AgentAuth.Scheme + " ", StringComparison.OrdinalIgnoreCase)
+                    ? AgentAuth.Scheme
+                    : JwtBearerDefaults.AuthenticationScheme;
+        })
         .AddJwtBearer(options =>
         {
             var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
@@ -154,11 +166,17 @@ try
                 RoleClaimType = SolvixClaimTypes.Role,
             };
         });
+    DevicesModule.AddDeviceCredentialScheme(authentication);
 
+    // People's policies reject agent principals and the agent policy rejects people,
+    // so a device credential can never reach an administrative endpoint (and vice versa).
+    static bool IsAgent(System.Security.Claims.ClaimsPrincipal user) =>
+        user.HasClaim(SolvixClaimTypes.ActorType, ActorTypes.Agent);
     builder.Services.AddAuthorizationBuilder()
-        .AddPolicy(Policies.TenantMember, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId))
-        .AddPolicy(Policies.TenantAdmin, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
-        .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner)));
+        .AddPolicy(Policies.TenantMember, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireAssertion(c => !IsAgent(c.User)))
+        .AddPolicy(Policies.TenantAdmin, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireAssertion(c => !IsAgent(c.User)).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
+        .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireAssertion(c => !IsAgent(c.User)).RequireRole(nameof(TenantRole.Owner)))
+        .AddPolicy(Policies.Agent, p => p.AddAuthenticationSchemes(AgentAuth.Scheme).RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireClaim(SolvixClaimTypes.ActorType, ActorTypes.Agent));
 
     // ------------------------------------------------------------------ CORS
     builder.Services.AddCors(options =>

@@ -1,6 +1,9 @@
 namespace Solvix.Infrastructure.DependencyInjection;
 
 using System.Reflection;
+using Solvix.Modules.Audit;
+using Solvix.Modules.Devices;
+using Solvix.Modules.EndpointManagement;
 using Solvix.Modules.Identity;
 using Solvix.Modules.Organization;
 using Solvix.Modules.Tenancy;
@@ -14,6 +17,9 @@ public static class SolvixModules
         new TenancyModule(),
         new IdentityModule(),
         new OrganizationModule(),
+        new AuditModule(),
+        new DevicesModule(),
+        new EndpointManagementModule(),
     ];
 
     public static IReadOnlyList<Assembly> ConfigurationAssemblies { get; } =

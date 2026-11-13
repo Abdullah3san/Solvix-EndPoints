@@ -7,9 +7,15 @@
     <Project Path="src/backend/Solvix.SharedKernel/Solvix.SharedKernel.csproj" />
   </Folder>
   <Folder Name="/src/backend/Modules/">
+    <Project Path="src/backend/Modules/Solvix.Modules.Audit/Solvix.Modules.Audit.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Devices/Solvix.Modules.Devices.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.EndpointManagement/Solvix.Modules.EndpointManagement.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/Solvix.Endpoint.Contracts/Solvix.Endpoint.Contracts.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Solvix.IntegrationTests/Solvix.IntegrationTests.csproj" />

@@ -25,6 +25,8 @@ public sealed class MigrationTests(ApiFixture fixture)
         var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
         Assert.Contains(applied, m => m.EndsWith("_InitialSchema", StringComparison.Ordinal));
         Assert.Contains(applied, m => m.EndsWith("_RowLevelSecurity", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("_EndpointManagement", StringComparison.Ordinal));
+        Assert.Contains(applied, m => m.EndsWith("_EndpointManagementSecurity", StringComparison.Ordinal));
 
         // Guards against editing entities/configurations without adding a migration.
         Assert.False(db.Database.HasPendingModelChanges(), "The EF model has changes that are not covered by a migration.");
@@ -43,7 +45,11 @@ public sealed class MigrationTests(ApiFixture fixture)
             .ToList();
 
         Assert.NotEmpty(tenantTables);
-        Assert.Equal(tenantTables, RowLevelSecurityMigration.TenantTables.OrderBy(t => t, StringComparer.Ordinal).ToList());
+        var protectedTables = RowLevelSecurityMigration.TenantTables
+            .Concat(EndpointManagementSecurityMigration.TenantTables)
+            .OrderBy(t => t, StringComparer.Ordinal)
+            .ToList();
+        Assert.Equal(tenantTables, protectedTables);
 
         await using var connection = new NpgsqlConnection(fixture.Database.MigratorConnectionString);
         await connection.OpenAsync();

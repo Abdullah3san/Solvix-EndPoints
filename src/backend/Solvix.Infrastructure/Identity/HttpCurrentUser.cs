@@ -10,7 +10,12 @@ internal sealed class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentU
 
     public bool IsAuthenticated => Principal?.Identity?.IsAuthenticated == true;
 
-    public Guid? UserId => Guid.TryParse(Principal?.FindFirst(SolvixClaimTypes.Subject)?.Value, out var id) ? id : null;
+    public bool IsAgent => string.Equals(Principal?.FindFirst(SolvixClaimTypes.ActorType)?.Value, ActorTypes.Agent, StringComparison.Ordinal);
+
+    /// <summary>The signed-in person. Always null for agents, so user-only services reject them.</summary>
+    public Guid? UserId => !IsAgent && Guid.TryParse(Principal?.FindFirst(SolvixClaimTypes.Subject)?.Value, out var id) ? id : null;
+
+    public Guid? DeviceId => IsAgent && Guid.TryParse(Principal?.FindFirst(SolvixClaimTypes.Subject)?.Value, out var id) ? id : null;
 
     public string? Email => Principal?.FindFirst(SolvixClaimTypes.Email)?.Value;
 

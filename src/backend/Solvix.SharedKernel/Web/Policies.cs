@@ -11,4 +11,7 @@ public static class Policies
 
     /// <summary>Tenant Owner only.</summary>
     public const string TenantOwner = "TenantOwner";
+
+    /// <summary>An enrolled, active endpoint agent authenticated with its device credential.</summary>
+    public const string Agent = "Agent";
 }

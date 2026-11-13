@@ -18,6 +18,9 @@
     <ProjectReference Include="..\Modules\Solvix.Modules.Tenancy\Solvix.Modules.Tenancy.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Identity\Solvix.Modules.Identity.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Organization\Solvix.Modules.Organization.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Audit\Solvix.Modules.Audit.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Devices\Solvix.Modules.Devices.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.EndpointManagement\Solvix.Modules.EndpointManagement.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Solvix.UnitTests" />

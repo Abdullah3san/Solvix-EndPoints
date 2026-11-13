@@ -9,4 +9,14 @@ public static class SolvixClaimTypes
     public const string TenantId = "tid";
     public const string TenantSlug = "tslug";
     public const string Role = "role";
+
+    /// <summary>Kind of principal: absent or <see cref="ActorTypes.User"/> for people, <see cref="ActorTypes.Agent"/> for endpoint agents.</summary>
+    public const string ActorType = "act";
+}
+
+/// <summary>Values of the <see cref="SolvixClaimTypes.ActorType"/> claim.</summary>
+public static class ActorTypes
+{
+    public const string User = "user";
+    public const string Agent = "agent";
 }

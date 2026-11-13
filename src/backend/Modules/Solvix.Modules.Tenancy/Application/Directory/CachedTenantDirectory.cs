@@ -61,6 +61,13 @@ internal sealed class CachedTenantDirectory(ISolvixDbContext db, IDistributedCac
         return descriptor;
     }
 
+    public async Task<IReadOnlyList<Guid>> ListActiveTenantIdsAsync(CancellationToken cancellationToken) =>
+        await db.Set<Tenant>().AsNoTracking()
+            .Where(t => t.Status == TenantStatus.Active)
+            .OrderBy(t => t.Id)
+            .Select(t => t.Id)
+            .ToListAsync(cancellationToken);
+
     public async Task InvalidateAsync(Guid tenantId, string slug, CancellationToken cancellationToken)
     {
         await cache.RemoveAsync(IdKey(tenantId), cancellationToken);
