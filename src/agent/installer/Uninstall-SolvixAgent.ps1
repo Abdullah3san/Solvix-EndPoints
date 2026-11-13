@@ -17,6 +17,10 @@ $ErrorActionPreference = 'Stop'
 $Exe = Join-Path $InstallPath 'Solvix.Agent.exe'
 $DataPath = Join-Path $env:ProgramData 'Solvix\Agent'
 
+if (Get-Service -Name SolvixRemoteExecutor -ErrorAction SilentlyContinue) {
+    Stop-Service -Name SolvixRemoteExecutor -Force -ErrorAction SilentlyContinue
+    & sc.exe delete SolvixRemoteExecutor | Out-Null
+}
 if (Get-Service -Name SolvixAgent -ErrorAction SilentlyContinue) {
     Stop-Service -Name SolvixAgent -Force -ErrorAction SilentlyContinue
     & sc.exe delete SolvixAgent | Out-Null

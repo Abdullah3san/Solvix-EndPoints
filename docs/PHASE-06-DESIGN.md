@@ -244,7 +244,7 @@ versions before the first production release.
 | 1 | Permissions, remote access policy and scope (`Authorization`), remote audit log (`Auditing`) | **Done** – see §10 |
 | 2 | Command broker: definitions, signer, envelope, sequences, delivery/ack/result, redelivery, expiry, cancellation; approvals | **Done** – see §10 |
 | 3 | Agent: key pinning, verifier, replay store, command channel, read-only system operations | **Done** – see §11. Windows-only handlers compiled, not run on Windows |
-| 4 | Privileged executor service + restart / shutdown / logoff; session helper + lock | Planned |
+| 4 | Privileged executor service + restart / shutdown / logoff / lock | **Implemented, not verified on Windows** – see §12. The user-session helper is still open (lock uses session disconnect meanwhile) |
 | 5 | Session management (records, concurrency, idle/max expiry, termination, history) | Planned |
 | 6 | Approved PowerShell scripts (library, approval, hash-pinned execution) | Planned |
 | 7 | File transfer | Planned |
@@ -312,3 +312,18 @@ self-approved, unknown type, unsupported version; local disable; run-once and re
 server refuses acknowledgement → not executed; refusal reported; privileged without executor; signed cancel) and
 `AgentEndToEndTests.Real_agent_verifies_executes_and_reports_signed_commands_and_refuses_tampered_ones` (real agent core ↔
 real API: execution and result, command altered in the database refused by the device, approved restart failing cleanly).
+
+## 12. Implemented: increment 4 (Remote Executor)
+
+`src/agent/Solvix.Agent.Core/RemoteManagement/Privileged`, `src/agent/Solvix.Agent.Windows/RemoteManagement/WindowsPowerOperations.cs`.
+
+| Piece | Behaviour |
+|-------|-----------|
+| Service | `Solvix.Agent.exe executor` as Windows service **SolvixRemoteExecutor** (LocalSystem), created by the installer, removed by the uninstaller. The power code exists only in this process. |
+| Pipe | `\\.\pipe\SolvixRemoteExecutor`; ACL: SYSTEM and Administrators full, `NT SERVICE\SolvixAgent` read/write, network SID denied (`SecuredExecutorPipeFactory`). Length-prefixed JSON, ≤ 128 KiB, 30 s per request. |
+| Independent verification | The executor re-runs the full verifier (signature, tenant, device, expiry, approval, allow-list) with its **own** pinned keys, pinned tenant/device identity and replay store under `%ProgramData%\Solvix\Agent\executor` (SYSTEM/Administrators only). It adopts the agent's identity and keys once, at the first command; after that, changes to the agent's files cannot redirect it. It accepts only restart, shutdown, sign-off and lock (never cancel or read-only commands) and re-validates parameters itself. |
+| Operations | restart/shutdown: `InitiateSystemShutdownEx` (planned reason, **no forced app close**, optional delay ≤ 600 s and message); sign-off: `WTSLogoffSession` on the active console session; lock: `WTSDisconnectSession` of the console session (lock screen, programs keep running). No console user → `no_active_session`. |
+| Agent side | `PipePrivilegedOperationHost`; executor not running → `privileged_executor_unavailable`; refusals surface as `executor_rejected_<code>`. |
+
+**Limits:** first-use trust – a compromised agent that alters its key or identity files *before* the first privileged command could seed the executor; a stricter option is to pin both at install time. A process that creates the pipe before the executor starts could receive (but not forge) signed commands; the executor creating the first pipe instance at boot makes this unlikely. Lock via a user-session helper (`LockWorkStation`, toasts, consent prompts) is still to be built.
+**Tests (Linux, portable logic and pipe):** `RemoteExecutorTests` (9): all four operations with parameters; forged, wrong tenant/device, expired, unapproved, cancel and read-only types refused; replay across executor restarts; tampering with the agent's files after first use; parameter re-validation; OS failures reported; pipe round trip incl. missing executor, replay and forged command; full chain processor → pipe → executor. The Win32 calls, the pipe ACL and the installer scripts were **not executed** (no Windows machine, no PowerShell).

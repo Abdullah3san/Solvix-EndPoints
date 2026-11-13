@@ -108,6 +108,22 @@ if ($ServiceAccount -ne 'LocalSystem') {
     & icacls.exe $DataPath /grant:r "$($serviceIdentity):(OI)(CI)M" | Out-Null
 }
 
+# 5b. Remote Executor: the only component that may restart, shut down, sign off or lock the device.
+# Runs as LocalSystem, listens on a local pipe reachable only by SYSTEM, Administrators and the agent
+# service, and re-verifies every signed command itself. Its state directory is NOT readable or writable
+# by the agent service account (inheritance removed, no entry for it).
+$ExecutorService = 'SolvixRemoteExecutor'
+$ExecutorData = Join-Path $DataPath 'executor'
+New-Item -ItemType Directory -Force -Path $ExecutorData | Out-Null
+& icacls.exe $ExecutorData /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+if (-not (Get-Service -Name $ExecutorService -ErrorAction SilentlyContinue)) {
+    New-Service -Name $ExecutorService -BinaryPathName "`"$Exe`" executor" -DisplayName 'Solvix Remote Executor' `
+        -Description 'Performs restart, shutdown, sign-off and lock requested by Solvix EndPoints. Accepts only signed commands from the local Solvix Agent.' `
+        -StartupType Automatic | Out-Null
+}
+& sc.exe config $ExecutorService obj= 'LocalSystem' | Out-Null
+& sc.exe failure $ExecutorService reset= 86400 actions= restart/60000/restart/60000/restart/300000 | Out-Null
+
 # 6. Privileged updater: installs only staged packages that pass hash + publisher checks again.
 $action = New-ScheduledTaskAction -Execute $Exe -Argument 'apply-update'
 $triggers = @(
@@ -130,5 +146,6 @@ finally {
     Remove-Item Env:\SOLVIX_ENROLLMENT_TOKEN -ErrorAction SilentlyContinue
 }
 
+Start-Service -Name $ExecutorService
 Start-Service -Name $ServiceName
 Write-Host "Solvix Agent installed. Check enrollment with: & '$Exe' status"

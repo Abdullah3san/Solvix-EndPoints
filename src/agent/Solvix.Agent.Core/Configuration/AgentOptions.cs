@@ -102,4 +102,7 @@ public sealed class RemoteManagementAgentOptions
 
     /// <summary>How long one command poll may be held open by the server.</summary>
     public int PollWaitSeconds { get; set; } = 25;
+
+    /// <summary>Name of the local pipe the privileged Remote Executor service listens on.</summary>
+    public string ExecutorPipeName { get; set; } = "SolvixRemoteExecutor";
 }
