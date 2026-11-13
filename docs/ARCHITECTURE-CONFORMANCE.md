@@ -6,7 +6,7 @@ can follow, so the implementation matches the agreed architecture
 [DEVICE_PLATFORM.md](DEVICE_PLATFORM.md)).
 
 * **Part A** lists concrete gaps found in the in-progress Phase 02 branch
-  `claude/funny-wozniak-t660n8` (reviewed at commit `2191ab4`, 2026-11-12).
+  `claude/funny-wozniak-t660n8` (first reviewed at `2191ab4`; findings re-checked at `74d49f0`, 2026-11-13).
 * **Part B** is the gate every later phase must pass before it is called done.
 
 Tick an item only when its **verification** passes in CI.
@@ -30,7 +30,7 @@ injection or raw SQL mistake reads **every tenant**. Phase 02 added 9 more table
 this policy (`roles`, `role_permissions`, `membership_roles`, `user_sessions`,
 `refresh_tokens`, `user_invitations`, `user_invitation_roles`,
 `tenant_security_policies`, `auth_audit_events`). `BeginPlatformScope()` is now called in
-about 20 places: `AuthService` (6), `AccountService` (6), `MfaService` (4),
+27 places (re-counted 2026-11-13 at `74d49f0`): `AuthService` (6), `AccountService` (6), `MfaService` (4),
 `InvitationService` (2), `SessionService` (2), plus Tenancy registration.
 
 **Tasks**
