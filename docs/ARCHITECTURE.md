@@ -180,7 +180,9 @@ new read-only SharedKernel contracts, `IMemberDirectory` and `IOrganizationDirec
 TLS can terminate in Kestrel (named endpoint `Agents`, `ClientCertificateMode.AllowCertificate`) or
 at a trusted reverse proxy that forwards the client certificate in a configured header
 (`Solvix:Devices:ForwardedClientCertificateHeader`). The header mode must only be enabled when the
-API is reachable exclusively through that proxy.
+API is reachable exclusively through that proxy. The single-VPS production stack uses the Kestrel
+endpoint, because the web container also reaches the API directly (`docs/DEPLOYMENT-VPS.md`,
+*Windows agents*).
 
 ## Duplicate devices
 

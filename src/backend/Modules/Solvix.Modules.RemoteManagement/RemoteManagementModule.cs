@@ -4,6 +4,7 @@ using System.Reflection;
 using FluentValidation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Solvix.Modules.RemoteManagement.Auditing;
 using Solvix.Modules.RemoteManagement.Authorization;
 using Solvix.Modules.RemoteManagement.CommandBroker;
@@ -27,6 +28,7 @@ public sealed class RemoteManagementModule : IModule
         services.AddHttpContextAccessor();
 
         services.AddSingleton<ICommandSigner, EcdsaCommandSigner>();
+        services.AddHostedService<CommandSignerWarmup>();
         services.AddSingleton<CommandSignal>();
 
         services.AddScoped<RemoteAuditTrail>();
@@ -43,5 +45,17 @@ public sealed class RemoteManagementModule : IModule
         services.AddHostedService<CommandSweeperService>();
 
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
+    }
+
+    /// <summary>Loads the command signing key at start-up so a missing or invalid key fails fast instead of on the first command.</summary>
+    private sealed class CommandSignerWarmup(ICommandSigner signer) : IHostedService
+    {
+        public Task StartAsync(CancellationToken cancellationToken)
+        {
+            _ = signer.KeyId;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

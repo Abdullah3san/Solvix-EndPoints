@@ -14,7 +14,7 @@ working unless it is listed there as *Done* with its verification.
 | Agent (Phase 03/04): outbound-only HTTPS, heartbeat (default 60 s) returning configuration and two booleans; contracts deliberately carry **no instructions** ("never execute arbitrary server instructions"). Runs as the virtual account `NT SERVICE\SolvixAgent` with only `SeChangeNotifyPrivilege/SeCreateGlobalPrivilege`. Privileged work (updates) is done by a separate SYSTEM component that **re-verifies** what it is given. | Remote operations need privileges the agent intentionally lacks (restart, shutdown) and access to the interactive desktop that a session-0 service cannot reach (lock, screen capture, call prompt). Phase 06 keeps the agent least-privileged and follows the update pattern (§4.3). |
 | Real-time (Phase 04): SignalR hub through the Next.js BFF using SSE/long polling (route handlers cannot proxy WebSockets). | Browser-side streaming (terminal output, session status, call signalling) uses the same BFF approach. |
 | Audit (Phase 02 `auth_audit_events`, Phase 05 asset audit log): append-only via database triggers. | Remote audit uses the same technique. |
-| Gap noted during the merge: Phase 02's single-VPS deployment (`docker-compose.prod.yml`, `deploy/Caddyfile`) does not expose the Phase 03 agent mutual-TLS endpoint. | Not Phase 06 scope; tracked as a follow-up. |
+| Gap noted during the merge: Phase 02's single-VPS deployment (`docker-compose.prod.yml`, `deploy/Caddyfile`) did not expose the Phase 03 agent mutual-TLS endpoint. | Resolved: the production stack publishes the Kestrel `Agents` endpoint (8443) with the device CA and command signing key from file secrets; see `docs/DEPLOYMENT-VPS.md`, *Windows agents*. |
 
 ## 2. Scope mapping
 

@@ -2,6 +2,15 @@
 # (Let's Encrypt) for SOLVIX_DOMAIN, redirects HTTP to HTTPS and forwards to the
 # web container. The API is NOT routed here: browsers only ever talk to the web
 # app, which calls the API over the private network.
+#
+# Windows agents do NOT go through Caddy either. They connect to the API's own
+# mutual-TLS endpoint, https://{$SOLVIX_DOMAIN}:8443, published directly by the api
+# container, so the device certificate is verified in the TLS handshake by the
+# component that authenticates it and no client-certificate header is ever trusted
+# (see docs/DEPLOYMENT-VPS.md, "Windows agents"). Caddy's only part in that path is
+# the certificate: scripts/sync-agent-tls.sh copies the certificate Caddy obtains
+# and renews for this site to the agent endpoint. Keep this site address equal to
+# SOLVIX_DOMAIN so that certificate covers the host name agents use.
 {
 	email {$SOLVIX_ACME_EMAIL}
 }

@@ -37,3 +37,4 @@ dump.rdb
 # Production secrets and database dumps
 .env.production
 backups/
+secrets/

@@ -161,8 +161,10 @@ stable, different from the JWT key), `Solvix__Identity__WebBaseUrl`, SMTP settin
 (`Solvix__Email__Smtp__*`) and `Solvix__Network__TrustedProxies__*`; on the web container
 `SOLVIX_WEB_ORIGIN` and `SOLVIX_COOKIE_SECURE=true` behind HTTPS. For device management: a device
 CA bundle (`Solvix__Devices__CertificateAuthority__PfxPath`/`PfxBase64` + `PfxPassword`) and a TLS
-certificate for the `Kestrel__Endpoints__Agents` endpoint. See `.env.example`,
-`docs/ARCHITECTURE.md` and `docs/PHASE-02-SUMMARY.md`.
+certificate for the `Kestrel__Endpoints__Agents` endpoint; for remote management a command signing
+key (`Solvix__RemoteManagement__CommandSigning__KeyPath`/`KeyPem`). See `.env.example`,
+`docs/ARCHITECTURE.md` and `docs/PHASE-02-SUMMARY.md`; `docker-compose.prod.yml` wires all of them
+from file secrets (`docs/DEPLOYMENT-VPS.md`).
 
 Monitoring (`Solvix__Devices__Monitoring__*`): default thresholds, sweep/flush intervals, outage
 grace, retention, and `RedisBackplane=true` when more than one API node serves the SignalR hub.
