@@ -140,11 +140,87 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
         Assert.Equal(Solvix.Agent.Core.RemoteManagement.UnavailablePrivilegedOperationHost.ErrorCode, failed.ErrorCode);
     }
 
+    [Fact]
+    public async Task Real_agent_downloads_verifies_and_installs_a_deployed_package_and_reports_the_result()
+    {
+        var tenant = await fixture.RegisterTenantAsync();
+        using var admin = fixture.CreateClient(tenant.Token);
+        var installed = new List<Solvix.Agent.Contracts.Software.DetectedApplication>();
+        var executor = new RecordingExecutor(installed);
+        using var agent = new InProcessAgent(fixture, services =>
+        {
+            services.Replace(ServiceDescriptor.Singleton<Solvix.Agent.Core.Software.IInstalledApplicationSource>(new ListApplications(installed)));
+            services.Replace(ServiceDescriptor.Singleton<Solvix.Agent.Core.Software.ISoftwareExecutor>(executor));
+        });
+        agent.Services.GetRequiredService<BootstrapTokenStore>().Save(await fixture.CreateTokenAsync(tenant, maxUses: 1));
+        await agent.Services.GetRequiredService<AgentRuntime>().RunCycleAsync(CancellationToken.None);
+        var deviceId = agent.Services.GetRequiredService<IAgentStateStore>().Load().DeviceId!.Value;
+        var processor = agent.Services.GetRequiredService<Solvix.Agent.Core.RemoteManagement.CommandProcessor>();
+
+        var bytes = SoftwareTestKit.Msi();
+        var package = await admin.ConfigureAsync((await admin.UploadAsync("notes.msi", bytes)).Id, SoftwareTestKit.MsiConfiguration());
+        var created = await admin.CreateDeploymentAsync(SoftwareTestKit.Deployment(package.Id, deviceId));
+        foreach (var permissions in new[] { 1, 2 })
+        {
+            var approver = await fixture.AddMemberWithPermissionsAsync(tenant, Solvix.SharedKernel.Authorization.Permissions.Software.Approve);
+            using var client = fixture.CreateClient(approver.Token);
+            await HttpAssert.OkAsync<Solvix.Modules.Software.Deployments.DeploymentDetailDto>(await client.DecideAsync(created.Deployment.Id, true));
+        }
+
+        await fixture.RunDeploymentsAsync();
+        await processor.PollOnceAsync(CancellationToken.None);
+        await processor.DrainAsync();
+
+        // The executor received the signed command and the package the agent downloaded and verified.
+        var (request, staged) = Assert.Single(executor.Requests);
+        Assert.Equal(bytes, staged);
+        Assert.Equal(deviceId, request.DeviceId);
+
+        var detail = await admin.GetDeploymentAsync(created.Deployment.Id);
+        var target = Assert.Single(detail.Targets);
+        Assert.Equal(Solvix.Modules.Software.Domain.TargetStatus.Succeeded, target.Status);
+        Assert.Equal(Solvix.Agent.Contracts.Software.SoftwareOutcome.Installed, target.Outcome);
+        Assert.Equal("5.2.0", target.DetectedVersion);
+        Assert.Equal(Solvix.Modules.Software.Domain.DeploymentStatus.Completed, detail.Deployment.Status);
+
+        // A second deployment of the same package finds it installed and does not download or run anything.
+        var again = await admin.CreateDeploymentAsync(SoftwareTestKit.Deployment(package.Id, deviceId));
+        foreach (var permissions in new[] { 1, 2 })
+        {
+            var approver = await fixture.AddMemberWithPermissionsAsync(tenant, Solvix.SharedKernel.Authorization.Permissions.Software.Approve);
+            using var client = fixture.CreateClient(approver.Token);
+            await HttpAssert.OkAsync<Solvix.Modules.Software.Deployments.DeploymentDetailDto>(await client.DecideAsync(again.Deployment.Id, true));
+        }
+
+        await fixture.RunDeploymentsAsync();
+        await processor.PollOnceAsync(CancellationToken.None);
+        await processor.DrainAsync();
+        Assert.Single(executor.Requests);
+        Assert.Equal(Solvix.Agent.Contracts.Software.SoftwareOutcome.AlreadyInstalled, Assert.Single((await admin.GetDeploymentAsync(again.Deployment.Id)).Targets).Outcome);
+    }
+
+    private sealed class ListApplications(List<Solvix.Agent.Contracts.Software.DetectedApplication> items) : Solvix.Agent.Core.Software.IInstalledApplicationSource
+    {
+        public IReadOnlyList<Solvix.Agent.Contracts.Software.DetectedApplication> GetInstalledApplications() => [.. items];
+    }
+
+    private sealed class RecordingExecutor(List<Solvix.Agent.Contracts.Software.DetectedApplication> installed) : Solvix.Agent.Core.Software.ISoftwareExecutor
+    {
+        public List<(Solvix.Agent.Core.Software.ExecutorRequest Request, byte[] Staged)> Requests { get; } = [];
+
+        public Task<Solvix.Agent.Core.Software.ExecutorResponse> ExecuteAsync(Solvix.Agent.Core.Software.ExecutorRequest request, CancellationToken cancellationToken)
+        {
+            Requests.Add((request, File.ReadAllBytes(request.PackagePath!)));
+            installed.Add(new Solvix.Agent.Contracts.Software.DetectedApplication("Contoso Notes", "5.2.0", "Contoso Ltd", SoftwareTestKit.ProductCode));
+            return Task.FromResult(new Solvix.Agent.Core.Software.ExecutorResponse { Executed = true, ExitCode = 0 });
+        }
+    }
+
     private sealed class InProcessAgent : IDisposable
     {
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "solvix-e2e-agent-" + Guid.NewGuid().ToString("N"));
 
-        public InProcessAgent(ApiFixture fixture)
+        public InProcessAgent(ApiFixture fixture, Action<IServiceCollection>? configure = null)
         {
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
@@ -162,6 +238,7 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
             services.Replace(ServiceDescriptor.Singleton<TimeProvider>(Clock));
             services.Replace(ServiceDescriptor.Singleton<IAgentTransport>(sp =>
                 new TestServerTransport(fixture, sp.GetRequiredService<DeviceCredentialStore>(), Network)));
+            configure?.Invoke(services);
             Services = services.BuildServiceProvider();
         }
 

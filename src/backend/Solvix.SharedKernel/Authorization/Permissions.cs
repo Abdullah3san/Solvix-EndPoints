@@ -39,6 +39,19 @@ public static class Permissions
         public const string ApprovalsManage = "remote.approvals.manage";
     }
 
+    /// <summary>
+    /// Enterprise software management (Phase 07). Every key implies <see cref="View"/>,
+    /// which implies <see cref="Devices.View"/>.
+    /// </summary>
+    public static class Software
+    {
+        public const string View = "software.view";
+        public const string PackagesManage = "software.packages.manage";
+        public const string Deploy = "software.deploy";
+        public const string Approve = "software.approve";
+        public const string PoliciesManage = "software.policies.manage";
+    }
+
     public static class Assets
     {
         public const string View = "assets.view";

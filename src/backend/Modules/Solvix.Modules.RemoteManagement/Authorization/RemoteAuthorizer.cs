@@ -64,7 +64,11 @@ public sealed class RemoteAuthorizer(
     /// Re-checks a user who is not the caller (e.g. the requester of a queued command at
     /// delivery time) using their current roles. Returns a denial code, or <c>null</c> if allowed.
     /// </summary>
-    public async Task<string?> ReauthorizeAsync(Guid userId, Guid deviceId, string permission, CancellationToken cancellationToken)
+    /// <param name="enforceAllowedHours">
+    /// False for work whose timing is governed elsewhere (scheduled software deployments with their own
+    /// approval and maintenance window); permission, device state and technician scope still apply.
+    /// </param>
+    public async Task<string?> ReauthorizeAsync(Guid userId, Guid deviceId, string permission, CancellationToken cancellationToken, bool enforceAllowedHours = true)
     {
         var device = await endpoints.FindForAccessAsync(deviceId, cancellationToken);
         if (device is null)
@@ -78,10 +82,11 @@ public sealed class RemoteAuthorizer(
             return RemoteDenialCodes.RequesterInactive;
         }
 
-        return await EvaluateAsync(userId, permissions, device, permission, cancellationToken);
+        return await EvaluateAsync(userId, permissions, device, permission, cancellationToken, enforceAllowedHours);
     }
 
-    private async Task<string?> EvaluateAsync(Guid userId, IReadOnlySet<string> permissions, EndpointAccessInfo device, string permission, CancellationToken cancellationToken)
+    private async Task<string?> EvaluateAsync(
+        Guid userId, IReadOnlySet<string> permissions, EndpointAccessInfo device, string permission, CancellationToken cancellationToken, bool enforceAllowedHours = true)
     {
         if (!device.Endpoint.IsActive)
         {
@@ -97,6 +102,11 @@ public sealed class RemoteAuthorizer(
         if (scope is not null && !scope.Allows(device.Endpoint.BranchId, device.GroupIds))
         {
             return RemoteDenialCodes.ScopeDenied;
+        }
+
+        if (!enforceAllowedHours)
+        {
+            return null;
         }
 
         var policy = await policies.GetAsync(cancellationToken);

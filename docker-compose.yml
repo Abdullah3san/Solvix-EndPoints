@@ -110,8 +110,11 @@ services:
       # solvix-pki volume for development; production supplies a managed key (KeyPem from a secret store).
       Solvix__RemoteManagement__CommandSigning__AutoGenerate: ${SOLVIX_COMMAND_KEY_AUTOGENERATE:-true}
       Solvix__RemoteManagement__CommandSigning__KeyPath: /var/lib/solvix/command-signing.pem
+      # Software management (Phase 07): uploaded packages, outside any web root, readable by the API only.
+      Solvix__Software__Storage__RootPath: /var/lib/solvix-packages
     volumes:
       - solvix-pki:/var/lib/solvix
+      - solvix-packages:/var/lib/solvix-packages
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
       - "${API_AGENT_PORT:-8443}:8443"
@@ -140,6 +143,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  solvix-packages:
   postgres-data:
   redis-data:
   solvix-pki:

@@ -43,6 +43,13 @@ public static class SystemRoles
         Permissions.Remote.SessionsView,
     ];
 
+    /// <summary>Software management of the IT Manager: the whole lifecycle, including approving others' deployments.</summary>
+    internal static readonly string[] ItManagerSoftware =
+    [
+        Permissions.Software.View, Permissions.Software.PackagesManage, Permissions.Software.Deploy,
+        Permissions.Software.Approve, Permissions.Software.PoliciesManage,
+    ];
+
     /// <summary>Holds every permission, including billing and workspace settings. A tenant always keeps at least one.</summary>
     public static SystemRoleDefinition SuperAdministrator { get; } = Define(
         SuperAdministratorKey,
@@ -65,6 +72,7 @@ public static class SystemRoles
             .. ItManagerRemote,
             Permissions.Assets.View, Permissions.Assets.Create, Permissions.Assets.Edit, Permissions.Assets.Transfer,
             Permissions.Mdm.Manage, Permissions.Reports.View, Permissions.Users.View, Permissions.Organization.View,
+            .. ItManagerSoftware,
         ]);
 
     public static SystemRoleDefinition ItTechnician { get; } = Define(
@@ -75,6 +83,7 @@ public static class SystemRoles
             Permissions.Devices.View, Permissions.Devices.Enroll,
             .. ItTechnicianRemote,
             Permissions.Assets.View, Permissions.Assets.Edit, Permissions.Organization.View,
+            Permissions.Software.View, Permissions.Software.Deploy,
         ]);
 
     public static SystemRoleDefinition AssetManager { get; } = Define(
@@ -84,6 +93,7 @@ public static class SystemRoles
         [
             Permissions.Assets.View, Permissions.Assets.Create, Permissions.Assets.Edit, Permissions.Assets.Transfer,
             Permissions.Devices.View, Permissions.Reports.View, Permissions.Organization.View,
+            Permissions.Software.View,
         ]);
 
     public static SystemRoleDefinition SecurityAdministrator { get; } = Define(
@@ -95,6 +105,7 @@ public static class SystemRoles
             Permissions.Users.View, Permissions.Roles.View, Permissions.Devices.View,
             Permissions.Remote.View, Permissions.Remote.SessionsView,
             Permissions.Reports.View, Permissions.Organization.View,
+            Permissions.Software.View,
         ]);
 
     public static SystemRoleDefinition ReadOnlyAuditor { get; } = Define(
@@ -105,6 +116,7 @@ public static class SystemRoles
             Permissions.Devices.View, Permissions.Assets.View, Permissions.Users.View, Permissions.Roles.View,
             Permissions.Security.View, Permissions.Audit.View, Permissions.Reports.View, Permissions.Organization.View,
             Permissions.Remote.View, Permissions.Remote.SessionsView,
+            Permissions.Software.View,
         ]);
 
     public static IReadOnlyList<SystemRoleDefinition> All { get; } =

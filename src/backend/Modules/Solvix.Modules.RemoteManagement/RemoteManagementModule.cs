@@ -35,7 +35,10 @@ public sealed class RemoteManagementModule : IModule
         services.AddScoped<RemoteAccessPolicyProvider>();
         services.AddScoped<RemoteAuthorizer>();
         services.AddScoped<CurrentAgentDevice>();
-        services.AddScoped<ICommandBroker, CommandBroker.CommandBroker>();
+        services.AddScoped<CommandBroker.CommandBroker>();
+        services.AddScoped<ICommandBroker>(sp => sp.GetRequiredService<CommandBroker.CommandBroker>());
+        services.AddScoped<IRemoteCommandDispatcher, DelegatedCommandDispatcher>();
+        services.AddScoped<RemoteCommandObserverPublisher>();
         services.AddScoped<AgentCommandService>();
         services.AddScoped<IAgentCommandService>(sp => sp.GetRequiredService<AgentCommandService>());
         services.AddScoped<IRemoteCommandQueue>(sp => sp.GetRequiredService<AgentCommandService>());

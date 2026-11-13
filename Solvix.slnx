@@ -12,6 +12,7 @@
     <Project Path="src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.RemoteManagement/Solvix.Modules.RemoteManagement.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Software/Solvix.Modules.Software.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj" />
   </Folder>
   <Folder Name="/src/agent/">

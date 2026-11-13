@@ -36,11 +36,21 @@ public interface IAgentCommandClient
     Task<CommandKeySet> GetCommandKeysAsync(CancellationToken cancellationToken);
 }
 
+/// <summary>Package content for an accepted software command (Phase 07), resumable with HTTP Range.</summary>
+public interface ISoftwarePackageClient
+{
+    /// <summary>
+    /// Writes the package of <paramref name="executionId"/> to <paramref name="destination"/>, continuing at
+    /// <paramref name="offset"/> when the server supports it (otherwise the destination is truncated and refilled).
+    /// </summary>
+    Task DownloadSoftwarePackageAsync(Guid executionId, long offset, Stream destination, long maxBytes, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// Typed client for the agent API. All traffic is outbound; responses are
 /// deserialized into fixed contracts only (source-generated, no polymorphism).
 /// </summary>
-public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, IDisposable
+public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, ISoftwarePackageClient, IDisposable
 {
     private readonly Lock _gate = new();
     private readonly IAgentTransport? _transport;
@@ -122,6 +132,39 @@ public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, IDisp
         using var request = new HttpRequestMessage(HttpMethod.Get, AgentRoutes.CommandKeys);
         using var response = await SendRawAsync(request, cancellationToken);
         return await ReadAsync(response, AgentJsonContext.Default.CommandKeySet, cancellationToken);
+    }
+
+    public async Task DownloadSoftwarePackageAsync(Guid executionId, long offset, Stream destination, long maxBytes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(destination);
+        using var request = new HttpRequestMessage(HttpMethod.Get, AgentRoutes.SoftwarePackage(executionId));
+        if (offset > 0)
+        {
+            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(offset, null);
+        }
+
+        using var response = await SendRawAsync(request, cancellationToken);
+        if (response.StatusCode != HttpStatusCode.PartialContent)
+        {
+            // The server sent the whole file: start over.
+            destination.SetLength(0);
+            destination.Position = 0;
+        }
+
+        await using var body = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var buffer = new byte[81920];
+        int read;
+        while ((read = await body.ReadAsync(buffer, cancellationToken)) > 0)
+        {
+            if (destination.Length + read > maxBytes)
+            {
+                throw new InvalidDataException("The package is larger than allowed.");
+            }
+
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+        }
+
+        await destination.FlushAsync(cancellationToken);
     }
 
     public void Dispose() => _http.Dispose();

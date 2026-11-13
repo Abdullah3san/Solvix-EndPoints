@@ -26,6 +26,18 @@ public interface ICommandHandler
     Task<CommandHandlerResult> ExecuteAsync(CommandEnvelope envelope, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// A handler that needs the exact signed bytes (to hand them to a privileged component that verifies
+/// them itself) and may run longer than the default execution limit.
+/// </summary>
+public interface ISignedCommandHandler
+{
+    /// <summary>Upper bound for this command; the processor cancels the handler after it.</summary>
+    TimeSpan MaxDuration(CommandEnvelope envelope);
+
+    Task<CommandHandlerResult> ExecuteAsync(SignedCommandContext command, CancellationToken cancellationToken);
+}
+
 public sealed class CommandHandlerRegistry(IEnumerable<ICommandHandler> handlers)
 {
     private readonly Dictionary<string, ICommandHandler> _handlers =

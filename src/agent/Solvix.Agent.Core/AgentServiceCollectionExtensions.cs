@@ -13,6 +13,7 @@ using Solvix.Agent.Core.Monitoring;
 using Solvix.Agent.Core.RemoteManagement;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
+using Solvix.Agent.Core.Software;
 using Solvix.Agent.Core.State;
 using Solvix.Agent.Core.Updates;
 
@@ -36,6 +37,7 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<AgentApiClient>();
         services.TryAddSingleton<IAgentApiClient>(sp => sp.GetRequiredService<AgentApiClient>());
         services.TryAddSingleton<IAgentCommandClient>(sp => sp.GetRequiredService<AgentApiClient>());
+        services.TryAddSingleton<ISoftwarePackageClient>(sp => sp.GetRequiredService<AgentApiClient>());
         services.TryAddSingleton<ConnectionMonitor>();
         services.TryAddSingleton<AgentHealthMonitor>();
         services.TryAddSingleton<ISystemHealthProbe, PortableSystemHealthProbe>();
@@ -62,6 +64,18 @@ public static class AgentServiceCollectionExtensions
         foreach (var type in PrivilegedCommandHandler.Types)
         {
             services.AddSingleton<ICommandHandler>(new PrivilegedCommandHandler(type));
+        }
+
+        // Software deployment (Phase 07): detection, download and verification here; installers run in the executor service.
+        services.TryAddSingleton<IInstalledApplicationSource, EmptyInstalledApplicationSource>();
+        services.TryAddSingleton<PackageDownloader>();
+        services.TryAddSingleton<ISoftwareExecutor, PipeSoftwareExecutorClient>();
+        services.TryAddSingleton<IInstallerProcessRunner, ProcessInstallerRunner>();
+        services.TryAddSingleton<IExecutorPipeFactory, DefaultExecutorPipeFactory>();
+        services.TryAddSingleton<SoftwareExecutor>();
+        foreach (var type in SoftwareCommandHandler.Types)
+        {
+            services.AddSingleton<ICommandHandler>(sp => ActivatorUtilities.CreateInstance<SoftwareCommandHandler>(sp, type));
         }
 
         services.AddHttpClient(UpdateManager.DownloadClientName, c => c.Timeout = TimeSpan.FromMinutes(30))

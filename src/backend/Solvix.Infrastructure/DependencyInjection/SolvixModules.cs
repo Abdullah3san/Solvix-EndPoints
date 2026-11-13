@@ -6,6 +6,7 @@ using Solvix.Modules.Devices;
 using Solvix.Modules.Identity;
 using Solvix.Modules.Organization;
 using Solvix.Modules.RemoteManagement;
+using Solvix.Modules.Software;
 using Solvix.Modules.Tenancy;
 using Solvix.SharedKernel.Modules;
 
@@ -20,6 +21,7 @@ public static class SolvixModules
         new DevicesModule(),
         new AssetsModule(),
         new RemoteManagementModule(),
+        new SoftwareModule(),
     ];
 
     public static IReadOnlyList<Assembly> ConfigurationAssemblies { get; } =

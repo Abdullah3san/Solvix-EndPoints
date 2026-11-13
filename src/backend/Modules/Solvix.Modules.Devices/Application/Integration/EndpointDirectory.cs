@@ -85,6 +85,33 @@ internal sealed class EndpointDirectory(ISolvixDbContext db) : IEndpointDirector
         return new EndpointPage(items.Select(ToSummary).ToList(), total);
     }
 
+    public async Task<IReadOnlyList<EndpointAccessInfo>> ResolveAsync(
+        IReadOnlyCollection<Guid> deviceIds, IReadOnlyCollection<Guid> groupIds, IReadOnlyCollection<Guid> branchIds, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(deviceIds);
+        ArgumentNullException.ThrowIfNull(groupIds);
+        ArgumentNullException.ThrowIfNull(branchIds);
+        var ids = deviceIds.Distinct().ToList();
+        var groups = groupIds.Distinct().ToList();
+        var branches = branchIds.Distinct().ToList();
+        if (ids.Count == 0 && groups.Count == 0 && branches.Count == 0)
+        {
+            return [];
+        }
+
+        var memberIds = db.Set<DeviceGroupMembership>().Where(m => groups.Contains(m.DeviceGroupId)).Select(m => m.DeviceId);
+        var devices = db.Set<Device>().AsNoTracking().Where(d =>
+            ids.Contains(d.Id) || memberIds.Contains(d.Id) || (d.BranchId != null && branches.Contains(d.BranchId.Value)));
+        var rows = await Project(devices.OrderBy(d => d.Hostname).ThenBy(d => d.Id).Take(MaxBatch)).ToListAsync(cancellationToken);
+        var found = rows.Select(r => r.Device.Id).ToList();
+        var memberships = await db.Set<DeviceGroupMembership>().AsNoTracking()
+            .Where(m => found.Contains(m.DeviceId))
+            .Select(m => new { m.DeviceId, m.DeviceGroupId })
+            .ToListAsync(cancellationToken);
+        var byDevice = memberships.ToLookup(m => m.DeviceId, m => m.DeviceGroupId);
+        return rows.Select(r => new EndpointAccessInfo(ToSummary(r), byDevice[r.Device.Id].ToList())).ToList();
+    }
+
     public Task<int> CountActiveAsync(CancellationToken cancellationToken) =>
         db.Set<Device>().CountAsync(d => d.Status == DeviceStatus.Active, cancellationToken);
 

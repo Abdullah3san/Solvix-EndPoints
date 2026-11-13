@@ -181,6 +181,18 @@ public sealed class CommandKeyStore(IOptions<AgentOptions> options)
         }
     }
 
+    /// <summary>The pinned keys as a key set (handed to the software executor, which pins them on first use).</summary>
+    public CommandKeySet Export()
+    {
+        lock (_gate)
+        {
+            return new CommandKeySet
+            {
+                Keys = Load().Select(k => new CommandSigningKey { KeyId = k.Key, PublicKey = Convert.ToBase64String(k.Value) }).ToList(),
+            };
+        }
+    }
+
     /// <summary>Forgets pinned keys (re-enrollment into a new identity).</summary>
     public void Clear()
     {

@@ -3118,7 +3118,7 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("output_truncated");
 
-                    b.Property<Dictionary<string, string>>("Parameters")
+                    b.Property<string>("Parameters")
                         .IsRequired()
                         .HasColumnType("jsonb")
                         .HasColumnName("parameters");
@@ -3538,6 +3538,960 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_remote_audit_events_tenant_id_device_id_occurred_at_utc");
 
                     b.ToTable("remote_audit_events", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.DeploymentApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ApproverId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approver_id");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at_utc");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("decision");
+
+                    b.Property<Guid>("DeploymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deployment_id");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_deployment_approvals");
+
+                    b.HasIndex("TenantId", "DeploymentId", "ApproverId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_software_deployment_approvals_tenant_id_deployment_id_appro~");
+
+                    b.ToTable("software_deployment_approvals", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_software_deployment_approvals_four_eyes", "approver_id <> requested_by");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.DeploymentGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<List<Guid>>("BranchIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("branch_ids");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.PrimitiveCollection<List<Guid>>("DeviceGroupIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("device_group_ids");
+
+                    b.PrimitiveCollection<List<Guid>>("DeviceIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("device_ids");
+
+                    b.PrimitiveCollection<List<Guid>>("ExcludedDeviceIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("excluded_device_ids");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_deployment_groups");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_software_deployment_groups_tenant_id_name");
+
+                    b.ToTable("software_deployment_groups", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.DeploymentTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("action");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("CurrentExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("current_execution_id");
+
+                    b.Property<Guid>("DeploymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deployment_id");
+
+                    b.Property<string>("DetectedVersion")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("detected_version");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("device_name");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("error_code");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<int?>("ExitCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("exit_code");
+
+                    b.Property<string>("LogExcerpt")
+                        .HasMaxLength(8192)
+                        .HasColumnType("character varying(8192)")
+                        .HasColumnName("log_excerpt");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at_utc");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("outcome");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<bool>("RebootRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("reboot_required");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_deployment_targets");
+
+                    b.HasIndex("CurrentExecutionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_software_deployment_targets_current_execution_id")
+                        .HasFilter("current_execution_id IS NOT NULL");
+
+                    b.HasIndex("Status", "NextAttemptAtUtc")
+                        .HasDatabaseName("ix_software_deployment_targets_status_next_attempt_at_utc");
+
+                    b.HasIndex("TenantId", "DeviceId")
+                        .HasDatabaseName("ix_software_deployment_targets_tenant_id_device_id");
+
+                    b.HasIndex("TenantId", "DeploymentId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_software_deployment_targets_tenant_id_deployment_id_device_~");
+
+                    b.HasIndex("TenantId", "DeviceId", "PackageId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_software_deployment_targets_active")
+                        .HasFilter("status IN ('Pending', 'Dispatched', 'Running')");
+
+                    b.ToTable("software_deployment_targets", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_software_deployment_targets_attempts", "attempts BETWEEN 0 AND 5");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DeploymentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deployment_id");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("detail");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("event_type");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("outcome");
+
+                    b.Property<Guid?>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<string>("PreviousHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("previous_hash")
+                        .IsFixedLength();
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence");
+
+                    b.Property<string>("SourceIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_ip");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_audit_events");
+
+                    b.HasIndex("TenantId", "DeploymentId")
+                        .HasDatabaseName("ix_software_audit_events_tenant_id_deployment_id");
+
+                    b.HasIndex("TenantId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_software_audit_events_tenant_id_occurred_at_utc");
+
+                    b.HasIndex("TenantId", "PackageId")
+                        .HasDatabaseName("ix_software_audit_events_tenant_id_package_id");
+
+                    b.HasIndex("TenantId", "Sequence")
+                        .IsUnique()
+                        .HasDatabaseName("ix_software_audit_events_tenant_id_sequence");
+
+                    b.ToTable("software_audit_events", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareDeployment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("action");
+
+                    b.Property<DateTimeOffset>("ApprovalExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approval_expires_at_utc");
+
+                    b.Property<DateTimeOffset?>("ApprovedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at_utc");
+
+                    b.Property<DateTimeOffset?>("CancelledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at_utc");
+
+                    b.Property<Guid?>("CancelledBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cancelled_by");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTimeOffset>("DeadlineUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deadline_utc");
+
+                    b.Property<Guid?>("DeploymentGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deployment_group_id");
+
+                    b.Property<Guid?>("FinalApprovalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("final_approval_id");
+
+                    b.Property<Guid?>("FinalApprovedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("final_approved_by");
+
+                    b.Property<string>("InstallerType")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("installer_type");
+
+                    b.Property<bool>("IsSensitive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sensitive");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_attempts");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<string>("PackageName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("package_name");
+
+                    b.Property<int>("PackageRevision")
+                        .HasColumnType("integer")
+                        .HasColumnName("package_revision");
+
+                    b.Property<string>("PackageSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("package_sha256")
+                        .IsFixedLength();
+
+                    b.Property<string>("PackageVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("package_version");
+
+                    b.Property<string>("Parameters")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("parameters");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("ReportJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("report_json");
+
+                    b.Property<DateTimeOffset>("RequestedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at_utc");
+
+                    b.Property<int>("RequiredApprovals")
+                        .HasColumnType("integer")
+                        .HasColumnName("required_approvals");
+
+                    b.Property<int>("RetryDelayMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("retry_delay_minutes");
+
+                    b.Property<DateTimeOffset>("ScheduledStartUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_start_utc");
+
+                    b.PrimitiveCollection<List<string>>("SensitivityReasons")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("sensitivity_reasons");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TargetCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_count");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("TimeoutMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("timeout_minutes");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_deployments");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_software_deployments_tenant_id_id");
+
+                    b.HasIndex("Status", "ScheduledStartUtc")
+                        .HasDatabaseName("ix_software_deployments_status_scheduled_start_utc");
+
+                    b.HasIndex("TenantId", "PackageId")
+                        .HasDatabaseName("ix_software_deployments_tenant_id_package_id");
+
+                    b.HasIndex("TenantId", "RequestedAtUtc")
+                        .HasDatabaseName("ix_software_deployments_tenant_id_requested_at_utc");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_software_deployments_tenant_id_status");
+
+                    b.ToTable("software_deployments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_software_deployments_approvals", "required_approvals BETWEEN 0 AND 2");
+
+                            t.HasCheckConstraint("ck_software_deployments_attempts", "max_attempts BETWEEN 1 AND 5");
+
+                            t.HasCheckConstraint("ck_software_deployments_window", "deadline_utc > scheduled_start_utc");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareDeploymentPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowExeInstallers")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_exe_installers");
+
+                    b.Property<int>("ApprovalTtlHours")
+                        .HasColumnType("integer")
+                        .HasColumnName("approval_ttl_hours");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<int>("LargeDeploymentThreshold")
+                        .HasColumnType("integer")
+                        .HasColumnName("large_deployment_threshold");
+
+                    b.Property<bool>("RequireApproval")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_approval");
+
+                    b.Property<bool>("RequireSignedPackages")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_signed_packages");
+
+                    b.Property<bool>("ServerTargetsAreSensitive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("server_targets_are_sensitive");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.PrimitiveCollection<List<string>>("TrustedPublisherThumbprints")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("trusted_publisher_thumbprints");
+
+                    b.Property<bool>("UninstallIsSensitive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("uninstall_is_sensitive");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_deployment_policies");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_software_deployment_policies_tenant_id");
+
+                    b.ToTable("software_deployment_policies", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_software_deployment_policies_values", "large_deployment_threshold BETWEEN 1 AND 5000 AND approval_ttl_hours BETWEEN 1 AND 720");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareInventoryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<DateTimeOffset>("FirstSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_seen_at_utc");
+
+                    b.Property<DateOnly?>("InstallDate")
+                        .HasColumnType("date")
+                        .HasColumnName("install_date");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at_utc");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NameKey")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name_key");
+
+                    b.Property<string>("Publisher")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("publisher");
+
+                    b.Property<string>("Scope")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("scope");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_inventory_items");
+
+                    b.HasIndex("TenantId", "DeviceId")
+                        .HasDatabaseName("ix_software_inventory_items_tenant_id_device_id");
+
+                    b.HasIndex("TenantId", "NameKey")
+                        .HasDatabaseName("ix_software_inventory_items_tenant_id_name_key");
+
+                    b.ToTable("software_inventory_items", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwarePackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Architecture")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("architecture");
+
+                    b.Property<int>("ConfigurationRevision")
+                        .HasColumnType("integer")
+                        .HasColumnName("configuration_revision");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DetectionDisplayName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("detection_display_name");
+
+                    b.Property<string>("DetectionKind")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("detection_kind");
+
+                    b.Property<string>("DetectionNameMatch")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("detection_name_match");
+
+                    b.Property<string>("DetectionProductCode")
+                        .HasMaxLength(38)
+                        .HasColumnType("character varying(38)")
+                        .HasColumnName("detection_product_code");
+
+                    b.Property<string>("DetectionPublisher")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("detection_publisher");
+
+                    b.Property<string>("DetectionVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("detection_version");
+
+                    b.Property<string>("DetectionVersionOperator")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("detection_version_operator");
+
+                    b.PrimitiveCollection<List<string>>("InstallArguments")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("install_arguments");
+
+                    b.Property<string>("InstallerType")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("installer_type");
+
+                    b.Property<bool>("IsSensitive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sensitive");
+
+                    b.Property<DateTimeOffset>("LastVerifiedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_verified_at_utc");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("original_file_name");
+
+                    b.Property<string>("Publisher")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("publisher");
+
+                    b.PrimitiveCollection<List<int>>("RebootExitCodes")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("reboot_exit_codes");
+
+                    b.Property<DateTimeOffset?>("RetiredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("retired_at_utc");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("sha256")
+                        .IsFixedLength();
+
+                    b.Property<bool>("SignatureContentVerified")
+                        .HasColumnType("boolean")
+                        .HasColumnName("signature_content_verified");
+
+                    b.Property<string>("SignatureState")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("signature_state");
+
+                    b.Property<string>("SignerSubject")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("signer_subject");
+
+                    b.Property<string>("SignerThumbprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("signer_thumbprint")
+                        .IsFixedLength();
+
+                    b.Property<string>("SilentPreset")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("silent_preset");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character(32)")
+                        .HasColumnName("storage_key")
+                        .IsFixedLength();
+
+                    b.PrimitiveCollection<List<int>>("SuccessExitCodes")
+                        .IsRequired()
+                        .HasColumnType("integer[]")
+                        .HasColumnName("success_exit_codes");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("TimeoutMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("timeout_minutes");
+
+                    b.PrimitiveCollection<List<string>>("UninstallArguments")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("uninstall_arguments");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<DateTimeOffset>("UploadedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploaded_at_utc");
+
+                    b.Property<Guid>("UploadedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by");
+
+                    b.Property<string>("Version")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_packages");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_software_packages_tenant_id_id");
+
+                    b.HasIndex("TenantId", "Name")
+                        .HasDatabaseName("ix_software_packages_tenant_id_name");
+
+                    b.HasIndex("TenantId", "Sha256")
+                        .IsUnique()
+                        .HasDatabaseName("ix_software_packages_tenant_id_sha256")
+                        .HasFilter("status <> 'Retired'");
+
+                    b.ToTable("software_packages", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_software_packages_size", "size_bytes > 0");
+
+                            t.HasCheckConstraint("ck_software_packages_timeout", "timeout_minutes BETWEEN 1 AND 240");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareRestrictionRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.PrimitiveCollection<List<Guid>>("DeviceGroupIds")
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("device_group_ids");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<string>("MinimumVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("minimum_version");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NamePattern")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("name_pattern");
+
+                    b.Property<string>("Publisher")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("publisher");
+
+                    b.Property<string>("RuleType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("rule_type");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_software_restriction_rules");
+
+                    b.HasIndex("TenantId", "Enabled")
+                        .HasDatabaseName("ix_software_restriction_rules_tenant_id_enabled");
+
+                    b.ToTable("software_restriction_rules", (string)null);
                 });
 
             modelBuilder.Entity("Solvix.Modules.Tenancy.Domain.Tenant", b =>
@@ -4364,6 +5318,120 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_remote_audit_events_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.DeploymentApproval", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployment_approvals_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Software.Domain.SoftwareDeployment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeploymentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployment_approvals_software_deployments_tenant_i~");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.DeploymentGroup", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployment_groups_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.DeploymentTarget", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployment_targets_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Software.Domain.SoftwareDeployment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "DeploymentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployment_targets_software_deployments_tenant_id_~");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareAuditEvent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_audit_events_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareDeployment", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployments_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Software.Domain.SoftwarePackage", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "PackageId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployments_software_packages_tenant_id_package_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareDeploymentPolicy", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_deployment_policies_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareInventoryItem", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_inventory_items_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwarePackage", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_packages_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Software.Domain.SoftwareRestrictionRule", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_software_restriction_rules_tenants_tenant_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.Role", b =>

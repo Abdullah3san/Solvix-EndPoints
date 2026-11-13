@@ -33,6 +33,9 @@ public sealed partial class CommandProcessor(
     public const int MaxConcurrentCommands = 4;
     public static readonly TimeSpan MaxExecutionTime = TimeSpan.FromMinutes(15);
 
+    /// <summary>Hard limit for handlers that declare their own duration (software installations).</summary>
+    public static readonly TimeSpan MaxSignedHandlerTime = TimeSpan.FromHours(5);
+
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _running = new();
     private readonly SemaphoreSlim _slots = new(MaxConcurrentCommands);
     private readonly ConcurrentBag<Task> _work = [];
@@ -102,7 +105,9 @@ public sealed partial class CommandProcessor(
         }
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        cts.CancelAfter(MaxExecutionTime);
+        cts.CancelAfter(handlers.Find(envelope.CommandType) is ISignedCommandHandler longRunning
+            ? TimeSpan.FromTicks(Math.Clamp(longRunning.MaxDuration(envelope).Ticks, MaxExecutionTime.Ticks, MaxSignedHandlerTime.Ticks))
+            : MaxExecutionTime);
         _running[envelope.ExecutionId] = cts;
         _work.Add(Task.Run(() => ExecuteAsync(signed, envelope, cts), CancellationToken.None));
     }
@@ -119,6 +124,7 @@ public sealed partial class CommandProcessor(
             {
                 null => CommandHandlerResult.Fail("not_implemented", $"No handler for {envelope.CommandType}."),
                 PrivilegedCommandHandler => await privileged.ExecuteAsync(new SignedCommandContext(signed, envelope), cts.Token),
+                ISignedCommandHandler withBytes => await withBytes.ExecuteAsync(new SignedCommandContext(signed, envelope), cts.Token),
                 _ => await handler.ExecuteAsync(envelope, cts.Token),
             };
         }

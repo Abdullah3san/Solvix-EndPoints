@@ -3,6 +3,7 @@ namespace Solvix.Agent.Contracts;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Solvix.Agent.Contracts.RemoteManagement;
+using Solvix.Agent.Contracts.Software;
 
 /// <summary>
 /// Source-generated serializer metadata matching the API's JSON conventions
@@ -26,6 +27,9 @@ using Solvix.Agent.Contracts.RemoteManagement;
 [JsonSerializable(typeof(CommandAcknowledgement))]
 [JsonSerializable(typeof(CommandResultReport))]
 [JsonSerializable(typeof(CommandKeySet))]
+[JsonSerializable(typeof(DetectionRule))]
+[JsonSerializable(typeof(SoftwareOperationResult))]
+[JsonSerializable(typeof(IReadOnlyList<string>))]
 public sealed partial class AgentJsonContext : JsonSerializerContext
 {
 }

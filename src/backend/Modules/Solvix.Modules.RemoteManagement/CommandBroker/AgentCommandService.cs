@@ -50,6 +50,7 @@ internal sealed class AgentCommandService(
     RemoteAuditTrail audit,
     ICommandSigner signer,
     CommandSignal signal,
+    RemoteCommandObserverPublisher observers,
     IOptions<RemoteManagementOptions> options,
     IClock clock) : IAgentCommandService, IRemoteCommandQueue
 {
@@ -127,6 +128,11 @@ internal sealed class AgentCommandService(
                 return true;
             },
             cancellationToken);
+
+        if (!acknowledgement.Accepted)
+        {
+            await observers.PublishAsync(executionId, cancellationToken);
+        }
     }
 
     public async Task ReportResultAsync(Guid executionId, CommandResultReport report, CancellationToken cancellationToken)
@@ -181,6 +187,8 @@ internal sealed class AgentCommandService(
         {
             throw new ConflictException("A result was already recorded for this command.", "command_result_recorded");
         }
+
+        await observers.PublishAsync(executionId, cancellationToken);
     }
 
     private async Task<IReadOnlyList<SignedCommand>> DeliverAsync(Guid deviceId, CancellationToken cancellationToken)

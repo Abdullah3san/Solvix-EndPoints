@@ -20,7 +20,12 @@
          (no administrative rights) with restart-on-failure;
       6. registers the "Solvix Agent Updater" scheduled task (SYSTEM) that installs only
          updates the agent has staged AND that pass hash + Authenticode publisher checks again;
-      7. stores the server URL and enrollment token and starts the service.
+      7. creates the "SolvixSoftwareExecutor" service (LocalSystem) and its data directory
+         %ProgramData%\Solvix\Executor (SYSTEM and Administrators only). It listens on a
+         local named pipe that only SYSTEM and NT SERVICE\SolvixAgent may open, accepts only
+         signed software install/uninstall commands that it verifies itself, and has no
+         network function. -DisableSoftwareDeployment skips it;
+      8. stores the server URL and enrollment token and starts the services.
 
 .EXAMPLE
     .\Install-SolvixAgent.ps1 -ServerUrl https://agents.solvix.example:8443/ -EnrollmentToken svxe_...
@@ -47,13 +52,19 @@ param(
     # Virtual service account by default (least privilege). Use LocalSystem only if the
     # device key cannot be created under the virtual account on a hardened image.
     [ValidateSet('NT SERVICE\SolvixAgent', 'LocalSystem')]
-    [string] $ServiceAccount = 'NT SERVICE\SolvixAgent'
+    [string] $ServiceAccount = 'NT SERVICE\SolvixAgent',
+
+    # Do not install the privileged software executor: software deployments then fail on this
+    # device with software_executor_unavailable (detection still works).
+    [switch] $DisableSoftwareDeployment
 )
 
 $ErrorActionPreference = 'Stop'
 $ServiceName = 'SolvixAgent'
 $TaskName = 'Solvix Agent Updater'
+$ExecutorServiceName = 'SolvixSoftwareExecutor'
 $DataPath = Join-Path $env:ProgramData 'Solvix\Agent'
+$ExecutorDataPath = Join-Path $env:ProgramData 'Solvix\Executor'
 $Exe = Join-Path $InstallPath 'Solvix.Agent.exe'
 
 if ([string]::IsNullOrWhiteSpace($EnrollmentToken)) {
@@ -118,7 +129,29 @@ $principal = New-ScheduledTaskPrincipal -UserId 'S-1-5-18' -LogonType ServiceAcc
 $settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -StartWhenAvailable -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName $TaskName -TaskPath '\Solvix\' -Action $action -Trigger $triggers -Principal $principal -Settings $settings -Force | Out-Null
 
-# 7. Enrollment configuration + start ---------------------------------------------------------
+# 7. Software executor (Phase 07): LocalSystem service, local named pipe only ------------------
+$executor = Get-Service -Name $ExecutorServiceName -ErrorAction SilentlyContinue
+if ($executor -and $executor.Status -ne 'Stopped') {
+    Stop-Service -Name $ExecutorServiceName -Force
+}
+if ($DisableSoftwareDeployment) {
+    if ($executor) { & sc.exe delete $ExecutorServiceName | Out-Null }
+}
+else {
+    # Pinned keys, identity, replay records and package copies: SYSTEM and Administrators only, never the agent.
+    New-Item -ItemType Directory -Force -Path $ExecutorDataPath | Out-Null
+    & icacls.exe $ExecutorDataPath /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+    if (-not $executor) {
+        New-Service -Name $ExecutorServiceName -BinaryPathName "`"$Exe`" software-executor" -DisplayName 'Solvix Software Executor' `
+            -Description 'Runs software installations approved in Solvix EndPoints after verifying their signed command, checksum and publisher. No network access.' `
+            -StartupType Automatic | Out-Null
+    }
+    & sc.exe config $ExecutorServiceName obj= LocalSystem | Out-Null
+    & sc.exe sidtype $ExecutorServiceName unrestricted | Out-Null
+    & sc.exe failure $ExecutorServiceName reset= 86400 actions= restart/60000/restart/60000/restart/300000 | Out-Null
+}
+
+# 8. Enrollment configuration + start ---------------------------------------------------------
 $enrollArgs = @('enroll', '--server', $ServerUrl)
 if ($ServerCertificateSha256) { $enrollArgs += @('--pin', ($ServerCertificateSha256 -replace ':', '')) }
 $env:SOLVIX_ENROLLMENT_TOKEN = $EnrollmentToken   # passed via environment, not the command line
@@ -131,4 +164,5 @@ finally {
 }
 
 Start-Service -Name $ServiceName
+if (-not $DisableSoftwareDeployment) { Start-Service -Name $ExecutorServiceName }
 Write-Host "Solvix Agent installed. Check enrollment with: & '$Exe' status"

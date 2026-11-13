@@ -29,6 +29,9 @@ public static class AgentRoutes
     /// <summary>Device certificate. Public keys commands are signed with.</summary>
     public const string CommandKeys = Base + "/command-keys";
 
+    /// <summary>Device certificate. Package content for an accepted software command of this device (supports Range).</summary>
+    public static string SoftwarePackage(Guid executionId) => $"{Base}/software/executions/{executionId:D}/package";
+
     public static string CommandAcknowledgement(Guid executionId) => $"{Commands}/{executionId:D}/ack";
 
     public static string CommandResult(Guid executionId) => $"{Commands}/{executionId:D}/result";

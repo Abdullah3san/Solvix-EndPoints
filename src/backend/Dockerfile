@@ -39,7 +39,7 @@ ENV ASPNETCORE_URLS=http://+:8080 \
 COPY --from=build /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=build /out/api .
 # PKI volume (device CA, development agent TLS certificate) writable by the app user only.
-RUN mkdir -p /var/lib/solvix && chown app /var/lib/solvix && chmod 700 /var/lib/solvix
+RUN mkdir -p /var/lib/solvix /var/lib/solvix-packages && chown app /var/lib/solvix /var/lib/solvix-packages && chmod 700 /var/lib/solvix /var/lib/solvix-packages
 USER app
 EXPOSE 8080 8443
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \

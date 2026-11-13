@@ -41,6 +41,7 @@ internal sealed partial class AgentService(
     MonitoringSettingsProvider monitoringSettings,
     EndpointIdentityPublisher identityPublisher,
     IEnumerable<IRemoteCommandQueue> commandQueues,
+    IEnumerable<ISoftwareInventoryObserver> softwareObservers,
     IOptions<DevicesOptions> options,
     IClock clock,
     ILogger<AgentService> logger) : IAgentService
@@ -148,6 +149,27 @@ internal sealed partial class AgentService(
         {
             await identityPublisher.PublishAsync(device.Id, EndpointIdentityChangeKind.HardwareChanged, cancellationToken);
         }
+
+        await PublishSoftwareAsync(device.Id, report, cancellationToken);
+    }
+
+    /// <summary>Hands the installed applications to software management; never fails the upload.</summary>
+    private async Task PublishSoftwareAsync(Guid deviceId, InventoryReport report, CancellationToken cancellationToken)
+    {
+        var entries = report.Software
+            .Select(a => new InstalledSoftwareEntry(a.Name, a.Version, a.Publisher, a.Scope, a.InstallDate))
+            .ToList();
+        foreach (var observer in softwareObservers)
+        {
+            try
+            {
+                await observer.OnSoftwareInventoryAsync(deviceId, report.CollectedAtUtc, entries, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                LogSoftwareObserverFailed(logger, ex, observer.GetType().Name, deviceId);
+            }
+        }
     }
 
     public async Task<CertificateRenewalResponse> RenewCertificateAsync(CertificateRenewalRequest request, CancellationToken cancellationToken)
@@ -209,6 +231,9 @@ internal sealed partial class AgentService(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Agent on device {DeviceId} changed version {PreviousVersion} -> {AgentVersion}")]
     private static partial void LogAgentVersionChanged(ILogger logger, Guid deviceId, string previousVersion, string agentVersion);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Software inventory observer {Observer} failed for device {DeviceId}")]
+    private static partial void LogSoftwareObserverFailed(ILogger logger, Exception exception, string observer, Guid deviceId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Issued renewed certificate for device {DeviceId} (sha256 {Thumbprint})")]
     private static partial void LogRenewed(ILogger logger, Guid deviceId, string thumbprint);

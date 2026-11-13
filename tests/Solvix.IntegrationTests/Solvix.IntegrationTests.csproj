@@ -18,6 +18,10 @@
     <ProjectReference Include="..\..\src\agent\Solvix.Agent.Core\Solvix.Agent.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Builders of test MSI/EXE packages, shared with the unit tests. -->
+    <Compile Include="..\Solvix.UnitTests\Software\TestPackages.cs" Link="Fixtures\TestPackages.cs" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>

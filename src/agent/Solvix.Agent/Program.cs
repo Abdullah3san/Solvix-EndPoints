@@ -6,6 +6,7 @@
 //   Solvix.Agent.exe status                  print local enrollment / health state (diagnostics)
 //   Solvix.Agent.exe inventory               collect inventory locally and print it (no network)
 //   Solvix.Agent.exe apply-update            privileged updater (scheduled task as SYSTEM)
+//   Solvix.Agent.exe software-executor       privileged software executor (separate LocalSystem service, named pipe only)
 //   Solvix.Agent.exe reset                   delete the device key, certificate and state (uninstall)
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -75,7 +76,7 @@ builder.Services.AddSolvixAgentCore(builder.Configuration);
 if (OperatingSystem.IsWindows())
 {
     builder.Services.AddSolvixAgentWindows(dataDirectory);
-    builder.Services.AddWindowsService(o => o.ServiceName = "SolvixAgent");
+    builder.Services.AddWindowsService(o => o.ServiceName = command == "software-executor" ? "SolvixSoftwareExecutor" : "SolvixAgent");
 }
 else
 {
@@ -83,6 +84,12 @@ else
     builder.Services.AddSingleton<IDeviceKeyStore>(_ => new FileDeviceKeyStore(dataDirectory));
     builder.Services.AddSingleton<ISecretProtector, FilePermissionSecretProtector>();
     builder.Services.AddSingleton<IPackageInstaller, UnsupportedInstaller>();
+}
+
+if (command == "software-executor")
+{
+    // Runs installers only: no enrollment, heartbeat, inventory or command polling, no outbound network use.
+    builder.Services.AddHostedService<Solvix.Agent.Core.Software.SoftwareExecutorHost>();
 }
 
 if (command == "run")
@@ -96,7 +103,7 @@ try
     using var host = builder.Build();
     return command switch
     {
-        "run" => await RunAsync(host),
+        "run" or "software-executor" => await RunAsync(host),
         "enroll" => Commands.Enroll(host, args, machineSettings),
         "status" => Commands.Status(host),
         "inventory" => await Commands.InventoryAsync(host),
@@ -205,7 +212,7 @@ namespace Solvix.Agent
 
         public static int Usage()
         {
-            Console.Error.WriteLine("Commands: run | enroll --server <url> --token <token> [--pin <sha256>] | status | inventory | apply-update | reset");
+            Console.Error.WriteLine("Commands: run | software-executor | enroll --server <url> --token <token> [--pin <sha256>] | status | inventory | apply-update | reset");
             return 2;
         }
 

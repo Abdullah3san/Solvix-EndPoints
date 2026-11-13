@@ -22,6 +22,7 @@
     <ProjectReference Include="..\Modules\Solvix.Modules.Devices\Solvix.Modules.Devices.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Assets\Solvix.Modules.Assets.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.RemoteManagement\Solvix.Modules.RemoteManagement.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Software\Solvix.Modules.Software.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Solvix.UnitTests" />

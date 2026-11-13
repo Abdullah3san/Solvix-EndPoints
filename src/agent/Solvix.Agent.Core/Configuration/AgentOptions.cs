@@ -26,6 +26,9 @@ public sealed class AgentOptions
     /// <summary>Remote administration (Phase 06). Local policy that the server cannot override.</summary>
     public RemoteManagementAgentOptions RemoteManagement { get; set; } = new();
 
+    /// <summary>Software deployment (Phase 07). Local policy that the server cannot override.</summary>
+    public SoftwareAgentOptions Software { get; set; } = new();
+
     public BackoffOptions Backoff { get; set; } = new();
 
     public UpdateOptions Updates { get; set; } = new();
@@ -102,4 +105,39 @@ public sealed class RemoteManagementAgentOptions
 
     /// <summary>How long one command poll may be held open by the server.</summary>
     public int PollWaitSeconds { get; set; } = 25;
+}
+
+public sealed class SoftwareAgentOptions
+{
+    /// <summary>Set to false to refuse every software installation and removal on this device (detection still answers).</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Installer types this device accepts (<c>Msi</c>, <c>Exe</c>).</summary>
+    public string[] AllowedInstallerTypes { get; set; } = ["Msi", "Exe"];
+
+    /// <summary>Accept packages that carry no Authenticode signature (they still need the extra approval on the server).</summary>
+    public bool AllowUnsignedPackages { get; set; } = true;
+
+    /// <summary>
+    /// When not empty, signed packages are only accepted from these signing certificates (SHA-1 or SHA-256
+    /// thumbprints), in addition to matching the signer recorded when the package was uploaded.
+    /// </summary>
+    public List<string> TrustedPublisherThumbprints { get; set; } = [];
+
+    public long MaxPackageBytes { get; set; } = 2L * 1024 * 1024 * 1024;
+
+    /// <summary>Named pipe of the Solvix Software Executor service (LocalSystem).</summary>
+    public string ExecutorPipeName { get; set; } = "SolvixSoftwareExecutor";
+
+    public int ExecutorConnectTimeoutSeconds { get; set; } = 10;
+
+    /// <summary>Data directory of the executor (SYSTEM and Administrators only). Defaults to <c>%ProgramData%\Solvix\Executor</c>.</summary>
+    public string? ExecutorDataDirectory { get; set; }
+
+    public int DownloadAttempts { get; set; } = 4;
+
+    public string ResolveExecutorDirectory() =>
+        !string.IsNullOrWhiteSpace(ExecutorDataDirectory)
+            ? ExecutorDataDirectory
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Solvix", "Executor");
 }

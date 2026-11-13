@@ -105,6 +105,13 @@ public sealed class ValidationException : DomainException
     {
     }
 
+    /// <summary>A validation failure with a specific, machine-readable <paramref name="code"/>.</summary>
+    public ValidationException(string property, string error, string code)
+        : this(new Dictionary<string, string[]> { [property] = [error] })
+    {
+        _code = code;
+    }
+
     public ValidationException()
         : base("One or more validation errors occurred.")
     {
@@ -123,9 +130,11 @@ public sealed class ValidationException : DomainException
         Errors = new Dictionary<string, string[]>();
     }
 
+    private readonly string? _code;
+
     public IReadOnlyDictionary<string, string[]> Errors { get; }
 
-    public override string Code => "validation_failed";
+    public override string Code => _code ?? "validation_failed";
 }
 
 public class ForbiddenException : DomainException

@@ -56,6 +56,11 @@ internal sealed class CommandBroker(
     public async Task<CommandExecutionDto> RequestAsync(Guid deviceId, string commandType, OperationRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (CommandTypes.Software.Contains(commandType))
+        {
+            throw new ValidationException("commandType", "Software commands are only created by software deployments.");
+        }
+
         var definition = CommandDefinitions.Get(commandType);
         var parameters = definition.Validate(ParametersOf(request));
         if (request.Reason is { Length: > 500 })
@@ -153,8 +158,17 @@ internal sealed class CommandBroker(
 
         // Cancelling needs the same right as requesting (and the device must still be in scope).
         await authorizer.AuthorizeAsync(snapshot.DeviceId, snapshot.RequiredPermission, snapshot.CommandType, cancellationToken);
+        return await CancelCoreAsync(executionId, currentUser.RequireUserId(), throwIfFinished: true, cancellationToken);
+    }
+
+    /// <summary>
+    /// Cancels without authorizing a signed-in user (the caller did that). Before acknowledgement the command
+    /// is cancelled at once; afterwards a signed <c>command.cancel</c> is queued for the device.
+    /// </summary>
+    internal async Task<CommandExecutionDto> CancelCoreAsync(Guid executionId, Guid userId, bool throwIfFinished, CancellationToken cancellationToken)
+    {
+        var snapshot = await FindAsync(executionId, tracked: false, cancellationToken);
         var now = clock.UtcNow;
-        var userId = currentUser.RequireUserId();
         var notify = false;
         var result = await audit.AtomicAsync(
             async ct =>
@@ -171,13 +185,11 @@ internal sealed class CommandBroker(
                         execution.CancelRequestedAtUtc = now;
                         execution.CancelRequestedBy = userId;
                         execution.CompletedAtUtc = now;
-                        if (execution.ApprovalId is { } approvalId)
+                        // Delegated commands (software deployments) carry their owner's approval id, not a remote approval.
+                        if (execution.ApprovalId is { } approvalId
+                            && await db.Set<RemoteApproval>().FirstOrDefaultAsync(a => a.Id == approvalId, ct) is { Status: ApprovalStatus.Pending } approval)
                         {
-                            var approval = await db.Set<RemoteApproval>().FirstAsync(a => a.Id == approvalId, ct);
-                            if (approval.Status == ApprovalStatus.Pending)
-                            {
-                                approval.Status = ApprovalStatus.Cancelled;
-                            }
+                            approval.Status = ApprovalStatus.Cancelled;
                         }
 
                         audit.Record(Entry(RemoteAuditEvents.CommandCancelled, RemoteAuditOutcome.Success, execution));
@@ -201,7 +213,12 @@ internal sealed class CommandBroker(
                     case CommandExecutionStatus.Acknowledged:
                         break; // already asked
                     default:
-                        throw new ConflictException("The command has already finished.", "command_finished");
+                        if (throwIfFinished)
+                        {
+                            throw new ConflictException("The command has already finished.", "command_finished");
+                        }
+
+                        break;
                 }
 
                 return CommandExecutionDto.From(execution);

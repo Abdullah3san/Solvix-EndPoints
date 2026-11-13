@@ -20,12 +20,28 @@ public static class CommandTypes
     public const string Lock = "system.lock";
     public const string Logoff = "system.logoff";
 
+    /// <summary>Installs a software package (Phase 07); parameters: <c>Software.SoftwareOperation</c>.</summary>
+    public const string SoftwareInstall = "software.install";
+
+    /// <summary>Removes software (MSI product code or the package's own uninstaller).</summary>
+    public const string SoftwareUninstall = "software.uninstall";
+
+    /// <summary>Evaluates a package's detection rule on the device (read-only).</summary>
+    public const string SoftwareDetect = "software.detect";
+
     /// <summary>Asks the agent to cancel a running execution (parameter <c>executionId</c>).</summary>
     public const string Cancel = "command.cancel";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         SystemInfo, Processes, Services, Uptime, LoggedInUsers, Restart, Shutdown, Lock, Logoff, Cancel,
+        SoftwareInstall, SoftwareUninstall, SoftwareDetect,
+    };
+
+    /// <summary>Software commands; only created by a software deployment, never requested ad hoc.</summary>
+    public static IReadOnlySet<string> Software { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        SoftwareInstall, SoftwareUninstall, SoftwareDetect,
     };
 }
 

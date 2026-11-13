@@ -37,6 +37,20 @@ public static class CommandDefinitions
         new(CommandTypes.Shutdown, Permissions.Remote.Shutdown, TimeSpan.FromMinutes(15), true, true, PowerParameters),
     }.ToDictionary(d => d.Type, StringComparer.Ordinal);
 
+    /// <summary>
+    /// Software commands (Phase 07). Only the software deployment engine creates them, through
+    /// <c>IRemoteCommandDispatcher</c>, with parameters it built and validated; they cannot be requested
+    /// through the remote operation endpoints. The execution timeout comes from the deployment.
+    /// </summary>
+    private static readonly Dictionary<string, CommandDefinition> Delegated = new CommandDefinition[]
+    {
+        new(CommandTypes.SoftwareInstall, Permissions.Software.Deploy, TimeSpan.FromHours(1), false, true, NoParameters),
+        new(CommandTypes.SoftwareUninstall, Permissions.Software.Deploy, TimeSpan.FromHours(1), false, true, NoParameters),
+        new(CommandTypes.SoftwareDetect, Permissions.Software.Deploy, TimeSpan.FromMinutes(5), false, false, NoParameters),
+    }.ToDictionary(d => d.Type, StringComparer.Ordinal);
+
+    public static CommandDefinition? FindDelegated(string type) => Delegated.GetValueOrDefault(type);
+
     /// <summary>The internal cancel command; never requested directly.</summary>
     public static CommandDefinition Cancel { get; } =
         new(CommandTypes.Cancel, Permissions.Remote.View, TimeSpan.FromMinutes(1), false, false, NoParameters);

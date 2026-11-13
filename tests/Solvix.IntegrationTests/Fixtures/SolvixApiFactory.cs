@@ -85,6 +85,10 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__RemoteManagement__CommandSigning__KeyPem"] = TestCommandKeyPem,
             ["Solvix__RemoteManagement__RunSweeper"] = "false",
             ["Solvix__RemoteManagement__LongPollSeconds"] = "2",
+
+            // Software management: packages in a private temporary directory; tests drive the deployment engine.
+            ["Solvix__Software__Storage__RootPath"] = PackageStoragePath,
+            ["Solvix__Software__RunProcessor"] = "false",
         };
         foreach (var (key, value) in extraSettings ?? new Dictionary<string, string>())
         {
@@ -96,6 +100,9 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             Environment.SetEnvironmentVariable(key, value);
         }
     }
+
+    /// <summary>Package storage of this test run (deleted with the process's temporary files).</summary>
+    public static string PackageStoragePath { get; } = Path.Combine(Path.GetTempPath(), "solvix-test-packages-" + Guid.NewGuid().ToString("N"));
 
     /// <summary>The API's clock (real time unless a test advances it).</summary>
     public TestClock Clock { get; } = new();

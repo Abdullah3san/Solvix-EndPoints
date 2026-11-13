@@ -54,9 +54,15 @@ public sealed class CommandExecution : TenantEntity
         DateTimeOffset createdAtUtc,
         DateTimeOffset expiresAtUtc,
         TimeSpan executionTimeout,
-        string? sourceIp)
+        string? sourceIp,
+        Guid? id = null)
         : base(tenantId)
     {
+        if (id is { } chosen)
+        {
+            Id = chosen;
+        }
+
         DeviceId = deviceId;
         DeviceName = deviceName;
         RequestedBy = requestedBy;

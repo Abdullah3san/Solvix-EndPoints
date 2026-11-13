@@ -7,10 +7,12 @@ using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Monitoring;
 using Solvix.Agent.Core.RemoteManagement;
 using Solvix.Agent.Core.Security;
+using Solvix.Agent.Core.Software;
 using Solvix.Agent.Core.Updates;
 using Solvix.Agent.Windows.Inventory;
 using Solvix.Agent.Windows.Monitoring;
 using Solvix.Agent.Windows.Security;
+using Solvix.Agent.Windows.Software;
 using Solvix.Agent.Windows.Updates;
 
 public static class WindowsAgentServiceCollectionExtensions
@@ -24,6 +26,8 @@ public static class WindowsAgentServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<IPackageSignatureVerifier, AuthenticodeVerifier>());
         services.Replace(ServiceDescriptor.Singleton<IPackageInstaller>(_ => new MsiPackageInstaller(Path.Combine(dataDirectory, "logs"))));
         services.Replace(ServiceDescriptor.Singleton<ISystemHealthProbe, WindowsSystemHealthProbe>());
+        services.Replace(ServiceDescriptor.Singleton<IInstalledApplicationSource, UninstallRegistrySource>());
+        services.Replace(ServiceDescriptor.Singleton<IExecutorPipeFactory, SecureExecutorPipeFactory>());
         services.AddSingleton<ICommandHandler, Solvix.Agent.Windows.RemoteManagement.ServicesHandler>();
         services.AddSingleton<ICommandHandler, Solvix.Agent.Windows.RemoteManagement.LoggedInUsersHandler>();
         services.AddSingleton<IInventoryCollector, SystemCollector>();

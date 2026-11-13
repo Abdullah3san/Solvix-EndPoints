@@ -23,6 +23,14 @@ public interface IEndpointDirectory
     /// <c>null</c> when it does not exist in the current tenant.
     /// </summary>
     Task<EndpointAccessInfo?> FindForAccessAsync(Guid deviceId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Every device (active or not) that is listed in <paramref name="deviceIds"/>, a member of one of
+    /// <paramref name="groupIds"/> or assigned to one of <paramref name="branchIds"/>, with its groups.
+    /// Used to resolve deployment targets; bounded by <c>MaxBatch</c> devices.
+    /// </summary>
+    Task<IReadOnlyList<EndpointAccessInfo>> ResolveAsync(
+        IReadOnlyCollection<Guid> deviceIds, IReadOnlyCollection<Guid> groupIds, IReadOnlyCollection<Guid> branchIds, CancellationToken cancellationToken);
 }
 
 /// <summary>A device as seen by authorization: who it belongs to organisationally and whether it can be reached.</summary>
