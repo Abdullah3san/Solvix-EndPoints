@@ -186,6 +186,23 @@ All admin endpoints are under `/api/v1`, JSON, camelCase, string enums, problem-
 **Retire a BYOD device**: `POST mobile-devices/{id}/commands {type: Retire, reason}` → pending →
 another admin approves → work profile / managed data removed; personal data untouched; audit event says so.
 
+## 5a. Web UI
+
+Sidebar section **Mobile devices** (`src/frontend`, routes under `/mobile`):
+
+| Page | What it does |
+|------|--------------|
+| `/mobile/devices` | Fleet compliance cards; filter by platform, ownership, compliance, state; search; "Sync now". |
+| `/mobile/devices/{id}` | Inventory, compliance violations, what the device allows (and why not more), commands, apps, audit trail; re-evaluate, change policy, send command. Personal devices show a data-boundary notice and "not collected" for identifiers. |
+| `/mobile/approvals` | Pending retire/wipe requests with approve/reject and a note. The server enforces "different administrator"; the UI only warns when you decided your own request. |
+| `/mobile/policies` | Create/edit policies (passcode, restrictions, compliance, Wi-Fi, VPN, kiosk, app control), assign apps with managed configuration, publish and read the applied/skipped report. Secrets are write-only fields. |
+| `/mobile/apps` | App catalogue. |
+| `/mobile/enrollments` | Connect Android Enterprise (owner), create enrollments, show the QR code / link **once** (QR rendered in the browser), revoke. |
+
+Only commands the device's capability set offers appear in the command dialog; destructive ones require a reason
+and explain that nothing happens until approval. Members can read everything; mutating controls are hidden unless Owner/Admin
+(the API enforces this independently). Tests: `src/frontend/src/__tests__/mobile.test.tsx`.
+
 ## 6. Configuration
 
 Section `Solvix:Mdm` (environment variables `Solvix__Mdm__…`, see `.env.example`).
@@ -238,5 +255,5 @@ dotnet test        # needs PostgreSQL (superuser) + Redis, see README
   Android `RESET_PASSWORD` with a new password are not implemented.
 * No rate limiting on the anonymous Apple endpoints (add at the reverse proxy); Apple's protocol has no
   nonce, so rely on TLS (replayed signed messages are idempotent state reports, but terminate TLS properly).
-* **No web UI yet.** Everything is available through the API (OpenAPI/Scalar at `/scalar/v1`); the
-  Next.js shell has not been extended in this phase.
+* The web UI covers the administrator workflows below; it has no Android/iOS enrollment *client*
+  and no bulk actions (multi-select commands, CSV export) yet.

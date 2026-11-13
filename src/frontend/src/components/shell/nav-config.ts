@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Building2, GitBranch, LayoutDashboard, Network, Settings2 } from "lucide-react";
+import { AppWindow, Building2, GitBranch, LayoutDashboard, Network, QrCode, Settings2, ShieldCheck, SlidersHorizontal, Smartphone } from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -27,6 +27,16 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Mobile devices",
+    items: [
+      { label: "Devices", href: "/mobile/devices", icon: Smartphone },
+      { label: "Approvals", href: "/mobile/approvals", icon: ShieldCheck },
+      { label: "Policies", href: "/mobile/policies", icon: SlidersHorizontal },
+      { label: "Apps", href: "/mobile/apps", icon: AppWindow },
+      { label: "Enrollment", href: "/mobile/enrollments", icon: QrCode },
+    ],
+  },
+  {
     title: "Settings",
     items: [{ label: "Workspace", href: "/settings/workspace", icon: Settings2 }],
   },
@@ -39,6 +49,12 @@ export const segmentLabels: Record<string, string> = {
   company: "Company profile",
   branches: "Branches",
   departments: "Departments",
+  mobile: "Mobile devices",
+  devices: "Devices",
+  approvals: "Approvals",
+  policies: "Policies",
+  apps: "Apps",
+  enrollments: "Enrollment",
   settings: "Settings",
   workspace: "Workspace",
 };
