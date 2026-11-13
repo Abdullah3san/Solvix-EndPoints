@@ -14,11 +14,11 @@ using Solvix.SharedKernel.Tenancy;
 
 public interface IRestartService
 {
-    Task<PagedResult<RestartRequestDto>> ListAsync(RestartListQuery query, CancellationToken cancellationToken);
+    Task<PagedResult<DeviceRestartDto>> ListAsync(RestartListQuery query, CancellationToken cancellationToken);
 
-    Task<RestartRequestDto> CreateAsync(CreateRestartRequest request, CancellationToken cancellationToken);
+    Task<DeviceRestartDto> CreateAsync(CreateRestartRequest request, CancellationToken cancellationToken);
 
-    Task<RestartRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken);
+    Task<DeviceRestartDto> CancelAsync(Guid id, CancellationToken cancellationToken);
 }
 
 internal sealed class RestartService(
@@ -28,7 +28,7 @@ internal sealed class RestartService(
     IClock clock,
     IAuditTrail audit) : IRestartService
 {
-    public async Task<PagedResult<RestartRequestDto>> ListAsync(RestartListQuery query, CancellationToken cancellationToken)
+    public async Task<PagedResult<DeviceRestartDto>> ListAsync(RestartListQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
         var page = new PageRequest(query.Page, query.PageSize);
@@ -48,10 +48,10 @@ internal sealed class RestartService(
 
         var total = await rows.LongCountAsync(cancellationToken);
         var items = await rows.OrderByDescending(x => x.Restart.CreatedAtUtc).Skip(page.Skip).Take(page.SafePageSize).ToListAsync(cancellationToken);
-        return new PagedResult<RestartRequestDto>(items.Select(x => ToDto(x.Restart, x.Hostname)).ToList(), page.SafePage, page.SafePageSize, total);
+        return new PagedResult<DeviceRestartDto>(items.Select(x => ToDto(x.Restart, x.Hostname)).ToList(), page.SafePage, page.SafePageSize, total);
     }
 
-    public async Task<RestartRequestDto> CreateAsync(CreateRestartRequest request, CancellationToken cancellationToken)
+    public async Task<DeviceRestartDto> CreateAsync(CreateRestartRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         var device = await db.Set<Device>().AsNoTracking().FirstOrDefaultAsync(d => d.Id == request.DeviceId && d.Status == DeviceStatus.Active, cancellationToken)
@@ -92,7 +92,7 @@ internal sealed class RestartService(
         return ToDto(restart, device.Hostname);
     }
 
-    public async Task<RestartRequestDto> CancelAsync(Guid id, CancellationToken cancellationToken)
+    public async Task<DeviceRestartDto> CancelAsync(Guid id, CancellationToken cancellationToken)
     {
         var restart = await db.Set<DeviceRestartRequest>().FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             ?? throw new NotFoundException("RestartRequest", id);
@@ -108,7 +108,7 @@ internal sealed class RestartService(
         return ToDto(restart, hostname);
     }
 
-    private static RestartRequestDto ToDto(DeviceRestartRequest r, string hostname) => new(
+    private static DeviceRestartDto ToDto(DeviceRestartRequest r, string hostname) => new(
         r.Id, r.DeviceId, hostname, r.Source, r.DeploymentId, r.Reason, r.Status, r.NotBeforeUtc, r.DeadlineUtc, r.MaintenanceWindowId,
         r.Force, r.GracePeriodSeconds, r.DispatchedAtUtc, r.InitiatedAtUtc, r.CompletedAtUtc, r.Message, r.CreatedAtUtc);
 }

@@ -219,7 +219,7 @@ public static class SettingRiskClassifier
     {
         ScreenLockControl.InactivityTimeoutSeconds when l.Value == 0 => SettingRisk.Elevated,
         ScreenLockControl.RequirePasswordOnWake when l.Value == 0 => SettingRisk.Elevated,
-        ScreenLockControl.DisableLockWorkstation when l.Value == 1 => SettingRisk.Elevated,
+        ScreenLockControl.RequireCtrlAltDel when l.Value == 0 => SettingRisk.Elevated,
         _ => SettingRisk.Low,
     };
 

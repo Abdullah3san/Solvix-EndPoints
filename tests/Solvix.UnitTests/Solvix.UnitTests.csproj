@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Devices\Solvix.Modules.Devices.csproj" />
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.EndpointManagement\Solvix.Modules.EndpointManagement.csproj" />
     <ProjectReference Include="..\..\src\shared\Solvix.Endpoint.Contracts\Solvix.Endpoint.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\agent\Solvix.Agent.Core\Solvix.Agent.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

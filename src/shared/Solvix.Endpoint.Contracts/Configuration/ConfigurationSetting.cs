@@ -428,7 +428,7 @@ public sealed record ScreenLockSetting(ScreenLockControl Control, int Value) : C
             case ScreenLockControl.InactivityTimeoutSeconds when Value is < 0 or > MaxInactivitySeconds:
                 errors.Add($"InactivityTimeoutSeconds must be between 0 (disabled) and {MaxInactivitySeconds}.");
                 break;
-            case ScreenLockControl.RequirePasswordOnWake or ScreenLockControl.DisableLockWorkstation when Value is not (0 or 1):
+            case ScreenLockControl.RequirePasswordOnWake or ScreenLockControl.RequireCtrlAltDel when Value is not (0 or 1):
                 errors.Add($"{Control} value must be 0 or 1.");
                 break;
             default:

@@ -98,7 +98,7 @@ public sealed record DeploymentJobDto(
 
 public sealed record DeploymentListQuery(DeploymentStatus? Status, int Page = 1, int PageSize = 25);
 
-public sealed record RestartRequestDto(
+public sealed record DeviceRestartDto(
     Guid Id,
     Guid DeviceId,
     string Hostname,

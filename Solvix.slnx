@@ -14,6 +14,10 @@
     <Project Path="src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj" />
   </Folder>
+  <Folder Name="/src/agent/">
+    <Project Path="src/agent/Solvix.Agent.Core/Solvix.Agent.Core.csproj" />
+    <Project Path="src/agent/Solvix.Agent.Windows/Solvix.Agent.Windows.csproj" />
+  </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Solvix.Endpoint.Contracts/Solvix.Endpoint.Contracts.csproj" />
   </Folder>

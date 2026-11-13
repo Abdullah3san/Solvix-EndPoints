@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Platform-neutral agent logic: server API client, configuration evaluation
+    (risk gate, drift, remediation, snapshots and rollback), patch job execution
+    with an interruption journal, and the main loop. Every operating-system
+    interaction goes through interfaces implemented by Solvix.Agent.Windows, so
+    this assembly is fully unit-testable on any OS.
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\shared\Solvix.Endpoint.Contracts\Solvix.Endpoint.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Solvix.UnitTests" />
+    <InternalsVisibleTo Include="Solvix.IntegrationTests" />
+  </ItemGroup>
+</Project>

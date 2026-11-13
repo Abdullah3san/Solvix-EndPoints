@@ -5,7 +5,6 @@ using Solvix.Endpoint.Contracts.Configuration;
 using Solvix.Modules.Devices.Domain;
 using Solvix.Modules.EndpointManagement.Domain.Configuration;
 using Solvix.SharedKernel.Exceptions;
-using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Persistence;
 using Solvix.SharedKernel.Results;
 
@@ -147,7 +146,7 @@ public static class SecurityBaselines
                 new FirewallProfileSetting(FirewallProfile.Public, true, FirewallAction.Block, FirewallAction.Allow),
                 new ScreenLockSetting(ScreenLockControl.InactivityTimeoutSeconds, 900),
                 new ScreenLockSetting(ScreenLockControl.RequirePasswordOnWake, 1),
-                new ScreenLockSetting(ScreenLockControl.DisableLockWorkstation, 0),
+                new ScreenLockSetting(ScreenLockControl.RequireCtrlAltDel, 1),
                 new UsbStorageSetting(UsbDeviceClass.RemovableDisks, UsbAccess.ReadOnly),
                 new UsbStorageSetting(UsbDeviceClass.PortableDevices, UsbAccess.ReadOnly),
                 new ServiceSetting("RemoteRegistry", ServiceStartupType.Disabled, ServiceRunState.Stopped),

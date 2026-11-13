@@ -178,8 +178,11 @@ public enum ScreenLockControl
     /// <summary>Power setting CONSOLELOCK on AC and DC: 1 = require sign-in on wake.</summary>
     RequirePasswordOnWake = 2,
 
-    /// <summary>HKLM\...\Policies\System\DisableLockWorkstation: 1 = users cannot lock the computer.</summary>
-    DisableLockWorkstation = 3,
+    /// <summary>
+    /// "Interactive logon: Do not require CTRL+ALT+DEL" (HKLM\...\Policies\System\DisableCAD):
+    /// 1 = users must press CTRL+ALT+DEL to sign in or unlock (secure attention sequence).
+    /// </summary>
+    RequireCtrlAltDel = 3,
 }
 
 /// <summary>Device classes governed by the "Removable Storage Access" administrative template.</summary>

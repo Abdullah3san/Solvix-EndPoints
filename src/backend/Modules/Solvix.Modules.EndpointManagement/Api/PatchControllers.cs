@@ -173,18 +173,18 @@ public sealed class PatchDeploymentsController(IPatchDeploymentService service) 
 public sealed class RestartRequestsController(IRestartService service) : ApiControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<PagedResult<RestartRequestDto>>> List([FromQuery] RestartListQuery query, CancellationToken cancellationToken) =>
+    public async Task<ActionResult<PagedResult<DeviceRestartDto>>> List([FromQuery] RestartListQuery query, CancellationToken cancellationToken) =>
         Ok(await service.ListAsync(query, cancellationToken));
 
     [HttpPost]
     [Authorize(Policy = Policies.TenantAdmin)]
-    [ProducesResponseType<RestartRequestDto>(StatusCodes.Status201Created)]
-    public async Task<ActionResult<RestartRequestDto>> Create([FromBody] CreateRestartRequest request, CancellationToken cancellationToken) =>
+    [ProducesResponseType<DeviceRestartDto>(StatusCodes.Status201Created)]
+    public async Task<ActionResult<DeviceRestartDto>> Create([FromBody] CreateRestartRequest request, CancellationToken cancellationToken) =>
         StatusCode(StatusCodes.Status201Created, await service.CreateAsync(request, cancellationToken));
 
     [HttpPost("{id:guid}/cancel")]
     [Authorize(Policy = Policies.TenantAdmin)]
-    public async Task<ActionResult<RestartRequestDto>> Cancel(Guid id, CancellationToken cancellationToken) =>
+    public async Task<ActionResult<DeviceRestartDto>> Cancel(Guid id, CancellationToken cancellationToken) =>
         Ok(await service.CancelAsync(id, cancellationToken));
 }
 
