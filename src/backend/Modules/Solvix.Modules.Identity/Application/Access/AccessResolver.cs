@@ -88,6 +88,14 @@ internal sealed class AccessResolver(ISolvixDbContext db, IDistributedCache cach
                 mfaEnrollmentRequired));
     }
 
+    public async Task<IReadOnlySet<string>> ResolveMemberPermissionsAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken)
+    {
+        var access = await FindAccessAsync(tenantId, userId, cancellationToken);
+        return access is { MembershipActive: true, UserActive: true }
+            ? access.Permissions.ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+    }
+
     public async Task<SecurityPolicySettings?> FindAsync(Guid tenantId, CancellationToken cancellationToken)
     {
         var key = PolicyKey(tenantId);

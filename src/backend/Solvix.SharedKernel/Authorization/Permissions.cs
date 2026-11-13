@@ -12,8 +12,31 @@ public static class Permissions
         public const string View = "devices.view";
         public const string Enroll = "devices.enroll";
         public const string Manage = "devices.manage";
-        public const string RemoteAccess = "devices.remote_access";
-        public const string ExecuteCommand = "devices.execute_command";
+    }
+
+    /// <summary>
+    /// Remote endpoint administration (Phase 06). Every key implies <see cref="View"/>,
+    /// which implies <see cref="Devices.View"/>. Holding a key is necessary but not
+    /// sufficient: the remote access policy (scope, hours, approvals) is checked as well.
+    /// </summary>
+    public static class Remote
+    {
+        public const string View = "remote.view";
+        public const string Desktop = "remote.desktop";
+        public const string DesktopControl = "remote.desktop.control";
+        public const string MultiMonitor = "remote.multimonitor";
+        public const string Terminal = "remote.terminal";
+        public const string PowerShell = "remote.powershell";
+        public const string ExecuteApprovedCommands = "remote.execute_approved_commands";
+        public const string FileUpload = "remote.file.upload";
+        public const string FileDownload = "remote.file.download";
+        public const string Restart = "remote.restart";
+        public const string Shutdown = "remote.shutdown";
+        public const string Lock = "remote.lock";
+        public const string VoiceCall = "remote.voice_call";
+        public const string SessionsView = "remote.sessions.view";
+        public const string SessionsTerminate = "remote.sessions.terminate";
+        public const string ApprovalsManage = "remote.approvals.manage";
     }
 
     public static class Assets

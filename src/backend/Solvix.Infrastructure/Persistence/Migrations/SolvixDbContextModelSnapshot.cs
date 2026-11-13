@@ -3021,6 +3021,525 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("departments", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.CommandExecution", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AcknowledgedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("acknowledged_at_utc");
+
+                    b.Property<Guid?>("ApprovalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approval_id");
+
+                    b.Property<Guid?>("ApprovedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by");
+
+                    b.Property<DateTimeOffset?>("CancelRequestedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancel_requested_at_utc");
+
+                    b.Property<Guid?>("CancelRequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cancel_requested_by");
+
+                    b.Property<string>("CommandType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("command_type");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<int>("DeliveryAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("delivery_attempts");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("device_name");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("error_code");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<DateTimeOffset?>("ExecutionDeadlineUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("execution_deadline_utc");
+
+                    b.Property<int>("ExecutionTimeoutSeconds")
+                        .HasColumnType("integer")
+                        .HasColumnName("execution_timeout_seconds");
+
+                    b.Property<int?>("ExitCode")
+                        .HasColumnType("integer")
+                        .HasColumnName("exit_code");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("KeyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("key_id");
+
+                    b.Property<DateTimeOffset?>("LastDeliveredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_delivered_at_utc");
+
+                    b.Property<string>("Output")
+                        .HasColumnType("text")
+                        .HasColumnName("output");
+
+                    b.Property<bool>("OutputTruncated")
+                        .HasColumnType("boolean")
+                        .HasColumnName("output_truncated");
+
+                    b.Property<Dictionary<string, string>>("Parameters")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("parameters");
+
+                    b.Property<DateTimeOffset?>("QueuedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("queued_at_utc");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RequestedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at_utc");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by");
+
+                    b.Property<string>("RequiredPermission")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("required_permission");
+
+                    b.Property<long?>("Sequence")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence");
+
+                    b.Property<string>("SignedCommand")
+                        .HasColumnType("text")
+                        .HasColumnName("signed_command");
+
+                    b.Property<string>("SourceIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_ip");
+
+                    b.Property<DateTimeOffset?>("StartedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at_utc");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("TargetExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_execution_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_command_executions");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_remote_command_executions_tenant_id_id");
+
+                    b.HasIndex("Status", "ExecutionDeadlineUtc")
+                        .HasDatabaseName("ix_remote_command_executions_status_execution_deadline_utc");
+
+                    b.HasIndex("Status", "ExpiresAtUtc")
+                        .HasDatabaseName("ix_remote_command_executions_status_expires_at_utc");
+
+                    b.HasIndex("TenantId", "RequestedAtUtc")
+                        .HasDatabaseName("ix_remote_command_executions_tenant_id_requested_at_utc");
+
+                    b.HasIndex("TenantId", "DeviceId", "Sequence")
+                        .IsUnique()
+                        .HasDatabaseName("ix_remote_command_executions_tenant_id_device_id_sequence")
+                        .HasFilter("sequence IS NOT NULL");
+
+                    b.HasIndex("TenantId", "DeviceId", "Status")
+                        .HasDatabaseName("ix_remote_command_executions_tenant_id_device_id_status");
+
+                    b.ToTable("remote_command_executions", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.DeviceCommandSequence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<long>("LastSequence")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_sequence");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_device_command_sequences");
+
+                    b.HasIndex("TenantId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_remote_device_command_sequences_tenant_id_device_id");
+
+                    b.ToTable("remote_device_command_sequences", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteAccessPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AllowedDaysMask")
+                        .HasColumnType("integer")
+                        .HasColumnName("allowed_days_mask");
+
+                    b.Property<int?>("AllowedFromMinute")
+                        .HasColumnType("integer")
+                        .HasColumnName("allowed_from_minute");
+
+                    b.Property<int?>("AllowedToMinute")
+                        .HasColumnType("integer")
+                        .HasColumnName("allowed_to_minute");
+
+                    b.PrimitiveCollection<List<string>>("ApprovalRequiredCommands")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("approval_required_commands");
+
+                    b.Property<int>("ApprovalTtlMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("approval_ttl_minutes");
+
+                    b.Property<int>("CommandTtlMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("command_ttl_minutes");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("time_zone_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_access_policies");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_remote_access_policies_tenant_id");
+
+                    b.ToTable("remote_access_policies", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_remote_access_policies_ttl", "command_ttl_minutes BETWEEN 5 AND 10080 AND approval_ttl_minutes BETWEEN 5 AND 10080");
+
+                            t.HasCheckConstraint("ck_remote_access_policies_window", "(allowed_from_minute IS NULL) = (allowed_to_minute IS NULL) AND COALESCE(allowed_from_minute, 0) BETWEEN 0 AND 1439 AND COALESCE(allowed_to_minute, 0) BETWEEN 0 AND 1440");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteAccessScope", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<List<Guid>>("BranchIds")
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("branch_ids");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.PrimitiveCollection<List<Guid>>("DeviceGroupIds")
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("device_group_ids");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_access_scopes");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_remote_access_scopes_tenant_id_user_id");
+
+                    b.ToTable("remote_access_scopes", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CommandType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("command_type");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at_utc");
+
+                    b.Property<Guid?>("DecidedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by");
+
+                    b.Property<string>("DecisionComment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("decision_comment");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("DeviceName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("device_name");
+
+                    b.Property<Guid>("ExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("execution_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("RequestedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_approvals");
+
+                    b.HasIndex("TenantId", "ExecutionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_remote_approvals_tenant_id_execution_id");
+
+                    b.HasIndex("TenantId", "Status", "ExpiresAtUtc")
+                        .HasDatabaseName("ix_remote_approvals_tenant_id_status_expires_at_utc");
+
+                    b.ToTable("remote_approvals", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_remote_approvals_four_eyes", "decided_by IS NULL OR decided_by <> requested_by");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteAuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<Guid?>("ApprovalId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approval_id");
+
+                    b.Property<string>("CommandType")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("command_type");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("detail");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("event_type");
+
+                    b.Property<Guid?>("ExecutionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("execution_id");
+
+                    b.Property<string>("Hash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("hash")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Permission")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("permission");
+
+                    b.Property<string>("PreviousHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("previous_hash")
+                        .IsFixedLength();
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("bigint")
+                        .HasColumnName("sequence");
+
+                    b.Property<string>("SourceIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_ip");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_audit_events");
+
+                    b.HasIndex("TenantId", "ExecutionId")
+                        .HasDatabaseName("ix_remote_audit_events_tenant_id_execution_id");
+
+                    b.HasIndex("TenantId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_remote_audit_events_tenant_id_occurred_at_utc");
+
+                    b.HasIndex("TenantId", "Sequence")
+                        .IsUnique()
+                        .HasDatabaseName("ix_remote_audit_events_tenant_id_sequence");
+
+                    b.HasIndex("TenantId", "DeviceId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_remote_audit_events_tenant_id_device_id_occurred_at_utc");
+
+                    b.ToTable("remote_audit_events", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Tenancy.Domain.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3777,6 +4296,74 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("ParentDepartment");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.CommandExecution", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_command_executions_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.DeviceCommandSequence", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_device_command_sequences_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteAccessPolicy", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_access_policies_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteAccessScope", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_access_scopes_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteApproval", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_approvals_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.RemoteManagement.Domain.CommandExecution", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ExecutionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_approvals_remote_command_executions_tenant_id_execut~");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.RemoteManagement.Domain.RemoteAuditEvent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_audit_events_tenants_tenant_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.Role", b =>

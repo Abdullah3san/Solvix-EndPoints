@@ -137,6 +137,9 @@ public sealed record HeartbeatResponse
 
     /// <summary>The device certificate is in its renewal window.</summary>
     public bool CertificateRenewalRecommended { get; init; }
+
+    /// <summary>Signed commands are waiting at <see cref="AgentRoutes.Commands"/> (0 for servers without remote management).</summary>
+    public int PendingCommands { get; init; }
 }
 
 public sealed record UpdateCheckResponse

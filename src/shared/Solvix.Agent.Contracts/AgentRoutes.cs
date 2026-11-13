@@ -22,6 +22,16 @@ public static class AgentRoutes
 
     /// <summary>Device certificate (mutual TLS).</summary>
     public const string Updates = Base + "/updates";
+
+    /// <summary>Device certificate. Pending signed commands; long-polls up to <c>waitSeconds</c>.</summary>
+    public const string Commands = Base + "/commands";
+
+    /// <summary>Device certificate. Public keys commands are signed with.</summary>
+    public const string CommandKeys = Base + "/command-keys";
+
+    public static string CommandAcknowledgement(Guid executionId) => $"{Commands}/{executionId:D}/ack";
+
+    public static string CommandResult(Guid executionId) => $"{Commands}/{executionId:D}/result";
 }
 
 /// <summary>Well-known identifiers embedded in device certificates.</summary>

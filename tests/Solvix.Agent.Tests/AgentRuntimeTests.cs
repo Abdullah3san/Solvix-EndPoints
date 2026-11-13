@@ -293,8 +293,10 @@ public sealed class AgentRuntimeTests
     [Fact]
     public void Heartbeat_response_contract_has_no_command_surface()
     {
-        // Structural guard: the only server-to-agent data are schedules and booleans.
-        var allowed = new[] { typeof(DateTimeOffset), typeof(AgentConfiguration), typeof(bool) };
+        // Structural guard: the only server-to-agent data are schedules, booleans and the count of
+        // pending commands (a hint). Commands themselves only arrive as signed envelopes from
+        // AgentRoutes.Commands, never through the heartbeat.
+        var allowed = new[] { typeof(DateTimeOffset), typeof(AgentConfiguration), typeof(bool), typeof(int) };
         Assert.All(typeof(HeartbeatResponse).GetProperties(), p => Assert.Contains(p.PropertyType, allowed));
         Assert.All(typeof(AgentConfiguration).GetProperties(), p => Assert.Equal(typeof(int), p.PropertyType));
     }

@@ -106,6 +106,10 @@ services:
       Solvix__Devices__CertificateAuthority__AutoGenerate: ${SOLVIX_DEVICE_CA_AUTOGENERATE:-true}
       Solvix__Devices__CertificateAuthority__PfxPath: /var/lib/solvix/device-ca.pfx
       Solvix__Devices__CertificateAuthority__PfxPassword: ${SOLVIX_DEVICE_CA_PASSWORD:-dev-only-device-ca}
+      # Remote management: ECDSA P-256 key that signs every command sent to devices. Generated once on the
+      # solvix-pki volume for development; production supplies a managed key (KeyPem from a secret store).
+      Solvix__RemoteManagement__CommandSigning__AutoGenerate: ${SOLVIX_COMMAND_KEY_AUTOGENERATE:-true}
+      Solvix__RemoteManagement__CommandSigning__KeyPath: /var/lib/solvix/command-signing.pem
     volumes:
       - solvix-pki:/var/lib/solvix
     ports:

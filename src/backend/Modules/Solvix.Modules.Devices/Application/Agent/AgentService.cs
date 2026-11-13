@@ -40,6 +40,7 @@ internal sealed partial class AgentService(
     PresenceTracker presence,
     MonitoringSettingsProvider monitoringSettings,
     EndpointIdentityPublisher identityPublisher,
+    IEnumerable<IRemoteCommandQueue> commandQueues,
     IOptions<DevicesOptions> options,
     IClock clock,
     ILogger<AgentService> logger) : IAgentService
@@ -84,7 +85,19 @@ internal sealed partial class AgentService(
             Configuration = AgentConfigurationFactory.From(settings.Agent, monitoring.Thresholds.HeartbeatIntervalSeconds),
             InventoryRequested = device.IsInventoryRequested,
             CertificateRenewalRecommended = now >= renewalFrom,
+            PendingCommands = await CountPendingCommandsAsync(device.Id, cancellationToken),
         };
+    }
+
+    private async Task<int> CountPendingCommandsAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        var pending = 0;
+        foreach (var queue in commandQueues)
+        {
+            pending += await queue.CountPendingAsync(deviceId, cancellationToken);
+        }
+
+        return pending;
     }
 
     private static bool SameIssues(string? storedJson, AgentHealthReport current)

@@ -56,12 +56,12 @@ public sealed class IdentityDomainTests
     public void Custom_roles_only_accept_known_permissions_and_include_what_they_imply()
     {
         var tenant = Guid.NewGuid();
-        var role = Role.CreateCustom(tenant, "  Help Desk ", " First line ", [Permissions.Users.Manage, Permissions.Devices.RemoteAccess]);
+        var role = Role.CreateCustom(tenant, "  Help Desk ", " First line ", [Permissions.Users.Manage, Permissions.Remote.Lock]);
         Assert.Equal("Help Desk", role.Name);
         Assert.Equal("HELP DESK", role.NormalizedName);
         Assert.False(role.IsSystem);
         Assert.Equal(
-            new[] { "devices.remote_access", "devices.view", "users.manage", "users.view" },
+            new[] { "devices.view", "remote.lock", "remote.view", "users.manage", "users.view" },
             role.PermissionKeys().Order(StringComparer.Ordinal));
         Assert.All(role.Permissions, p => Assert.Equal(tenant, p.TenantId));
 

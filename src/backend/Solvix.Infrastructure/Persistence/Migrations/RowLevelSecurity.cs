@@ -22,6 +22,7 @@ public static class RowLevelSecurity
         .. DeviceManagementSecurityMigration.TenantTables,
         .. RealTimeMonitoringSecurityMigration.TenantTables,
         .. AssetManagementSecurityMigration.TenantTables,
+        .. RemoteManagementSecurityMigration.TenantTables,
     ];
 
     public static void CreateHelperFunctions(MigrationBuilder migrationBuilder)

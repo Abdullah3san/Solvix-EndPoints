@@ -468,8 +468,8 @@ public sealed class PrivilegeEscalationTests(ApiFixture fixture)
     {
         var t = await fixture.RegisterTenantAsync();
         using var owner = fixture.CreateClient(t.Token);
-        var role = await CreateRoleAsync(owner, "Help Desk", Permissions.Devices.RemoteAccess);
-        Assert.Equal(new[] { "devices.remote_access", "devices.view" }, role.Permissions);
+        var role = await CreateRoleAsync(owner, "Help Desk", Permissions.Remote.Lock);
+        Assert.Equal(new[] { "devices.view", "remote.lock", "remote.view" }, role.Permissions);
 
         var member = await fixture.AddMemberAsync(t, [role.Id]);
         await HttpAssert.ProblemAsync(await owner.DeleteAsync($"/api/v1/roles/{role.Id}"), HttpStatusCode.Conflict, "role_in_use");

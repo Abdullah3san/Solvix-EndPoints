@@ -24,6 +24,25 @@ public static class SystemRoles
     public const string SecurityAdministratorKey = "security_admin";
     public const string ReadOnlyAuditorKey = "read_only_auditor";
 
+    /// <summary>Remote permissions of the IT Manager: everything except interactive/ad-hoc PowerShell.</summary>
+    internal static readonly string[] ItManagerRemote =
+    [
+        Permissions.Remote.View, Permissions.Remote.Desktop, Permissions.Remote.DesktopControl, Permissions.Remote.MultiMonitor,
+        Permissions.Remote.Terminal, Permissions.Remote.ExecuteApprovedCommands, Permissions.Remote.FileUpload,
+        Permissions.Remote.FileDownload, Permissions.Remote.Restart, Permissions.Remote.Shutdown, Permissions.Remote.Lock,
+        Permissions.Remote.VoiceCall, Permissions.Remote.SessionsView, Permissions.Remote.SessionsTerminate,
+        Permissions.Remote.ApprovalsManage,
+    ];
+
+    /// <summary>Remote permissions of the IT Technician: support work, no shutdown, approvals or PowerShell.</summary>
+    internal static readonly string[] ItTechnicianRemote =
+    [
+        Permissions.Remote.View, Permissions.Remote.Desktop, Permissions.Remote.DesktopControl, Permissions.Remote.MultiMonitor,
+        Permissions.Remote.Terminal, Permissions.Remote.ExecuteApprovedCommands, Permissions.Remote.FileUpload,
+        Permissions.Remote.FileDownload, Permissions.Remote.Restart, Permissions.Remote.Lock, Permissions.Remote.VoiceCall,
+        Permissions.Remote.SessionsView,
+    ];
+
     /// <summary>Holds every permission, including billing and workspace settings. A tenant always keeps at least one.</summary>
     public static SystemRoleDefinition SuperAdministrator { get; } = Define(
         SuperAdministratorKey,
@@ -43,7 +62,7 @@ public static class SystemRoles
         "Runs day-to-day IT: full control of devices, MDM and assets, plus reports.",
         [
             Permissions.Devices.View, Permissions.Devices.Enroll, Permissions.Devices.Manage,
-            Permissions.Devices.RemoteAccess, Permissions.Devices.ExecuteCommand,
+            .. ItManagerRemote,
             Permissions.Assets.View, Permissions.Assets.Create, Permissions.Assets.Edit, Permissions.Assets.Transfer,
             Permissions.Mdm.Manage, Permissions.Reports.View, Permissions.Users.View, Permissions.Organization.View,
         ]);
@@ -51,9 +70,10 @@ public static class SystemRoles
     public static SystemRoleDefinition ItTechnician { get; } = Define(
         ItTechnicianKey,
         "IT Technician",
-        "Supports users: enrols devices, connects remotely and keeps asset records up to date. Cannot run commands or retire devices.",
+        "Supports users: enrols devices, connects remotely, runs approved operations and keeps asset records up to date. Cannot shut devices down, run ad-hoc PowerShell or retire devices.",
         [
-            Permissions.Devices.View, Permissions.Devices.Enroll, Permissions.Devices.RemoteAccess,
+            Permissions.Devices.View, Permissions.Devices.Enroll,
+            .. ItTechnicianRemote,
             Permissions.Assets.View, Permissions.Assets.Edit, Permissions.Organization.View,
         ]);
 
@@ -73,6 +93,7 @@ public static class SystemRoles
         [
             Permissions.Security.View, Permissions.Security.Manage, Permissions.Audit.View,
             Permissions.Users.View, Permissions.Roles.View, Permissions.Devices.View,
+            Permissions.Remote.View, Permissions.Remote.SessionsView,
             Permissions.Reports.View, Permissions.Organization.View,
         ]);
 
@@ -83,6 +104,7 @@ public static class SystemRoles
         [
             Permissions.Devices.View, Permissions.Assets.View, Permissions.Users.View, Permissions.Roles.View,
             Permissions.Security.View, Permissions.Audit.View, Permissions.Reports.View, Permissions.Organization.View,
+            Permissions.Remote.View, Permissions.Remote.SessionsView,
         ]);
 
     public static IReadOnlyList<SystemRoleDefinition> All { get; } =

@@ -17,7 +17,16 @@ public interface IEndpointDirectory
     Task<EndpointPage> SearchAsync(string? search, IReadOnlyCollection<Guid> excludedDeviceIds, bool activeOnly, int skip, int take, CancellationToken cancellationToken);
 
     Task<int> CountActiveAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// One device with the attributes access decisions need (branch, groups, state), or
+    /// <c>null</c> when it does not exist in the current tenant.
+    /// </summary>
+    Task<EndpointAccessInfo?> FindForAccessAsync(Guid deviceId, CancellationToken cancellationToken);
 }
+
+/// <summary>A device as seen by authorization: who it belongs to organisationally and whether it can be reached.</summary>
+public sealed record EndpointAccessInfo(EndpointSummary Endpoint, IReadOnlyList<Guid> GroupIds);
 
 public sealed record EndpointPage(IReadOnlyList<EndpointSummary> Items, long TotalCount);
 

@@ -17,15 +17,13 @@ public sealed class PermissionCatalogTests
 
         Assert.Equal(constants.Count, constants.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(constants.Order(StringComparer.Ordinal), PermissionCatalog.AllKeys.Order(StringComparer.Ordinal));
-        Assert.All(PermissionCatalog.All, p => Assert.Matches("^[a-z]+\\.[a-z_]+$", p.Key));
+        Assert.All(PermissionCatalog.All, p => Assert.Matches("^[a-z]+(\\.[a-z_]+)+$", p.Key));
     }
 
     [Theory]
     [InlineData("devices.view")]
     [InlineData("devices.enroll")]
     [InlineData("devices.manage")]
-    [InlineData("devices.remote_access")]
-    [InlineData("devices.execute_command")]
     [InlineData("assets.view")]
     [InlineData("assets.create")]
     [InlineData("assets.edit")]
@@ -35,6 +33,22 @@ public sealed class PermissionCatalogTests
     [InlineData("security.manage")]
     [InlineData("reports.view")]
     [InlineData("billing.manage")]
+    [InlineData("remote.view")]
+    [InlineData("remote.desktop")]
+    [InlineData("remote.desktop.control")]
+    [InlineData("remote.multimonitor")]
+    [InlineData("remote.terminal")]
+    [InlineData("remote.powershell")]
+    [InlineData("remote.execute_approved_commands")]
+    [InlineData("remote.file.upload")]
+    [InlineData("remote.file.download")]
+    [InlineData("remote.restart")]
+    [InlineData("remote.shutdown")]
+    [InlineData("remote.lock")]
+    [InlineData("remote.voice_call")]
+    [InlineData("remote.sessions.view")]
+    [InlineData("remote.sessions.terminate")]
+    [InlineData("remote.approvals.manage")]
     public void Catalog_contains_the_permissions_named_in_the_specification(string key)
     {
         Assert.True(PermissionCatalog.IsKnown(key));
@@ -103,11 +117,23 @@ public sealed class PermissionCatalogTests
                 Assert.DoesNotContain(Permissions.Billing.Manage, r.Permissions);
             });
 
-        // The technician supports users but cannot run commands or retire devices.
-        Assert.Contains(Permissions.Devices.RemoteAccess, SystemRoles.ItTechnician.Permissions);
-        Assert.DoesNotContain(Permissions.Devices.ExecuteCommand, SystemRoles.ItTechnician.Permissions);
+        // The technician supports users remotely but cannot shut down, approve, run ad-hoc PowerShell or retire devices.
+        Assert.Contains(Permissions.Remote.DesktopControl, SystemRoles.ItTechnician.Permissions);
+        Assert.Contains(Permissions.Remote.ExecuteApprovedCommands, SystemRoles.ItTechnician.Permissions);
+        Assert.DoesNotContain(Permissions.Remote.Shutdown, SystemRoles.ItTechnician.Permissions);
+        Assert.DoesNotContain(Permissions.Remote.ApprovalsManage, SystemRoles.ItTechnician.Permissions);
         Assert.DoesNotContain(Permissions.Devices.Manage, SystemRoles.ItTechnician.Permissions);
-        Assert.Contains(Permissions.Devices.ExecuteCommand, SystemRoles.ItManager.Permissions);
+        Assert.Contains(Permissions.Remote.Shutdown, SystemRoles.ItManager.Permissions);
+
+        // Ad-hoc PowerShell is never part of a built-in role below the tenant administrators.
+        Assert.All(
+            SystemRoles.All.Where(r => r.Key is not (SystemRoles.SuperAdministratorKey or SystemRoles.TenantAdministratorKey)),
+            r => Assert.DoesNotContain(Permissions.Remote.PowerShell, r.Permissions));
+
+        // Every remote permission implies remote.view and devices.view.
+        Assert.All(
+            PermissionCatalog.AllKeys.Where(k => k.StartsWith("remote.", StringComparison.Ordinal)),
+            k => Assert.Superset(new HashSet<string> { Permissions.Remote.View, Permissions.Devices.View }, PermissionCatalog.Expand([k]).ToHashSet()));
 
         // Security administration is separated from user administration.
         Assert.Contains(Permissions.Security.Manage, SystemRoles.SecurityAdministrator.Permissions);

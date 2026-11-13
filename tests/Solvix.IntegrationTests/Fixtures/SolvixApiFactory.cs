@@ -27,6 +27,15 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
     public const string JwtAudience = "solvix-endpoints-web";
     public const string WebBaseUrl = "https://app.solvix.test";
 
+    /// <summary>Command signing key of the API under test (P-256, generated per test run).</summary>
+    public static readonly string TestCommandKeyPem = CreateCommandKey();
+
+    private static string CreateCommandKey()
+    {
+        using var key = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        return key.ExportPkcs8PrivateKeyPem();
+    }
+
     public SolvixApiFactory(
         PostgresTestDatabase database,
         string redisConnection,
@@ -71,6 +80,11 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__Devices__Releases__0__SizeBytes"] = "1048576",
             // Tests drive the monitor explicitly (MonitoringTestKit.SweepAsync).
             ["Solvix__Devices__Monitoring__RunMonitor"] = "false",
+
+            // Remote management: a fresh command signing key per test run; tests drive the sweeper.
+            ["Solvix__RemoteManagement__CommandSigning__KeyPem"] = TestCommandKeyPem,
+            ["Solvix__RemoteManagement__RunSweeper"] = "false",
+            ["Solvix__RemoteManagement__LongPollSeconds"] = "2",
         };
         foreach (var (key, value) in extraSettings ?? new Dictionary<string, string>())
         {

@@ -24,6 +24,21 @@ internal sealed class EndpointDirectory(ISolvixDbContext db) : IEndpointDirector
         return rows.Select(ToSummary).ToDictionary(r => r.Id);
     }
 
+    public async Task<EndpointAccessInfo?> FindForAccessAsync(Guid deviceId, CancellationToken cancellationToken)
+    {
+        var row = await Project(db.Set<Device>().AsNoTracking().Where(d => d.Id == deviceId)).FirstOrDefaultAsync(cancellationToken);
+        if (row is null)
+        {
+            return null;
+        }
+
+        var groups = await db.Set<DeviceGroupMembership>().AsNoTracking()
+            .Where(m => m.DeviceId == deviceId)
+            .Select(m => m.DeviceGroupId)
+            .ToListAsync(cancellationToken);
+        return new EndpointAccessInfo(ToSummary(row), groups);
+    }
+
     public async Task<IReadOnlyList<EndpointSummary>> FindBySerialKeysAsync(IReadOnlyCollection<string> serialKeys, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(serialKeys);

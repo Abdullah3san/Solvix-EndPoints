@@ -9,6 +9,14 @@ namespace Solvix.SharedKernel.Identity;
 public interface IAccessResolver
 {
     Task<AccessResolution> ResolveAsync(Guid tenantId, Guid userId, Guid sessionId, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Permissions a member currently holds in <paramref name="tenantId"/>, independent of any
+    /// sign-in session (used to re-authorize work queued on someone's behalf, e.g. a remote
+    /// command delivered after the requester signed out). Empty when the membership or the
+    /// account is inactive. Same cache and invalidation as <see cref="ResolveAsync"/>.
+    /// </summary>
+    Task<IReadOnlySet<string>> ResolveMemberPermissionsAsync(Guid tenantId, Guid userId, CancellationToken cancellationToken);
 }
 
 public enum AccessStatus

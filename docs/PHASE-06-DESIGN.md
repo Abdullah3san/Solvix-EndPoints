@@ -241,8 +241,8 @@ versions before the first production release.
 | # | Increment | Status |
 |---|-----------|--------|
 | 0 | Integrate Phase 02 with Phases 03–05 | **Done** – agent 71, unit 198, integration 180 tests, web checks and build green |
-| 1 | Permissions, remote access policy and scope (`Authorization`), remote audit log (`Auditing`) | Planned |
-| 2 | Command broker: definitions, signer, envelope, sequences, delivery/ack/result, redelivery, expiry, cancellation; approvals | Planned |
+| 1 | Permissions, remote access policy and scope (`Authorization`), remote audit log (`Auditing`) | **Done** – see §10 |
+| 2 | Command broker: definitions, signer, envelope, sequences, delivery/ack/result, redelivery, expiry, cancellation; approvals | **Done (server side)** – see §10. No agent executes commands yet (increment 3) |
 | 3 | Agent: key pinning, verifier, replay store, command channel, read-only system operations | Planned |
 | 4 | Privileged executor service + restart / shutdown / logoff; session helper + lock | Planned |
 | 5 | Session management (records, concurrency, idle/max expiry, termination, history) | Planned |
@@ -259,3 +259,35 @@ versions before the first production release.
 is compiled but cannot be executed; portable logic around it is unit-tested, and each such
 item is marked *Implemented, not verified on Windows* until it has run on Windows 10/11 and
 Server 2016/2022.
+
+## 10. Implemented: increments 1–2 (server side)
+
+Module `src/backend/Modules/Solvix.Modules.RemoteManagement`, migrations `20261113061006_RemoteManagement`
+and `20261113061100_RemoteManagementSecurity`.
+
+| Area | What exists | Where |
+|------|-------------|-------|
+| Permissions | 16 `remote.*` keys with implications; built-in roles per §3.3; placeholders retired; data migration for existing tenants (custom roles keep equivalent access) | `SharedKernel/Authorization`, `Identity/Domain/SystemRoles.cs`, security migration |
+| Authorization | `RemoteAuthorizer`: device in tenant → active → permission → technician scope (groups/branches) → allowed hours; `ReauthorizeAsync` for queued work using the member's *current* roles (`IAccessResolver.ResolveMemberPermissionsAsync`) | `Authorization/` |
+| Policy & scope API | `GET/PUT /remote/policy` (`remote.view` / `security.manage`), `GET/PUT/DELETE /remote/scopes/{userId}` (`security.view` / `security.manage`) | `Api/RemoteControllers.cs` |
+| Command definitions | Allow-list: system info, processes, services, uptime, logged-in users, lock, logoff, restart, shutdown (+ internal cancel); validated parameters; typed device-name confirmation for disruptive operations | `CommandBroker/CommandDefinitions.cs` |
+| Signing | ECDSA P-256 over canonical envelope bytes; `ICommandSigner` (file/PEM; generated in Development); public key set at `GET agent/command-keys` | `CommandBroker/CommandSigner.cs`, `Agent.Contracts/RemoteManagement/Commands.cs` |
+| Delivery | heartbeat `pendingCommands` hint → `GET agent/commands?waitSeconds=` (long poll ≤ 30 s) → `POST …/ack` → `POST …/result`; redelivery of the identical signed bytes after 60 s without acknowledgement; per-device sequence; requester re-authorized at delivery | `CommandBroker/AgentCommandService.cs` |
+| Exactly-once | conditional updates: ack only from `Delivered` and before expiry (a cancelled/expired command answers 409 and must not run); one result per acknowledged command (second → 409, audited) | same |
+| Approvals | configurable per operation (default: restart, shutdown, logoff); four-eyes enforced in code and by a CHECK constraint; approver must hold the operation's permission and scope; requester re-checked at approval | `CommandBroker/CommandBroker.cs` |
+| Expiry / timeouts | sweeper: unfetched → `Expired`, approval → `Expired`, acknowledged without result past the deadline → `TimedOut` (device offline mid-execution) | `CommandBroker/CommandSweeper.cs` |
+| Cancellation | before acknowledgement: immediate; after: signed `command.cancel` for the execution | `CommandBroker.CancelAsync` |
+| Audit | `remote_audit_events`: every request, denial, queue, delivery, ack, rejection, result, approval decision, policy/scope change; actor, device, execution, permission, source IP; append-only triggers + per-tenant SHA-256 hash chain; `GET /remote/audit`, `GET /remote/audit/verify` (`audit.view`) | `Auditing/` |
+| Tenant isolation | tenant from token/certificate only; RLS forced on all six tables; devices only see their own commands | migration, `AgentCommandService` |
+
+**Tests** (`tests/Solvix.IntegrationTests/Tests/RemoteCommandBrokerTests.cs`, real PostgreSQL + Redis): lifecycle with
+signature verification and audit; duplicate result / idempotent ack; redelivery with identical bytes; 12 concurrent
+requests from two technicians → unique sequences; unauthorized technicians; device-name confirmation; approvals incl.
+self-approval and approver without the permission; permission removed after request → rejected at delivery; offline
+device → expired, offline during execution → timed out, late ack/result refused; cancellation before delivery, after
+delivery and while running; device-side rejection; cross-tenant and cross-device access; user tokens on the agent
+channel; scope and allowed hours; append-only audit and tamper detection. The Phase 02 endpoint-protection sweep covers
+every new endpoint.
+
+**Known limits:** the long-poll wake-up signal is in-process (with several API nodes a poll on another node returns at
+its timeout, ≤ 30 s later). The command signing key is a file/PEM key; a KMS-backed `ICommandSigner` is still to be written.
