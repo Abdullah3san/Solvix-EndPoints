@@ -20,7 +20,7 @@ export function CompanyProfileForm({ profile: initial }: { profile: CompanyProfi
   const router = useRouter();
   const { toast } = useToast();
   const { notify } = useNotifications();
-  const { isAdmin } = useCan();
+  const canManage = useCan("organization.manage");
   const [profile, setProfile] = React.useState(initial);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [error, setError] = React.useState<string | null>(null);
@@ -68,7 +68,7 @@ export function CompanyProfileForm({ profile: initial }: { profile: CompanyProfi
         </CardHeader>
         <CardContent className="space-y-6">
           {error ? <Alert tone="error">{error}</Alert> : null}
-          <fieldset disabled={!isAdmin || pending} className="grid gap-4 sm:grid-cols-2">
+          <fieldset disabled={!canManage || pending} className="grid gap-4 sm:grid-cols-2">
             <Field label="Legal name" htmlFor="legalName" error={errors.legalName} required>
               <Input id="legalName" value={profile.legalName} onChange={set("legalName")} required aria-invalid={!!errors.legalName} />
             </Field>
@@ -97,13 +97,13 @@ export function CompanyProfileForm({ profile: initial }: { profile: CompanyProfi
               <Input id="timeZone" value={profile.timeZone} onChange={set("timeZone")} aria-invalid={!!errors.timeZone} />
             </Field>
           </fieldset>
-          <fieldset disabled={!isAdmin || pending}>
+          <fieldset disabled={!canManage || pending}>
             <AddressFields value={profile.address} onChange={(address) => setProfile((p) => ({ ...p, address }))} errors={errors} />
           </fieldset>
         </CardContent>
         <CardFooter className="justify-between">
           <p className="text-xs text-muted-foreground">Last updated {formatDate(profile.updatedAtUtc)}</p>
-          {isAdmin ? (
+          {canManage ? (
             <Button type="submit" loading={pending}>
               Save changes
             </Button>

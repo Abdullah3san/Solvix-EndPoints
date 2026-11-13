@@ -15,6 +15,8 @@ using Solvix.SharedKernel.Tenancy;
 ///  - rejects any modification of TenantId (rows cannot move between tenants);
 ///  - stamps CreatedAtUtc / UpdatedAtUtc.
 /// Platform scope (registration, login) is the only exception and is explicit.
+/// Rows with an optional tenant (<see cref="ITenantVisible"/>) follow the same rule,
+/// with "no tenant" writable from platform scope only.
 /// </summary>
 public sealed class TenantEnforcementInterceptor(ITenantContext tenantContext, IClock clock) : SaveChangesInterceptor
 {
@@ -44,6 +46,12 @@ public sealed class TenantEnforcementInterceptor(ITenantContext tenantContext, I
         foreach (var entry in context.ChangeTracker.Entries())
         {
             StampAudit(entry, now);
+
+            if (entry.Entity is ITenantVisible visible)
+            {
+                EnforceVisible(entry, visible);
+                continue;
+            }
 
             if (entry.Entity is not ITenantScoped scoped)
             {
@@ -83,6 +91,24 @@ public sealed class TenantEnforcementInterceptor(ITenantContext tenantContext, I
         {
             throw new CrossTenantAccessException(
                 $"Attempted to insert {entry.Metadata.ClrType.Name} for tenant {scoped.TenantId} while acting for tenant {tenantContext.TenantId?.ToString() ?? "<none>"}.");
+        }
+    }
+
+    /// <summary>
+    /// Optional-tenant rows: a row for a tenant may only be written while acting for that
+    /// tenant, and a platform-level row (no tenant) only from platform scope.
+    /// </summary>
+    private void EnforceVisible(EntityEntry entry, ITenantVisible visible)
+    {
+        if (entry.State is not (EntityState.Added or EntityState.Modified or EntityState.Deleted) || tenantContext.IsPlatformScope)
+        {
+            return;
+        }
+
+        if (visible.TenantId is null || visible.TenantId != tenantContext.TenantId)
+        {
+            throw new CrossTenantAccessException(
+                $"Attempted to {entry.State.ToString().ToLowerInvariant()} {entry.Metadata.ClrType.Name} of tenant {visible.TenantId?.ToString() ?? "<platform>"} while acting for tenant {tenantContext.TenantId?.ToString() ?? "<none>"}.");
         }
     }
 

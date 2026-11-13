@@ -1,18 +1,23 @@
 namespace Solvix.Infrastructure.DependencyInjection;
 
 using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Solvix.Infrastructure.Authorization;
 using Solvix.Infrastructure.Caching;
+using Solvix.Infrastructure.Email;
 using Solvix.Infrastructure.Identity;
 using Solvix.Infrastructure.Persistence;
 using Solvix.Infrastructure.Persistence.Interceptors;
 using Solvix.Infrastructure.Tenancy;
 using Solvix.SharedKernel.Abstractions;
+using Solvix.SharedKernel.Email;
 using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Persistence;
 using Solvix.SharedKernel.Tenancy;
@@ -41,7 +46,19 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ITenantContextMutator>(sp => sp.GetRequiredService<TenantContext>());
         services.AddSingleton<ITenantScopeFactory, TenantScopeFactory>();
         services.AddSingleton<ITenantJobRunner, TenantJobRunner>();
+        // Access grant: resolved once per request by the tenant resolution middleware.
+        services.AddScoped<AccessContext>();
+        services.AddScoped<IAccessContext>(sp => sp.GetRequiredService<AccessContext>());
+        services.AddScoped<IAccessContextMutator>(sp => sp.GetRequiredService<AccessContext>());
         services.AddScoped<ICurrentUser, HttpCurrentUser>();
+        services.AddScoped<IClientInfo, HttpClientInfo>();
+
+        // Permission-based authorization: "perm:<key>" policies are built on demand.
+        services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+        services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, ActiveTenantSessionHandler>();
+
+        AddEmail(services, configuration);
 
         services.AddScoped<TenantEnforcementInterceptor>();
         services.AddScoped<TenantSessionConnectionInterceptor>();
@@ -62,6 +79,9 @@ public static class InfrastructureServiceCollectionExtensions
             options.AddInterceptors(
                 sp.GetRequiredService<TenantEnforcementInterceptor>(),
                 sp.GetRequiredService<TenantSessionConnectionInterceptor>());
+
+            // Interceptors contributed by modules (e.g. post-commit cache invalidation).
+            options.AddInterceptors(sp.GetServices<IInterceptor>());
             options.UseQueryTrackingBehavior(QueryTrackingBehavior.TrackAll);
             if (db.EnableSensitiveDataLogging)
             {
@@ -100,5 +120,23 @@ public static class InfrastructureServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    private static void AddEmail(IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddOptions<EmailOptions>()
+            .Bind(configuration.GetSection(EmailOptions.SectionName))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
+        services.AddSingleton<BackgroundEmailQueue>();
+        services.AddSingleton<IEmailQueue>(sp => sp.GetRequiredService<BackgroundEmailQueue>());
+        services.AddHostedService<EmailDispatcher>();
+
+        // SMTP when a host is configured; otherwise messages are logged, never silently "sent".
+        services.AddScoped<IEmailSender>(sp =>
+            string.IsNullOrWhiteSpace(sp.GetRequiredService<IOptions<EmailOptions>>().Value.Smtp.Host)
+                ? ActivatorUtilities.CreateInstance<LoggingEmailSender>(sp)
+                : ActivatorUtilities.CreateInstance<SmtpEmailSender>(sp));
     }
 }

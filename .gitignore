@@ -32,3 +32,7 @@ Thumbs.db
 # Docker volumes (local)
 .docker-data/
 dump.rdb
+
+# Production secrets and database dumps
+.env.production
+backups/

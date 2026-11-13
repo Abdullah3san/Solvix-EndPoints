@@ -16,6 +16,10 @@ public sealed class JwtOptions
     [Required]
     public string Audience { get; set; } = "solvix-endpoints-web";
 
-    [Range(5, 24 * 60)]
-    public int AccessTokenMinutes { get; set; } = 60;
+    /// <summary>
+    /// Lifetime of an access token. Kept short on purpose: the refresh token and
+    /// the server-side session carry the long-lived state.
+    /// </summary>
+    [Range(1, 60)]
+    public int AccessTokenMinutes { get; set; } = 15;
 }

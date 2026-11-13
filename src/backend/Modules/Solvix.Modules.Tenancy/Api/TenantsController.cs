@@ -4,8 +4,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Solvix.Modules.Tenancy.Application.Management;
 using Solvix.Modules.Tenancy.Application.Registration;
+using Solvix.SharedKernel.Authorization;
 using Solvix.SharedKernel.Web;
 
 [ApiVersion(1.0)]
@@ -15,6 +17,7 @@ public sealed class TenantController(ITenantRegistrationService registration, IT
     /// <summary>Self-service registration of a new workspace and its owner.</summary>
     [HttpPost("register")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Registration)]
     [ProducesResponseType<RegisterTenantResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<ActionResult<RegisterTenantResponse>> Register([FromBody] RegisterTenantRequest request, CancellationToken cancellationToken)
@@ -25,23 +28,26 @@ public sealed class TenantController(ITenantRegistrationService registration, IT
 
     [HttpGet("slug-availability")]
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Registration)]
     [ProducesResponseType<SlugAvailabilityResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<SlugAvailabilityResponse>> SlugAvailability([FromQuery] string slug, CancellationToken cancellationToken) =>
         Ok(await registration.CheckSlugAsync(slug ?? string.Empty, cancellationToken));
 
     /// <summary>The tenant resolved from the caller's token.</summary>
     [HttpGet]
+    [AuthenticatedOnly]
     [ProducesResponseType<TenantDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<TenantDto>> GetCurrent(CancellationToken cancellationToken) =>
         Ok(await tenants.GetCurrentAsync(cancellationToken));
 
     [HttpGet("overview")]
+    [AuthenticatedOnly]
     [ProducesResponseType<TenantOverviewDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<TenantOverviewDto>> Overview(CancellationToken cancellationToken) =>
         Ok(await tenants.GetOverviewAsync(cancellationToken));
 
     [HttpPut]
-    [Authorize(Policy = Policies.TenantOwner)]
+    [RequirePermission(Permissions.Workspace.Manage)]
     [ProducesResponseType<TenantDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<TenantDto>> Update([FromBody] UpdateTenantRequest request, CancellationToken cancellationToken) =>
         Ok(await tenants.UpdateCurrentAsync(request, cancellationToken));

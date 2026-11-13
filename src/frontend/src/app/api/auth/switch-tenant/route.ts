@@ -1,22 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import type { AuthResponse } from "@/lib/api/types";
-import { SESSION_COOKIE, isSessionValid } from "@/lib/auth/session";
-import { passThroughError, respondWithSession, upstreamUrl } from "../_shared";
+import { names, passThrough, postUpstream, problem, publicSession, rejectCsrf, setSessionCookies } from "@/lib/auth/bff";
+import { isSessionValid } from "@/lib/auth/session";
 
 export async function POST(request: NextRequest) {
-  const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
-  if (!isSessionValid(token)) {
-    return NextResponse.json({ title: "Unauthorized", status: 401, code: "unauthorized" }, { status: 401 });
-  }
-  const payload = await request.json();
-  const upstream = await fetch(upstreamUrl("auth/switch-tenant"), {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json", authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-    cache: "no-store",
-  });
-  if (!upstream.ok) return passThroughError(upstream);
-  return respondWithSession((await upstream.json()) as AuthResponse);
+  const rejected = rejectCsrf(request);
+  if (rejected) return rejected;
+
+  const token = request.cookies.get(names.access)?.value;
+  if (!isSessionValid(token)) return problem(401, "unauthorized", "Unauthorized", "Your session has expired.");
+
+  const upstream = await postUpstream(request, "auth/switch-tenant", await request.json(), token);
+  if (!upstream.ok) return passThrough(upstream);
+
+  const auth = (await upstream.json()) as AuthResponse;
+  const response = NextResponse.json({ session: publicSession(auth) }, { headers: { "cache-control": "no-store" } });
+  setSessionCookies(response, auth);
+  return response;
 }

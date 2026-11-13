@@ -2,7 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { serverConfig } from "@/lib/config";
-import { SESSION_COOKIE, isSessionValid } from "@/lib/auth/session";
+import { cookieNames, isSessionValid } from "@/lib/auth/session";
 import { ApiError, problemFromResponse } from "./errors";
 
 /**
@@ -11,7 +11,7 @@ import { ApiError, problemFromResponse } from "./errors";
  */
 export async function getSessionToken(): Promise<string | null> {
   const store = await cookies();
-  const token = store.get(SESSION_COOKIE)?.value;
+  const token = store.get(cookieNames(serverConfig.cookieSecure).access)?.value;
   return isSessionValid(token) ? token! : null;
 }
 
@@ -44,7 +44,7 @@ export async function serverApi<T>(path: string, options: ServerFetchOptions = {
   });
 
   if (response.status === 401 && redirectOnUnauthorized) {
-    redirect("/login?reason=expired");
+    redirect("/api/auth/session-ended");
   }
 
   if (!response.ok) {
@@ -56,4 +56,17 @@ export async function serverApi<T>(path: string, options: ServerFetchOptions = {
   }
 
   return (await response.json()) as T;
+}
+
+/**
+ * Like serverApi, but a 403 becomes null so a page can render "no access"
+ * instead of an error. The API made the decision; the page only reports it.
+ */
+export async function serverApiOrForbidden<T>(path: string): Promise<T | null> {
+  try {
+    return await serverApi<T>(path);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) return null;
+    throw error;
+  }
 }

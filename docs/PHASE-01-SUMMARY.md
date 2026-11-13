@@ -404,6 +404,9 @@ src/frontend/vitest.setup.ts
 
 ## Known limitations / next steps
 
+> Refresh tokens, sign-out revocation, password reset, e-mail verification, invitations
+> and brute-force protection were delivered in Phase 02 (`docs/PHASE-02-SUMMARY.md`).
+
 * **No refresh tokens or sign-out revocation**: access tokens live 60 min (configurable);
   logout only clears the cookie. Membership revocation and tenant suspension are
   enforced per request, but a stolen token stays valid until expiry.

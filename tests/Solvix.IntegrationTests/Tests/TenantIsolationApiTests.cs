@@ -5,10 +5,11 @@ using System.Net.Http.Json;
 using Solvix.Infrastructure.Tenancy;
 using Solvix.IntegrationTests.Fixtures;
 using Solvix.Modules.Identity.Application.Auth;
-using Solvix.Modules.Identity.Application.Members;
+using Solvix.Modules.Identity.Application.Users;
+using Solvix.Modules.Identity.Domain;
 using Solvix.Modules.Organization.Application.Branches;
 using Solvix.Modules.Organization.Application.Departments;
-using Solvix.SharedKernel.Identity;
+using Solvix.SharedKernel.Authorization;
 using Solvix.SharedKernel.Results;
 
 /// <summary>Cross-tenant access attempts through the public API must never succeed.</summary>
@@ -106,15 +107,16 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
 
         var me = await HttpAssert.OkAsync<CurrentUserDto>(await clientA.GetAsync("/api/v1/auth/me"));
         Assert.Equal(a.TenantId, me.Tenant.Id);
-        Assert.Equal(TenantRole.Owner, me.Tenant.Role);
+        Assert.Equal([SystemRoles.SuperAdministrator.Name], me.Roles);
+        Assert.Equal(PermissionCatalog.AllKeys.Order(StringComparer.Ordinal), me.Permissions);
 
         var tenantB = await HttpAssert.OkAsync<Solvix.Modules.Tenancy.Application.Management.TenantDto>(await clientB.GetAsync("/api/v1/tenant"));
         Assert.Equal(b.TenantId, tenantB.Id);
         Assert.Equal("Beta Co", tenantB.Name);
 
-        // Members are tenant-scoped: B does not see A's owner.
-        var membersB = await HttpAssert.OkAsync<PagedResult<MemberDto>>(await clientB.GetAsync("/api/v1/tenant/members"));
-        var onlyB = Assert.Single(membersB.Items);
+        // Users are tenant-scoped: B does not see A's owner.
+        var usersB = await HttpAssert.OkAsync<PagedResult<TenantUserDto>>(await clientB.GetAsync("/api/v1/users"));
+        var onlyB = Assert.Single(usersB.Items);
         Assert.Equal(b.OwnerEmail, onlyB.Email);
     }
 
@@ -124,25 +126,26 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
         var a = await fixture.RegisterTenantAsync();
         using var owner = fixture.CreateClient(a.Token);
 
-        var memberEmail = $"member-{Guid.NewGuid():N}@example.test";
-        var member = await HttpAssert.OkAsync<MemberDto>(
-            await owner.PostAsJsonAsync("/api/v1/tenant/members", new AddMemberRequest(memberEmail, "Member", "Passw0rd!Secure", TenantRole.Member), ApiFixture.Json),
-            HttpStatusCode.Created);
-
-        var memberAuth = await fixture.LoginAsync(memberEmail, "Passw0rd!Secure");
-        Assert.Equal(a.TenantId, memberAuth.Tenant.Id);
-        using var memberClient = fixture.CreateClient(memberAuth.AccessToken);
+        var member = await fixture.AddMemberAsync(a, SystemRoles.ReadOnlyAuditor.Name);
+        Assert.Equal(a.TenantId, member.Auth.Tenant.Id);
+        using var memberClient = fixture.CreateClient(member.Token);
         (await memberClient.GetAsync("/api/v1/branches")).EnsureSuccessStatusCode();
 
-        // Members cannot administer.
+        // An auditor can look but not change.
         await HttpAssert.ProblemAsync(
             await memberClient.PostAsJsonAsync("/api/v1/branches", new CreateBranchRequest("X", "X", false, null, null, null, null), ApiFixture.Json),
-            HttpStatusCode.Forbidden);
+            HttpStatusCode.Forbidden, "permission_denied");
 
-        (await owner.DeleteAsync($"/api/v1/tenant/members/{member.MembershipId}")).EnsureSuccessStatusCode();
+        (await owner.DeleteAsync($"/api/v1/users/{member.UserId}")).EnsureSuccessStatusCode();
 
-        // Token is still cryptographically valid, but the membership check fails.
-        await HttpAssert.ProblemAsync(await memberClient.GetAsync("/api/v1/branches"), HttpStatusCode.Forbidden, "forbidden");
+        // Token is still cryptographically valid, but its session was revoked with the membership.
+        await HttpAssert.ProblemAsync(await memberClient.GetAsync("/api/v1/branches"), HttpStatusCode.Unauthorized, "session_expired");
+
+        // And the refresh token cannot bring it back.
+        using var anonymous = fixture.CreateClient();
+        await HttpAssert.ProblemAsync(
+            await anonymous.PostAsJsonAsync("/api/v1/auth/refresh", new RefreshRequest(member.Auth.RefreshToken), ApiFixture.Json),
+            HttpStatusCode.Unauthorized, "invalid_refresh_token");
     }
 
     [Fact]
@@ -152,15 +155,15 @@ public sealed class TenantIsolationApiTests(ApiFixture fixture)
         var b = await fixture.RegisterTenantAsync();
 
         // A's owner cannot obtain a token for B.
-        using var anonymous = fixture.CreateClient();
-        var response = await anonymous.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(a.OwnerEmail, a.OwnerPassword, b.Slug), ApiFixture.Json);
-        await HttpAssert.ProblemAsync(response, HttpStatusCode.Forbidden, "forbidden");
+        await HttpAssert.ProblemAsync(await fixture.TryLoginAsync(a.OwnerEmail, a.OwnerPassword, b.Slug), HttpStatusCode.Forbidden, "forbidden");
 
         var ok = await fixture.LoginAsync(a.OwnerEmail, a.OwnerPassword, a.Slug);
         Assert.Equal(a.TenantId, ok.Tenant.Id);
-        Assert.Single(ok.AvailableTenants);
 
         using var authed = fixture.CreateClient(ok.AccessToken);
+        var workspaces = await HttpAssert.OkAsync<List<AuthTenantDto>>(await authed.GetAsync("/api/v1/auth/workspaces"));
+        Assert.Equal(a.TenantId, Assert.Single(workspaces).Id);
+
         await HttpAssert.ProblemAsync(
             await authed.PostAsJsonAsync("/api/v1/auth/switch-tenant", new SwitchTenantRequest(b.Slug), ApiFixture.Json),
             HttpStatusCode.Forbidden, "forbidden");

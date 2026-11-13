@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Building2, GitBranch, Network, Users } from "lucide-react";
-import { serverApi } from "@/lib/api/server";
+import { serverApi, serverApiOrForbidden } from "@/lib/api/server";
 import type { CompanyProfileDto, TenantOverviewDto } from "@/lib/api/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,11 +13,11 @@ export const metadata: Metadata = { title: "Dashboard" };
 export default async function DashboardPage() {
   const [overview, profile] = await Promise.all([
     serverApi<TenantOverviewDto>("tenant/overview"),
-    serverApi<CompanyProfileDto>("company-profile"),
+    serverApiOrForbidden<CompanyProfileDto>("company-profile"),
   ]);
 
   const stats = [
-    { label: "Members", value: overview.memberCount, icon: Users, href: "/settings/workspace" },
+    { label: "Members", value: overview.memberCount, icon: Users, href: "/settings/users" },
     { label: "Branches", value: overview.branchCount, icon: GitBranch, href: "/organization/branches" },
     { label: "Departments", value: overview.departmentCount, icon: Network, href: "/organization/departments" },
   ];
@@ -44,24 +44,26 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-muted-foreground" /> Company
-            </CardTitle>
-            <CardDescription>Legal and contact details of your organisation.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Legal name" value={profile.legalName} />
-            <Row label="Trade name" value={profile.tradeName} />
-            <Row label="Industry" value={profile.industry} />
-            <Row label="Time zone" value={profile.timeZone} />
-            <Row label="Country" value={profile.address.countryCode} />
-            <Link href="/organization/company" className="inline-block pt-2 text-sm font-medium text-primary hover:underline">
-              Edit company profile →
-            </Link>
-          </CardContent>
-        </Card>
+        {profile ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" /> Company
+              </CardTitle>
+              <CardDescription>Legal and contact details of your organisation.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <Row label="Legal name" value={profile.legalName} />
+              <Row label="Trade name" value={profile.tradeName} />
+              <Row label="Industry" value={profile.industry} />
+              <Row label="Time zone" value={profile.timeZone} />
+              <Row label="Country" value={profile.address.countryCode} />
+              <Link href="/organization/company" className="inline-block pt-2 text-sm font-medium text-primary hover:underline">
+                View company profile →
+              </Link>
+            </CardContent>
+          </Card>
+        ) : null}
         <Card>
           <CardHeader>
             <CardTitle>Workspace</CardTitle>

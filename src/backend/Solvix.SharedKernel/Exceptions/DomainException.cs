@@ -59,9 +59,17 @@ public sealed class NotFoundException : DomainException
 
 public sealed class ConflictException : DomainException
 {
+    private readonly string? _code;
+
     public ConflictException(string message)
         : base(message)
     {
+    }
+
+    public ConflictException(string message, string code)
+        : base(message)
+    {
+        _code = code;
     }
 
     public ConflictException()
@@ -73,7 +81,7 @@ public sealed class ConflictException : DomainException
     {
     }
 
-    public override string Code => "conflict";
+    public override string Code => _code ?? "conflict";
 }
 
 public sealed class ValidationException : DomainException
@@ -114,9 +122,18 @@ public sealed class ValidationException : DomainException
 
 public class ForbiddenException : DomainException
 {
+    private readonly string? _code;
+
     public ForbiddenException(string message)
         : base(message)
     {
+    }
+
+    /// <param name="code">Machine-readable reason, e.g. <c>insufficient_privilege</c>.</param>
+    public ForbiddenException(string message, string code)
+        : base(message)
+    {
+        _code = code;
     }
 
     public ForbiddenException()
@@ -129,7 +146,7 @@ public class ForbiddenException : DomainException
     {
     }
 
-    public override string Code => "forbidden";
+    public override string Code => _code ?? "forbidden";
 }
 
 /// <summary>Raised whenever code attempts to read or write data of a tenant other than the current one.</summary>
@@ -155,9 +172,17 @@ public sealed class CrossTenantAccessException : ForbiddenException
 
 public sealed class UnauthorizedException : DomainException
 {
+    private readonly string? _code;
+
     public UnauthorizedException(string message)
         : base(message)
     {
+    }
+
+    public UnauthorizedException(string message, string code)
+        : base(message)
+    {
+        _code = code;
     }
 
     public UnauthorizedException()
@@ -170,7 +195,7 @@ public sealed class UnauthorizedException : DomainException
     {
     }
 
-    public override string Code => "unauthorized";
+    public override string Code => _code ?? "unauthorized";
 }
 
 public sealed class TenantContextMissingException : DomainException
