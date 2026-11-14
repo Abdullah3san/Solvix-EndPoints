@@ -13,6 +13,10 @@ using Solvix.SharedKernel.Tenancy;
 [Collection(ApiCollection.Name)]
 public sealed class MigrationTests(ApiFixture fixture)
 {
+    /// <summary>Every tenant table across all migrations that enable Row-Level Security.</summary>
+    internal static readonly string[] AllTenantTables =
+        [.. RowLevelSecurityMigration.TenantTables, .. Solvix.Infrastructure.Persistence.Migrations.AddAssistant.TenantTables];
+
     [Fact]
     public async Task All_migrations_are_applied_and_model_matches_snapshot()
     {
@@ -43,7 +47,7 @@ public sealed class MigrationTests(ApiFixture fixture)
             .ToList();
 
         Assert.NotEmpty(tenantTables);
-        Assert.Equal(tenantTables, RowLevelSecurityMigration.TenantTables.OrderBy(t => t, StringComparer.Ordinal).ToList());
+        Assert.Equal(tenantTables, AllTenantTables.OrderBy(t => t, StringComparer.Ordinal).ToList());
 
         await using var connection = new NpgsqlConnection(fixture.Database.MigratorConnectionString);
         await connection.OpenAsync();
@@ -86,7 +90,7 @@ public sealed class MigrationTests(ApiFixture fixture)
             Assert.Equal(2, rows);
         }
 
-        foreach (var table in RowLevelSecurityMigration.TenantTables)
+        foreach (var table in AllTenantTables)
         {
             await using var command = new NpgsqlCommand(
                 """

@@ -203,6 +203,7 @@ try
     app.UseAuthentication();
     app.UseMiddleware<TenantResolutionMiddleware>();
     app.UseAuthorization();
+    app.UseRateLimiter();
 
     app.MapControllers();
     app.MapOpenApi().WithDocumentPerVersion();

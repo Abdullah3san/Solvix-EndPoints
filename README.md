@@ -47,6 +47,12 @@ Development settings live in `src/backend/Solvix.Api/appsettings.Development.jso
 (Redis password `solvix_redis_dev`; start Redis with `redis-server --requirepass solvix_redis_dev`
 or change the connection string).
 
+## AI assistant (Phase 11)
+
+Natural-language assistant with tool calling, knowledge base, tickets, reports and approval-gated remediation
+proposals. Set `ANTHROPIC_API_KEY` in `.env` (and `SOLVIX_ASSISTANT_DEMO_FLEET=true` to try it with a synthetic fleet
+until the device modules exist). Design, security model and limitations: [docs/PHASE-11-SUMMARY.md](docs/PHASE-11-SUMMARY.md).
+
 ## Repository layout
 
 ```
@@ -57,6 +63,7 @@ src/backend/
     Solvix.Modules.Tenancy/      tenant entity, registration, management, tenant directory
     Solvix.Modules.Identity/     users, memberships, JWT auth, member management
     Solvix.Modules.Organization/ company profile, branches, departments
+    Solvix.Modules.Assistant/    AI assistant: tools, knowledge base, proposals, tickets, reports, audit
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/frontend/                 Next.js app (BFF proxy, app shell, feature pages)

@@ -72,6 +72,10 @@ services:
       Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-60}
       Solvix__Cors__AllowedOrigins__0: ${SOLVIX_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       Solvix__Logging__Format: json
+      # AI assistant (Phase 11). The key is a secret: set it in .env, never commit it.
+      Solvix__Assistant__Llm__ApiKey: ${ANTHROPIC_API_KEY:-}
+      Solvix__Assistant__Llm__Model: ${SOLVIX_ASSISTANT_MODEL:-claude-sonnet-5-5}
+      Solvix__Assistant__UseDemoFleet: ${SOLVIX_ASSISTANT_DEMO_FLEET:-false}
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
     depends_on:

@@ -105,3 +105,10 @@ Serilog with compact JSON in containers (text in Development), enriched with
 environment. `GlobalExceptionHandler` turns domain exceptions and PostgreSQL
 constraint violations into RFC 9457 problem details with a stable `code` and, for
 validation, an `errors` map keyed by camelCase property.
+
+## AI assistant (Phase 11)
+
+See `docs/PHASE-11-SUMMARY.md`. In short: `Solvix.Modules.Assistant` runs a tool-calling loop where every tool executes as
+the signed-in user through application services; device data and commands enter only through the SharedKernel ports
+`IFleetQueryService` / `IDeviceCommandGateway`; actions are proposals that humans approve; all AI activity is written to
+an append-only, tenant-isolated audit log. Its nine tables are tenant-scoped with FORCEd RLS like every other tenant table.

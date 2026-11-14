@@ -57,6 +57,8 @@ internal sealed partial class GlobalExceptionHandler(
             ValidationException v => (StatusCodes.Status400BadRequest, "Validation failed", v.Code, v.Errors),
             NotFoundException n => (StatusCodes.Status404NotFound, "Resource not found", n.Code, null),
             ConflictException c => (StatusCodes.Status409Conflict, "Conflict", c.Code, null),
+            ServiceUnavailableException s => (StatusCodes.Status503ServiceUnavailable, "Service unavailable", s.Code, null),
+            PayloadTooLargeException p => (StatusCodes.Status413PayloadTooLarge, "Payload too large", p.Code, null),
             UnauthorizedException u => (StatusCodes.Status401Unauthorized, "Unauthorized", u.Code, null),
             TenantInactiveException t => (StatusCodes.Status403Forbidden, "Tenant inactive", t.Code, null),
             TenantContextMissingException t => (StatusCodes.Status401Unauthorized, "Tenant context missing", t.Code, null),

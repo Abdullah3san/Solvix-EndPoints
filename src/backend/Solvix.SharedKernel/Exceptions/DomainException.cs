@@ -212,3 +212,48 @@ public sealed class TenantInactiveException : DomainException
 
     public override string Code => "tenant_inactive";
 }
+
+/// <summary>A required dependency (for example the AI model) is not configured or currently unavailable.</summary>
+public sealed class ServiceUnavailableException : DomainException
+{
+    public ServiceUnavailableException(string message, string code = "service_unavailable")
+        : base(message)
+    {
+        Code = code;
+    }
+
+    public ServiceUnavailableException()
+        : base("The service is currently unavailable.")
+    {
+        Code = "service_unavailable";
+    }
+
+    public ServiceUnavailableException(string message, Exception? innerException)
+        : base(message, innerException)
+    {
+        Code = "service_unavailable";
+    }
+
+    public override string Code { get; }
+}
+
+/// <summary>An upload exceeded the permitted size.</summary>
+public sealed class PayloadTooLargeException : DomainException
+{
+    public PayloadTooLargeException(string message)
+        : base(message)
+    {
+    }
+
+    public PayloadTooLargeException()
+        : base("The payload is too large.")
+    {
+    }
+
+    public PayloadTooLargeException(string message, Exception? innerException)
+        : base(message, innerException)
+    {
+    }
+
+    public override string Code => "payload_too_large";
+}

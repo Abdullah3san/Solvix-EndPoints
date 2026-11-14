@@ -150,3 +150,179 @@ export const emptyAddress: AddressDto = {
   postalCode: null,
   countryCode: null,
 };
+
+// ---------------------------------------------------------------- AI assistant (Phase 11)
+
+export type RiskLevel = "Low" | "Medium" | "High";
+export type ProposalStatus = "PendingApproval" | "Executing" | "Succeeded" | "PartiallyFailed" | "Failed" | "Rejected" | "Expired";
+export type TicketPriority = "Low" | "Normal" | "High" | "Urgent";
+export type TicketStatus = "Open" | "InProgress" | "Resolved" | "Closed";
+export type ReportKind = "FleetHealth" | "SoftwareInventory" | "Security" | "Performance";
+export type DocumentStatus = "Processing" | "Ready" | "Failed";
+
+export interface AssistantStatusDto {
+  modelConfigured: boolean;
+  model: string;
+  embeddingModel: string;
+  fleetConnected: boolean;
+  commandsConnected: boolean;
+  demoData: boolean;
+  tools: string[];
+  actions: string[];
+}
+
+export interface SourceDto {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  chunkId: string;
+  ordinal: number;
+  section: string | null;
+  page: number | null;
+  score: number;
+  cited: boolean;
+}
+
+export interface ToolCallRecord {
+  name: string;
+  status: string;
+  summary: string;
+}
+
+export interface ArtifactRef {
+  type: "proposal" | "ticket" | "report" | string;
+  id: string;
+  label: string;
+}
+
+export interface MessageDto {
+  id: string;
+  role: "User" | "Assistant";
+  content: string;
+  sources: SourceDto[];
+  toolCalls: ToolCallRecord[];
+  artifacts: ArtifactRef[];
+  createdAtUtc: string;
+}
+
+export interface ChatReplyDto {
+  conversationId: string;
+  message: MessageDto;
+}
+
+export interface ConversationDto {
+  id: string;
+  title: string;
+  lastMessageAtUtc: string;
+}
+
+export interface ConversationDetailDto {
+  id: string;
+  title: string;
+  messages: MessageDto[];
+}
+
+export interface ProposalTargetDto {
+  id: string;
+  name: string;
+}
+
+export interface ProposalResultDto {
+  deviceId: string;
+  status: string;
+  message: string;
+}
+
+export interface ProposalDto {
+  id: string;
+  action: string;
+  title: string;
+  rationale: string;
+  risk: RiskLevel;
+  status: ProposalStatus;
+  parameters: Record<string, string>;
+  targets: ProposalTargetDto[];
+  targetCount: number;
+  proposedByEmail: string | null;
+  createdAtUtc: string;
+  expiresAtUtc: string;
+  requiredApproverRole: TenantRole;
+  decidedByEmail: string | null;
+  decidedAtUtc: string | null;
+  decisionNote: string | null;
+  executedAtUtc: string | null;
+  results: ProposalResultDto[];
+  autoApproved: boolean;
+}
+
+export interface KnowledgeDocumentDto {
+  id: string;
+  title: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  status: DocumentStatus;
+  failureReason: string | null;
+  chunkCount: number;
+  characterCount: number;
+  redactionCount: number;
+  embeddingModel: string;
+  createdAtUtc: string;
+}
+
+export interface KnowledgeHit {
+  documentId: string;
+  documentTitle: string;
+  chunkId: string;
+  ordinal: number;
+  section: string | null;
+  page: number | null;
+  score: number;
+  content: string;
+}
+
+export interface TicketDto {
+  id: string;
+  reference: string;
+  number: number;
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  category: string | null;
+  status: TicketStatus;
+  devices: { id: string; name: string }[];
+  createdByEmail: string | null;
+  createdViaAssistant: boolean;
+  createdAtUtc: string;
+  resolvedAtUtc: string | null;
+}
+
+export interface ReportSummaryDto {
+  id: string;
+  title: string;
+  kind: ReportKind;
+  narrativeIncluded: boolean;
+  generatedByEmail: string | null;
+  createdAtUtc: string;
+}
+
+export interface ReportDto extends ReportSummaryDto {
+  contentMarkdown: string;
+  model: string | null;
+}
+
+export interface AuditEntryDto {
+  id: string;
+  kind: string;
+  name: string;
+  status: "Success" | "Denied" | "Failed";
+  userEmail: string | null;
+  conversationId: string | null;
+  proposalId: string | null;
+  input: string | null;
+  summary: string | null;
+  durationMs: number;
+  correlationId: string | null;
+  model: string | null;
+  createdAtUtc: string;
+}

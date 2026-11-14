@@ -27,6 +27,8 @@ public sealed class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__Jwt__AccessTokenMinutes"] = "30",
             ["Solvix__Logging__Format"] = "text",
             ["Solvix__Cors__AllowedOrigins__0"] = "http://localhost:3000",
+            ["Solvix__Assistant__UseDemoFleet"] = "true",
+            ["Solvix__Assistant__ChatPermitsPerMinute"] = "10000",
             ["Serilog__MinimumLevel__Default"] = "Warning",
         };
         foreach (var (key, value) in settings)
