@@ -11,4 +11,13 @@ public static class Policies
 
     /// <summary>Tenant Owner only.</summary>
     public const string TenantOwner = "TenantOwner";
+
+    /// <summary>Read security posture, findings, alerts, events, reports and the security audit trail.</summary>
+    public const string SecurityRead = "SecurityRead";
+
+    /// <summary>Enrol devices, triage findings and alerts, author policies, manage advisories, request remediation.</summary>
+    public const string SecurityManage = "SecurityManage";
+
+    /// <summary>Decide approvals (policies, remediation). Segregated from <see cref="SecurityManage"/> by a "not the requester" rule.</summary>
+    public const string SecurityApprove = "SecurityApprove";
 }

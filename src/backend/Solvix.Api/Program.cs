@@ -158,7 +158,23 @@ try
     builder.Services.AddAuthorizationBuilder()
         .AddPolicy(Policies.TenantMember, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId))
         .AddPolicy(Policies.TenantAdmin, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
-        .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner)));
+        .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner)))
+        // Security posture data (software lists, administrator names, event summaries) is sensitive:
+        // ordinary members have no access. Approval is a separate policy so it can diverge from "manage" later.
+        .AddPolicy(Policies.SecurityRead, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
+        .AddPolicy(Policies.SecurityManage, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
+        .AddPolicy(Policies.SecurityApprove, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)));
+
+    // ----------------------------------------------------------- rate limiting
+    // Agents authenticate with a device key, so limit by remote address before any key is checked.
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.AddPolicy(Solvix.Modules.Security.Api.RateLimitPolicies.DeviceIngest, httpContext =>
+            System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = 600, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+    });
 
     // ------------------------------------------------------------------ CORS
     builder.Services.AddCors(options =>
@@ -200,6 +216,7 @@ try
         };
     });
     app.UseCors(CorsOptions.PolicyName);
+    app.UseRateLimiter();
     app.UseAuthentication();
     app.UseMiddleware<TenantResolutionMiddleware>();
     app.UseAuthorization();

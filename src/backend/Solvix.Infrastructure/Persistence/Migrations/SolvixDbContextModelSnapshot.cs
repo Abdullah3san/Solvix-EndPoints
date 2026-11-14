@@ -337,6 +337,891 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("departments", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.ManagedEndpoint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AgentVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("agent_version");
+
+                    b.Property<string>("Band")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("band");
+
+                    b.Property<double?>("Coverage")
+                        .HasColumnType("double precision")
+                        .HasColumnName("coverage");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("EnrolledByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("enrolled_by_user_id");
+
+                    b.Property<string>("Hostname")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("hostname");
+
+                    b.Property<bool?>("IsDomainJoined")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_domain_joined");
+
+                    b.Property<byte[]>("KeyHash")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("key_hash");
+
+                    b.Property<DateTimeOffset>("KeyIssuedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("key_issued_at_utc");
+
+                    b.Property<DateTimeOffset?>("LastReportAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_report_at_utc");
+
+                    b.Property<Guid?>("LatestSnapshotId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("latest_snapshot_id");
+
+                    b.Property<int>("OpenCritical")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_critical");
+
+                    b.Property<int>("OpenHigh")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_high");
+
+                    b.Property<int>("OpenLow")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_low");
+
+                    b.Property<int>("OpenMedium")
+                        .HasColumnType("integer")
+                        .HasColumnName("open_medium");
+
+                    b.Property<string>("OsCaption")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("os_caption");
+
+                    b.Property<string>("OsVersion")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("os_version");
+
+                    b.Property<int?>("Score")
+                        .HasColumnType("integer")
+                        .HasColumnName("score");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_endpoints");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_security_endpoints_tenant_id_id");
+
+                    b.HasIndex("TenantId", "Band")
+                        .HasDatabaseName("ix_security_endpoints_tenant_id_band");
+
+                    b.HasIndex("TenantId", "Hostname")
+                        .HasDatabaseName("ix_security_endpoints_tenant_id_hostname");
+
+                    b.ToTable("security_endpoints", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.PostureSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Band")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("band");
+
+                    b.Property<DateTimeOffset>("CollectedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("collected_at_utc");
+
+                    b.Property<double>("Coverage")
+                        .HasColumnType("double precision")
+                        .HasColumnName("coverage");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("EndpointId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("endpoint_id");
+
+                    b.Property<string>("Evaluation")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("evaluation");
+
+                    b.Property<Guid?>("PolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("policy_id");
+
+                    b.Property<int?>("PolicyVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("policy_version");
+
+                    b.Property<DateTimeOffset>("ReceivedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at_utc");
+
+                    b.Property<string>("Report")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("report");
+
+                    b.Property<int>("SchemaVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("schema_version");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer")
+                        .HasColumnName("score");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_snapshots");
+
+                    b.HasIndex("TenantId", "ReceivedAtUtc")
+                        .HasDatabaseName("ix_security_snapshots_tenant_id_received_at_utc");
+
+                    b.HasIndex("TenantId", "EndpointId", "ReceivedAtUtc")
+                        .IsDescending(false, false, true)
+                        .HasDatabaseName("ix_security_snapshots_tenant_id_endpoint_id_received_at_utc");
+
+                    b.ToTable("security_snapshots", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.RemediationRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActionKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("action_key");
+
+                    b.Property<Guid?>("ApprovedUnderPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_under_policy_id");
+
+                    b.Property<bool>("AutoApproved")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_approved");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at_utc");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<DateTimeOffset?>("DispatchedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dispatched_at_utc");
+
+                    b.Property<Guid>("EndpointId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("endpoint_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<Guid?>("FindingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("finding_id");
+
+                    b.Property<string>("Parameter")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("parameter");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTimeOffset>("RequestedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at_utc");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<string>("ResultMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("result_message");
+
+                    b.Property<string>("Risk")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("risk");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_remediations");
+
+                    b.HasIndex("TenantId", "FindingId")
+                        .HasDatabaseName("ix_security_remediations_tenant_id_finding_id");
+
+                    b.HasIndex("TenantId", "EndpointId", "Status")
+                        .HasDatabaseName("ix_security_remediations_tenant_id_endpoint_id_status");
+
+                    b.HasIndex("TenantId", "Status", "RequestedAtUtc")
+                        .HasDatabaseName("ix_security_remediations_tenant_id_status_requested_at_utc");
+
+                    b.ToTable("security_remediations", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("AcknowledgedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("acknowledged_at_utc");
+
+                    b.Property<Guid?>("AcknowledgedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("acknowledged_by_user_id");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at_utc");
+
+                    b.Property<Guid?>("ClosedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("closed_by_user_id");
+
+                    b.Property<string>("ClosureNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("closure_note");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DedupeKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("dedupe_key");
+
+                    b.Property<Guid>("EndpointId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("endpoint_id");
+
+                    b.Property<string>("Evidence")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("evidence");
+
+                    b.Property<Guid?>("FindingId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("finding_id");
+
+                    b.Property<DateTimeOffset>("RaisedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("raised_at_utc");
+
+                    b.Property<string>("RuleKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_key");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("severity");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_alerts");
+
+                    b.HasIndex("TenantId", "DedupeKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_security_alerts_tenant_id_dedupe_key");
+
+                    b.HasIndex("TenantId", "EndpointId")
+                        .HasDatabaseName("ix_security_alerts_tenant_id_endpoint_id");
+
+                    b.HasIndex("TenantId", "FindingId")
+                        .HasDatabaseName("ix_security_alerts_tenant_id_finding_id");
+
+                    b.HasIndex("TenantId", "Status", "RaisedAtUtc")
+                        .HasDatabaseName("ix_security_alerts_tenant_id_status_raised_at_utc");
+
+                    b.ToTable("security_alerts", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<string>("ActorLabel")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("actor_label");
+
+                    b.Property<string>("ActorType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("actor_type");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("text")
+                        .HasColumnName("details");
+
+                    b.Property<Guid?>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("entity_type");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<string>("SourceIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("source_ip");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_audit");
+
+                    b.HasIndex("TenantId", "Action")
+                        .HasDatabaseName("ix_security_audit_tenant_id_action");
+
+                    b.HasIndex("TenantId", "OccurredAtUtc")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("ix_security_audit_tenant_id_occurred_at_utc");
+
+                    b.HasIndex("TenantId", "EntityType", "EntityId")
+                        .HasDatabaseName("ix_security_audit_tenant_id_entity_type_entity_id");
+
+                    b.ToTable("security_audit", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("EndpointId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("endpoint_id");
+
+                    b.Property<int>("EventId")
+                        .HasColumnType("integer")
+                        .HasColumnName("event_id");
+
+                    b.Property<string>("Log")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("log");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("provider");
+
+                    b.Property<long>("RecordId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("record_id");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("summary");
+
+                    b.Property<string>("TargetGroup")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("target_group");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("TimeCreatedUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("time_created_utc");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_events");
+
+                    b.HasIndex("TenantId", "TimeCreatedUtc")
+                        .HasDatabaseName("ix_security_events_tenant_id_time_created_utc");
+
+                    b.HasIndex("TenantId", "EndpointId", "Log", "RecordId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_security_events_tenant_id_endpoint_id_log_record_id");
+
+                    b.ToTable("security_events", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityFinding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AcceptanceReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("acceptance_reason");
+
+                    b.Property<Guid?>("AcceptedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("accepted_by_user_id");
+
+                    b.Property<DateTimeOffset?>("AcceptedUntilUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("accepted_until_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("EndpointId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("endpoint_id");
+
+                    b.Property<string>("Evidence")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("evidence");
+
+                    b.Property<DateTimeOffset>("FirstDetectedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_detected_at_utc");
+
+                    b.Property<DateTimeOffset>("LastDetectedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_detected_at_utc");
+
+                    b.Property<int>("RecurrenceCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("recurrence_count");
+
+                    b.Property<string>("RemediationActionKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("remediation_action_key");
+
+                    b.Property<string>("RemediationParameter")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("remediation_parameter");
+
+                    b.Property<DateTimeOffset?>("ResolvedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at_utc");
+
+                    b.Property<string>("RuleKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_key");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("severity");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("SubjectKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("subject_key");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_findings");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_security_findings_tenant_id_id");
+
+                    b.HasIndex("TenantId", "Status", "Severity")
+                        .HasDatabaseName("ix_security_findings_tenant_id_status_severity");
+
+                    b.HasIndex("TenantId", "EndpointId", "RuleKey", "SubjectKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_security_findings_tenant_id_endpoint_id_rule_key_subject_key");
+
+                    b.ToTable("security_findings", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ActivatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("activated_at_utc");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<Guid?>("BasedOnPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("based_on_policy_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at_utc");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Settings")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("settings");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset?>("SubmittedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at_utc");
+
+                    b.Property<Guid?>("SubmittedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submitted_by_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_policies");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_security_policies_tenant_active")
+                        .HasFilter("status = 'Active'");
+
+                    b.HasIndex("TenantId", "Version")
+                        .IsUnique()
+                        .HasDatabaseName("ix_security_policies_tenant_id_version");
+
+                    b.ToTable("security_policies", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SoftwareAdvisory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AffectedFromVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("affected_from_version");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("FixedVersion")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("fixed_version");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<string>("ProductPattern")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("product_pattern");
+
+                    b.Property<string>("Publisher")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("publisher");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("reference");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("severity");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_security_advisories");
+
+                    b.HasIndex("TenantId", "IsEnabled")
+                        .HasDatabaseName("ix_security_advisories_tenant_id_is_enabled");
+
+                    b.ToTable("security_advisories", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Tenancy.Domain.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
@@ -550,6 +1435,150 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("ParentDepartment");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.ManagedEndpoint", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_endpoints_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.PostureSnapshot", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_snapshots_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Security.Domain.ManagedEndpoint", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EndpointId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_snapshots_security_endpoints_tenant_id_endpoint_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.RemediationRequest", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_remediations_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Security.Domain.ManagedEndpoint", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EndpointId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_remediations_security_endpoints_tenant_id_endpoint~");
+
+                    b.HasOne("Solvix.Modules.Security.Domain.SecurityFinding", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "FindingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("fk_security_remediations_security_findings_tenant_id_finding_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityAlert", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_alerts_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Security.Domain.ManagedEndpoint", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EndpointId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_alerts_security_endpoints_tenant_id_endpoint_id");
+
+                    b.HasOne("Solvix.Modules.Security.Domain.SecurityFinding", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "FindingId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("fk_security_alerts_security_findings_tenant_id_finding_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityAuditEntry", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_audit_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityEvent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_events_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Security.Domain.ManagedEndpoint", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EndpointId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_events_security_endpoints_tenant_id_endpoint_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityFinding", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_findings_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Security.Domain.ManagedEndpoint", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "EndpointId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_findings_security_endpoints_tenant_id_endpoint_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SecurityPolicy", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_policies_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Security.Domain.SoftwareAdvisory", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_security_advisories_tenants_tenant_id");
                 });
 #pragma warning restore 612, 618
         }

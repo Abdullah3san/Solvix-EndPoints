@@ -212,3 +212,34 @@ public sealed class TenantInactiveException : DomainException
 
     public override string Code => "tenant_inactive";
 }
+
+/// <summary>Raised when a caller exceeds an agreed request rate. Mapped to HTTP 429 with a Retry-After header.</summary>
+public sealed class TooManyRequestsException : DomainException
+{
+    public TooManyRequestsException(int retryAfterSeconds)
+        : base($"Too many requests. Retry in {retryAfterSeconds} second(s).")
+    {
+        RetryAfterSeconds = retryAfterSeconds;
+    }
+
+    public TooManyRequestsException()
+        : this(60)
+    {
+    }
+
+    public TooManyRequestsException(string message)
+        : base(message)
+    {
+        RetryAfterSeconds = 60;
+    }
+
+    public TooManyRequestsException(string message, Exception? innerException)
+        : base(message, innerException)
+    {
+        RetryAfterSeconds = 60;
+    }
+
+    public int RetryAfterSeconds { get; }
+
+    public override string Code => "too_many_requests";
+}
