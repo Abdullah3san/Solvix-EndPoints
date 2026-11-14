@@ -175,13 +175,13 @@ public sealed class CommandKeyStore(IOptions<AgentOptions> options)
             var json = JsonSerializer.Serialize(
                 new PinnedKeys { Keys = keys.ToDictionary(k => k.Key, k => Convert.ToBase64String(k.Value), StringComparer.Ordinal) },
                 AgentRemoteJsonContext.Default.PinnedKeys);
-            AtomicFile.Write(FilePath, json);
+            AtomicFile.WriteAllText(FilePath, json);
             _keys = keys;
             return true;
         }
     }
 
-    /// <summary>The pinned keys as a key set (handed to the software executor, which pins them on first use).</summary>
+    /// <summary>The pinned keys as a key set: handed to the software executor (which pins them on first use) and used to seed the privileged executor's own copy.</summary>
     public CommandKeySet Export()
     {
         lock (_gate)
@@ -278,7 +278,7 @@ public sealed class CommandReplayStore(IOptions<AgentOptions> options, TimeProvi
             }
 
             seen[envelope.ExecutionId] = new SeenCommand { Nonce = envelope.Nonce, ExpiresAtUtc = envelope.ExpiresAtUtc, Sequence = envelope.Sequence };
-            AtomicFile.Write(FilePath, JsonSerializer.Serialize(new SeenCommands { Items = seen }, AgentRemoteJsonContext.Default.SeenCommands));
+            AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(new SeenCommands { Items = seen }, AgentRemoteJsonContext.Default.SeenCommands));
             return true;
         }
     }
@@ -321,17 +321,4 @@ public sealed record SeenCommand
 [JsonSerializable(typeof(SeenCommands))]
 internal sealed partial class AgentRemoteJsonContext : JsonSerializerContext
 {
-}
-
-internal static class AtomicFile
-{
-    /// <summary>Write to a temporary file then replace, so a crash never leaves a half-written file.</summary>
-    public static void Write(string path, string content)
-    {
-        var directory = Path.GetDirectoryName(path)!;
-        Directory.CreateDirectory(directory);
-        var temporary = path + ".tmp";
-        File.WriteAllText(temporary, content);
-        File.Move(temporary, path, overwrite: true);
-    }
 }

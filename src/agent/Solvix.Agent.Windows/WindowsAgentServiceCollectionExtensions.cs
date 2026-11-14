@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Monitoring;
 using Solvix.Agent.Core.RemoteManagement;
+using Solvix.Agent.Core.RemoteManagement.Privileged;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.Software;
 using Solvix.Agent.Core.Updates;
@@ -27,7 +28,9 @@ public static class WindowsAgentServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<IPackageInstaller>(_ => new MsiPackageInstaller(Path.Combine(dataDirectory, "logs"))));
         services.Replace(ServiceDescriptor.Singleton<ISystemHealthProbe, WindowsSystemHealthProbe>());
         services.Replace(ServiceDescriptor.Singleton<IInstalledApplicationSource, UninstallRegistrySource>());
-        services.Replace(ServiceDescriptor.Singleton<IExecutorPipeFactory, SecureExecutorPipeFactory>());
+        services.Replace(ServiceDescriptor.Singleton<Solvix.Agent.Core.Software.IExecutorPipeFactory, SecureExecutorPipeFactory>());
+        // The agent forwards privileged operations to the separate Remote Executor service.
+        services.Replace(ServiceDescriptor.Singleton<IPrivilegedOperationHost, PipePrivilegedOperationHost>());
         services.AddSingleton<ICommandHandler, Solvix.Agent.Windows.RemoteManagement.ServicesHandler>();
         services.AddSingleton<ICommandHandler, Solvix.Agent.Windows.RemoteManagement.LoggedInUsersHandler>();
         services.AddSingleton<IInventoryCollector, SystemCollector>();
@@ -38,5 +41,13 @@ public static class WindowsAgentServiceCollectionExtensions
         services.AddSingleton<IInventoryCollector, DiskCollector>();
         services.AddSingleton<IInventoryCollector, SoftwareCollector>();
         return services;
+    }
+
+    /// <summary>Registers what only the Remote Executor process needs: the privileged Win32 operations and the restricted pipe.</summary>
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddSolvixRemoteExecutorWindows(this IServiceCollection services)
+    {
+        services.Replace(ServiceDescriptor.Singleton<Solvix.Agent.Core.RemoteManagement.Privileged.IExecutorPipeFactory, Solvix.Agent.Windows.RemoteManagement.SecuredExecutorPipeFactory>());
+        return services.AddSolvixRemoteExecutor<Solvix.Agent.Windows.RemoteManagement.WindowsPowerOperations>();
     }
 }

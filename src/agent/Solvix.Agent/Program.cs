@@ -5,6 +5,7 @@
 //                                            store server URL + protected one-time token (installer)
 //   Solvix.Agent.exe status                  print local enrollment / health state (diagnostics)
 //   Solvix.Agent.exe inventory               collect inventory locally and print it (no network)
+//   Solvix.Agent.exe executor                Remote Executor service (LocalSystem): restart, shutdown, sign-off, lock
 //   Solvix.Agent.exe apply-update            privileged updater (scheduled task as SYSTEM)
 //   Solvix.Agent.exe software-executor       privileged software executor (separate LocalSystem service, named pipe only)
 //   Solvix.Agent.exe reset                   delete the device key, certificate and state (uninstall)
@@ -76,7 +77,17 @@ builder.Services.AddSolvixAgentCore(builder.Configuration);
 if (OperatingSystem.IsWindows())
 {
     builder.Services.AddSolvixAgentWindows(dataDirectory);
-    builder.Services.AddWindowsService(o => o.ServiceName = command == "software-executor" ? "SolvixSoftwareExecutor" : "SolvixAgent");
+    builder.Services.AddWindowsService(o => o.ServiceName = command switch
+    {
+        "software-executor" => "SolvixSoftwareExecutor",
+        "executor" => "SolvixRemoteExecutor",
+        _ => "SolvixAgent",
+    });
+    if (command == "executor")
+    {
+        // Privileged side of remote administration (LocalSystem service). Only this process contains the power operations.
+        builder.Services.AddSolvixRemoteExecutorWindows();
+    }
 }
 else
 {
@@ -107,6 +118,7 @@ try
         "enroll" => Commands.Enroll(host, args, machineSettings),
         "status" => Commands.Status(host),
         "inventory" => await Commands.InventoryAsync(host),
+        "executor" => await RunAsync(host),
         "apply-update" => await Commands.ApplyUpdateAsync(host),
         "reset" => Commands.Reset(host, dataDirectory),
         _ => Commands.Usage(),
