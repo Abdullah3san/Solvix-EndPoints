@@ -59,7 +59,7 @@ Design details: `docs/ARCHITECTURE.md` (section *Device management*), agent oper
 
 *Endpoints → Devices* (stats, filters, list), device details (overview, hardware, network, storage,
 software, security tabs; edit, assign, groups, refresh inventory, retire, delete), *Device groups*,
-*Enrollment* (admin only; token shown once with the install command), dashboard tile.
+*Enrollment* (admin only; token with optional group, branch and department, shown once with the install command), dashboard tile.
 
 ## Security
 
@@ -90,7 +90,7 @@ All suites run against real PostgreSQL 16 and Redis 7.
 | Suite | Result |
 |-------|--------|
 | `Solvix.UnitTests` | **44 / 44** (unchanged Phase 01 suite) |
-| `Solvix.IntegrationTests` | **71 / 71** (31 Phase 01 + 40 Phase 03) |
+| `Solvix.IntegrationTests` | **76 / 76** (31 Phase 01 + 45 Phase 03) |
 | `Solvix.Agent.Tests` | **68 / 68** |
 | Frontend `npm run check` | typecheck + lint clean, **16 / 16** tests; `next build` succeeds |
 | `dotnet build` | 0 warnings (warnings are errors) |
@@ -130,9 +130,20 @@ Additional manual verification performed in this environment:
 Recommended next step: run the integration checklist above on Windows 10, Windows 11 and Windows
 Server 2016/2022 VMs (with and without TPM), then add a WiX MSI and CI code signing.
 
+## Enrollment token placement and agent command test
+
+Tokens can place devices in a branch/department (e.g. one token per store; see `docs/ARCHITECTURE.md`,
+*Token placement*). The agent is run purely as a command (`Solvix.Agent enroll …`, then run as a
+service or console), so `scripts/smoke-agent.sh` exercises exactly that against a running API: it
+registers a workspace with two stores, creates one token per store, enrolls three terminals with the
+published binary (separate data directories), and verifies placement, group, online status,
+token exhaustion and the rejected-token status line. The same flow was run with a self-contained
+`linux-x64` single-file build of the agent and passed; the Windows build uses the same CLI.
+
 ## Database changes
 
-Migrations `20261112200553_DeviceManagement` (EF) and `20261112200600_DeviceManagementSecurity`
+Migrations `20261112200553_DeviceManagement` (EF), `20261112200600_DeviceManagementSecurity` and
+`20261114101908_DeviceEnrollmentPlacement` (token branch/department + tenant-safe FKs)
 (RLS on `devices`, `device_credentials`, `device_inventories`, `device_groups`,
 `device_group_memberships`, `enrollment_tokens`; assignment FKs). Both roll back cleanly
 (`MigrationTests.Migrations_can_be_rolled_back_and_reapplied`).

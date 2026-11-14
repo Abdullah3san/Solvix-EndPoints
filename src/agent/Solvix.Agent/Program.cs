@@ -166,7 +166,7 @@ namespace Solvix.Agent
             Console.WriteLine($"Certificate expires:  {state.CertificateNotAfterUtc?.ToString("u") ?? "-"}");
             Console.WriteLine($"Last contact:         {state.LastSuccessfulContactAtUtc?.ToString("u") ?? "-"}");
             Console.WriteLine($"Last inventory:       {state.LastInventoryAtUtc?.ToString("u") ?? "-"}");
-            Console.WriteLine($"Enrollment token:     {(bootstrap.HasToken ? "pending" : "none")}");
+            Console.WriteLine($"Enrollment token:     {(bootstrap.HasToken ? "pending" : bootstrap.HasRejectedToken ? "REJECTED by the server - run 'enroll' with a new token" : "none")}");
             return 0;
         }
 

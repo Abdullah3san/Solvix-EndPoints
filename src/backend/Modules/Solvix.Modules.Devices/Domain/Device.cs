@@ -235,6 +235,16 @@ public sealed class Device : TenantEntity
         DepartmentId = departmentId;
     }
 
+    /// <summary>Applies an enrollment token's placement without overriding an existing assignment.</summary>
+    public void AssignIfUnassigned(Guid? branchId, Guid? departmentId)
+    {
+        if (BranchId is null && DepartmentId is null)
+        {
+            BranchId = branchId;
+            DepartmentId = departmentId;
+        }
+    }
+
     public void RequestInventory(DateTimeOffset now)
     {
         EnsureActive();

@@ -15,13 +15,13 @@ public static class DeviceTestKit
 {
     public const string AgentVersion = "1.0.0";
 
-    public static async Task<string> CreateTokenAsync(this ApiFixture fixture, TenantSession tenant, int maxUses = 1, int? lifetimeHours = null, Guid? groupId = null)
+    public static async Task<string> CreateTokenAsync(this ApiFixture fixture, TenantSession tenant, int maxUses = 1, int? lifetimeHours = null, Guid? groupId = null, Guid? branchId = null, Guid? departmentId = null)
     {
         ArgumentNullException.ThrowIfNull(fixture);
         ArgumentNullException.ThrowIfNull(tenant);
         using var client = fixture.CreateClient(tenant.Token);
         var created = await HttpAssert.OkAsync<CreatedEnrollmentTokenDto>(
-            await client.PostAsJsonAsync("/api/v1/enrollment-tokens", new CreateEnrollmentTokenRequest("test", lifetimeHours, maxUses, groupId), ApiFixture.Json),
+            await client.PostAsJsonAsync("/api/v1/enrollment-tokens", new CreateEnrollmentTokenRequest("test", lifetimeHours, maxUses, groupId, branchId, departmentId), ApiFixture.Json),
             HttpStatusCode.Created);
         return created.Token;
     }

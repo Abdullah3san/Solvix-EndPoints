@@ -179,6 +179,7 @@ devices (RLS)                  (tenant_id, id) AK; unique (tenant_id, hardware_f
   └── device_group_memberships FK (tenant_id, device_id) CASCADE, FK (tenant_id, device_group_id) CASCADE
 device_groups (RLS)            unique (tenant_id, normalized_name)
 enrollment_tokens (RLS)        secret_hash bytea; FK (tenant_id, device_group_id) RESTRICT
+                               branch_id / department_id → branches / departments (tenant-safe, ON DELETE SET NULL)
 devices.assigned_user_id → users(id) ON DELETE SET NULL
 devices.(tenant_id, branch_id) → branches ON DELETE SET NULL (branch_id)
 devices.(tenant_id, department_id) → departments ON DELETE SET NULL (department_id)
@@ -222,3 +223,14 @@ been seen within `Agent:OfflineAfterSeconds` (default 300 s, i.e. 5 missed heart
 
 The options are validated at start-up (ranges, release URLs/hashes, CA presence) and the CA is
 loaded eagerly, so misconfiguration fails fast.
+
+## Token placement (one token per store)
+
+An enrollment token may carry a group, a branch and/or a department. Devices enrolled with it are
+added to the group and assigned to the branch/department (a department implies its branch; a
+department that does not belong to the chosen branch is rejected). The references are validated
+through `IOrganizationDirectory` under the caller's tenant scope, so another tenant's branch or
+department is "not found". The columns have tenant-safe composite foreign keys with
+`ON DELETE SET NULL (column)` (migration `DeviceEnrollmentPlacement`): deleting a store clears only that
+reference and the token stays usable. Re-enrolling known hardware never overrides an existing
+assignment; the token's placement only fills in an empty one.

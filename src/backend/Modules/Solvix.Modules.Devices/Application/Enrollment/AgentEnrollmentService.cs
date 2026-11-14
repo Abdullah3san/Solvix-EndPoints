@@ -106,6 +106,7 @@ internal sealed partial class AgentEnrollmentService(
                     if (device is null)
                     {
                         device = Device.Enroll(tenantId, DevicePlatform.Windows, request.Device, fingerprint, tokenId, now);
+                        device.AssignIfUnassigned(token.BranchId, token.DepartmentId);
                         db.Set<Device>().Add(device);
                         if (token.DeviceGroupId is { } groupId)
                         {
@@ -115,6 +116,10 @@ internal sealed partial class AgentEnrollmentService(
                     else
                     {
                         device.ReEnroll(request.Device, tokenId, now);
+
+                        // Re-enrolled hardware keeps its record and any existing assignment; a token's
+                        // placement only fills it in when the device has none.
+                        device.AssignIfUnassigned(token.BranchId, token.DepartmentId);
                         var previous = await db.Set<DeviceCredential>()
                             .Where(c => c.DeviceId == device.Id && c.RevokedAtUtc == null)
                             .ToListAsync(ct);

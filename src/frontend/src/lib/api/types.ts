@@ -324,6 +324,10 @@ export interface EnrollmentTokenDto {
   revokedAtUtc: string | null;
   deviceGroupId: string | null;
   deviceGroupName: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
   createdByUserId: string;
   createdAtUtc: string;
 }

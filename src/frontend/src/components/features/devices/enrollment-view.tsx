@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Ban, Copy, Plus } from "lucide-react";
 import { api } from "@/lib/api/client";
-import type { CreatedEnrollmentTokenDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
+import type { BranchDto, CreatedEnrollmentTokenDto, DepartmentDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
 import { installCommand, tokenStateTone } from "@/lib/devices";
 import { fieldErrorsFrom, messageFrom } from "@/lib/forms";
 import { formatDate } from "@/lib/utils";
@@ -28,11 +28,13 @@ const lifetimes = [
 interface Props {
   initial: PagedResult<EnrollmentTokenDto>;
   groups: DeviceGroupDto[];
+  branches: BranchDto[];
+  departments: DepartmentDto[];
   serverUrl: string;
   serverPin: string | null;
 }
 
-export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props) {
+export function EnrollmentView({ initial, groups, branches, departments, serverUrl, serverPin }: Props) {
   const { toast } = useToast();
   const [tokens, setTokens] = React.useState(initial.items);
   const [creating, setCreating] = React.useState(false);
@@ -86,6 +88,7 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
               <TH>State</TH>
               <TH>Uses</TH>
               <TH>Group</TH>
+              <TH>Branch / department</TH>
               <TH>Expires</TH>
               <TH>Last used</TH>
               <TH className="text-right">Actions</TH>
@@ -93,7 +96,7 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
           </THead>
           <TBody>
             {tokens.length === 0 ? (
-              <EmptyRow colSpan={7}>No enrollment tokens yet.</EmptyRow>
+              <EmptyRow colSpan={8}>No enrollment tokens yet.</EmptyRow>
             ) : (
               tokens.map((t) => (
                 <TR key={t.id}>
@@ -105,6 +108,7 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
                     {t.useCount} / {t.maxUses}
                   </TD>
                   <TD className="text-muted-foreground">{t.deviceGroupName ?? "—"}</TD>
+                  <TD className="text-muted-foreground">{[t.branchName, t.departmentName].filter(Boolean).join(" / ") || "—"}</TD>
                   <TD className="text-muted-foreground">{formatDate(t.expiresAtUtc)}</TD>
                   <TD className="text-muted-foreground">{formatDate(t.lastUsedAtUtc)}</TD>
                   <TD className="text-right">
@@ -124,6 +128,8 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
       {creating ? (
         <CreateTokenDialog
           groups={groups}
+          branches={branches}
+          departments={departments}
           onClose={() => setCreating(false)}
           onCreated={async (result) => {
             setCreating(false);
@@ -139,7 +145,8 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
             <CopyField label="Token" value={created.token} />
             <CopyField label="Install command (PowerShell, as administrator)" value={installCommand(serverUrl, created.token, serverPin)} />
             <Alert>
-              Valid until {formatDate(created.enrollmentToken.expiresAtUtc)} for {created.enrollmentToken.maxUses} device(s). Treat it like a password and revoke it
+              Valid until {formatDate(created.enrollmentToken.expiresAtUtc)} for {created.enrollmentToken.maxUses} device(s)
+              {created.enrollmentToken.branchName ? `, assigned to ${[created.enrollmentToken.branchName, created.enrollmentToken.departmentName].filter(Boolean).join(" / ")}` : ""}. Treat it like a password and revoke it
               when the rollout is complete.
             </Alert>
           </div>
@@ -172,11 +179,25 @@ function CopyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CreateTokenDialog({ groups, onClose, onCreated }: { groups: DeviceGroupDto[]; onClose: () => void; onCreated: (r: CreatedEnrollmentTokenDto) => Promise<void> }) {
+function CreateTokenDialog({
+  groups,
+  branches,
+  departments,
+  onClose,
+  onCreated,
+}: {
+  groups: DeviceGroupDto[];
+  branches: BranchDto[];
+  departments: DepartmentDto[];
+  onClose: () => void; onCreated: (r: CreatedEnrollmentTokenDto) => Promise<void>;
+}) {
   const [name, setName] = React.useState("");
   const [lifetimeHours, setLifetimeHours] = React.useState(24);
   const [maxUses, setMaxUses] = React.useState(1);
   const [groupId, setGroupId] = React.useState("");
+  const [branchId, setBranchId] = React.useState("");
+  const [departmentId, setDepartmentId] = React.useState("");
+  const branchDepartments = departments.filter((d) => d.branchId === branchId);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
@@ -186,7 +207,7 @@ function CreateTokenDialog({ groups, onClose, onCreated }: { groups: DeviceGroup
     setPending(true);
     setError(null);
     try {
-      await onCreated(await api.post<CreatedEnrollmentTokenDto>("enrollment-tokens", { name, lifetimeHours, maxUses, deviceGroupId: groupId || null }));
+      await onCreated(await api.post<CreatedEnrollmentTokenDto>("enrollment-tokens", { name, lifetimeHours, maxUses, deviceGroupId: groupId || null, branchId: branchId || null, departmentId: departmentId || null }));
     } catch (e) {
       setErrors(fieldErrorsFrom(e));
       setError(messageFrom(e));
@@ -240,6 +261,37 @@ function CreateTokenDialog({ groups, onClose, onCreated }: { groups: DeviceGroup
             ))}
           </Select>
         </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Assign to branch" htmlFor="token-branch" error={errors.branchId} hint="e.g. one token per store">
+            <Select
+              id="token-branch"
+              value={branchId}
+              onChange={(e) => {
+                setBranchId(e.target.value);
+                setDepartmentId("");
+              }}
+            >
+              <option value="">No branch</option>
+              {branches
+                .filter((b) => b.isActive)
+                .map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.code})
+                  </option>
+                ))}
+            </Select>
+          </Field>
+          <Field label="Assign to department" htmlFor="token-department" error={errors.departmentId}>
+            <Select id="token-department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} disabled={!branchId}>
+              <option value="">{branchId ? "No department" : "Select a branch first"}</option>
+              {branchDepartments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
       </form>
     </Dialog>
   );

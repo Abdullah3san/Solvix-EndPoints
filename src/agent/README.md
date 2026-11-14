@@ -73,6 +73,11 @@ Solvix.Agent.exe apply-update          privileged updater (scheduled task)
 Solvix.Agent.exe reset                 delete device key, certificate and state
 ```
 
+## Smoke test
+
+`scripts/smoke-agent.sh <api-url> <agent-url> [agent-binary]` drives the commands above against a running
+API (workspace with two stores → one token per store → three terminals → placement checks).
+
 ## Behaviour
 
 * **Heartbeat** every 60 s (server-configurable, clamped to 15 s – 1 h) with a health report.

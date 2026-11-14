@@ -7,6 +7,7 @@ using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Domain;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Abstractions;
+using Solvix.SharedKernel.Directory;
 using Solvix.SharedKernel.Exceptions;
 using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Persistence;
@@ -26,6 +27,7 @@ internal sealed class EnrollmentTokenService(
     ISolvixDbContext db,
     ITenantContext tenantContext,
     ICurrentUser currentUser,
+    IOrganizationDirectory organization,
     IOptions<DevicesOptions> options,
     IClock clock) : IEnrollmentTokenService
 {
@@ -45,9 +47,9 @@ internal sealed class EnrollmentTokenService(
             .OrderByDescending(t => t.CreatedAtUtc)
             .Skip(page.Skip).Take(page.SafePageSize)
             .ToListAsync(cancellationToken);
-        var groupNames = await GroupNamesAsync(items.Select(t => t.DeviceGroupId), cancellationToken);
+        var names = await NamesAsync(items, cancellationToken);
         return new PagedResult<EnrollmentTokenDto>(
-            items.Select(t => ToDto(t, groupNames, now)).ToList(), page.SafePage, page.SafePageSize, total);
+            items.Select(t => ToDto(t, names, now)).ToList(), page.SafePage, page.SafePageSize, total);
     }
 
     public async Task<CreatedEnrollmentTokenDto> CreateAsync(CreateEnrollmentTokenRequest request, CancellationToken cancellationToken)
@@ -72,17 +74,40 @@ internal sealed class EnrollmentTokenService(
             throw new NotFoundException("Device group", groupId);
         }
 
+        // Placement: a department implies its branch; both must exist in this tenant (lookups run under RLS).
+        var branchId = request.BranchId;
+        if (request.DepartmentId is { } departmentId)
+        {
+            var departments = await organization.FindDepartmentsAsync([departmentId], cancellationToken);
+            if (!departments.TryGetValue(departmentId, out var department))
+            {
+                throw new NotFoundException("Department", departmentId);
+            }
+
+            if (branchId is not null && branchId != department.BranchId)
+            {
+                throw new ValidationException("departmentId", "The department does not belong to the selected branch.");
+            }
+
+            branchId = department.BranchId;
+        }
+
+        if (branchId is { } b && !(await organization.FindBranchesAsync([b], cancellationToken)).ContainsKey(b))
+        {
+            throw new NotFoundException("Branch", b);
+        }
+
         var now = clock.UtcNow;
         var tokenId = Guid.CreateVersion7();
         var (plaintext, secret) = EnrollmentTokenCodec.Create(tenantId, tokenId);
         try
         {
             var token = EnrollmentToken.Create(
-                tenantId, tokenId, request.Name, secret, now.AddHours(lifetime), maxUses, currentUser.RequireUserId(), request.DeviceGroupId);
+                tenantId, tokenId, request.Name, secret, now.AddHours(lifetime), maxUses, currentUser.RequireUserId(), request.DeviceGroupId, branchId, request.DepartmentId);
             db.Set<EnrollmentToken>().Add(token);
             await db.SaveChangesAsync(cancellationToken);
-            var groupNames = await GroupNamesAsync([token.DeviceGroupId], cancellationToken);
-            return new CreatedEnrollmentTokenDto(ToDto(token, groupNames, now), plaintext);
+            var names = await NamesAsync([token], cancellationToken);
+            return new CreatedEnrollmentTokenDto(ToDto(token, names, now), plaintext);
         }
         finally
         {
@@ -97,24 +122,22 @@ internal sealed class EnrollmentTokenService(
         var now = clock.UtcNow;
         token.Revoke(now);
         await db.SaveChangesAsync(cancellationToken);
-        var groupNames = await GroupNamesAsync([token.DeviceGroupId], cancellationToken);
-        return ToDto(token, groupNames, now);
+        var names = await NamesAsync([token], cancellationToken);
+        return ToDto(token, names, now);
     }
 
-    private async Task<Dictionary<Guid, string>> GroupNamesAsync(IEnumerable<Guid?> groupIds, CancellationToken cancellationToken)
+    private async Task<TokenNames> NamesAsync(IReadOnlyCollection<EnrollmentToken> tokens, CancellationToken cancellationToken)
     {
-        var ids = groupIds.OfType<Guid>().Distinct().ToList();
-        if (ids.Count == 0)
-        {
-            return [];
-        }
-
-        return await db.Set<DeviceGroup>().AsNoTracking()
-            .Where(g => ids.Contains(g.Id))
-            .ToDictionaryAsync(g => g.Id, g => g.Name, cancellationToken);
+        var groupIds = tokens.Select(t => t.DeviceGroupId).OfType<Guid>().Distinct().ToList();
+        var groups = groupIds.Count == 0
+            ? []
+            : await db.Set<DeviceGroup>().AsNoTracking().Where(g => groupIds.Contains(g.Id)).ToDictionaryAsync(g => g.Id, g => g.Name, cancellationToken);
+        var branches = await organization.FindBranchesAsync(tokens.Select(t => t.BranchId).OfType<Guid>().Distinct().ToList(), cancellationToken);
+        var departments = await organization.FindDepartmentsAsync(tokens.Select(t => t.DepartmentId).OfType<Guid>().Distinct().ToList(), cancellationToken);
+        return new TokenNames(groups, branches, departments);
     }
 
-    private static EnrollmentTokenDto ToDto(EnrollmentToken t, Dictionary<Guid, string> groupNames, DateTimeOffset now) =>
+    private static EnrollmentTokenDto ToDto(EnrollmentToken t, TokenNames names, DateTimeOffset now) =>
         new(
             t.Id,
             t.Name,
@@ -125,7 +148,16 @@ internal sealed class EnrollmentTokenService(
             t.LastUsedAtUtc,
             t.RevokedAtUtc,
             t.DeviceGroupId,
-            t.DeviceGroupId is { } g && groupNames.TryGetValue(g, out var name) ? name : null,
+            t.DeviceGroupId is { } g && names.Groups.TryGetValue(g, out var groupName) ? groupName : null,
+            t.BranchId,
+            t.BranchId is { } b && names.Branches.TryGetValue(b, out var branch) ? branch.Name : null,
+            t.DepartmentId,
+            t.DepartmentId is { } d && names.Departments.TryGetValue(d, out var department) ? department.Name : null,
             t.CreatedByUserId,
             t.CreatedAtUtc);
+
+    private sealed record TokenNames(
+        IReadOnlyDictionary<Guid, string> Groups,
+        IReadOnlyDictionary<Guid, BranchSummary> Branches,
+        IReadOnlyDictionary<Guid, DepartmentSummary> Departments);
 }

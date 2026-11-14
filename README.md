@@ -36,7 +36,7 @@ docker compose up --build
 `migrator` applies EF Core migrations as the schema-owner role and exits; `api`
 only starts once it succeeded. Register a workspace at http://localhost:3000/register.
 
-To enroll a Windows device: create a token under *Endpoints → Enrollment*, build the agent
+To enroll a Windows device: create a token under *Endpoints → Enrollment* (optionally pre-assigning a group, branch and department, e.g. one token per store), build the agent
 package (`src/agent/installer/Build-AgentPackage.ps1`) and run on the device, as administrator:
 
 ```powershell

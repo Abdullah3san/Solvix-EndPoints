@@ -17,9 +17,17 @@ public sealed class BootstrapTokenStore(IOptions<AgentOptions> options, ISecretP
 
     public bool HasToken => File.Exists(FilePath);
 
+    /// <summary>A token the server refused (expired, revoked, used up); a new one must be supplied.</summary>
+    public bool HasRejectedToken => File.Exists(FilePath + ".rejected");
+
     public void Save(string token)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        if (File.Exists(FilePath + ".rejected"))
+        {
+            File.Delete(FilePath + ".rejected");
+        }
+
         var bytes = Encoding.UTF8.GetBytes(token.Trim());
         try
         {

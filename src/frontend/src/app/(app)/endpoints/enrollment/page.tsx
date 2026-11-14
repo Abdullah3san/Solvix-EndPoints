@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { serverApi } from "@/lib/api/server";
 import { ApiError } from "@/lib/api/errors";
 import { serverConfig } from "@/lib/config";
-import type { DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
+import type { BranchDto, DepartmentDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
 import { PageHeader } from "@/components/ui/page-header";
 import { EnrollmentView } from "@/components/features/devices/enrollment-view";
 
@@ -18,11 +18,15 @@ export default async function EnrollmentPage() {
     throw e;
   }
 
-  const groups = await serverApi<PagedResult<DeviceGroupDto>>("device-groups?pageSize=200");
+  const [groups, branches, departments] = await Promise.all([
+    serverApi<PagedResult<DeviceGroupDto>>("device-groups?pageSize=200"),
+    serverApi<PagedResult<BranchDto>>("branches?pageSize=200"),
+    serverApi<PagedResult<DepartmentDto>>("departments?pageSize=200"),
+  ]);
   return (
     <>
       <PageHeader title="Enrollment" description="Short-lived enrollment tokens authorise Windows devices to join this workspace. Tokens are shown once and never embedded in the installer." />
-      <EnrollmentView initial={tokens} groups={groups.items} serverUrl={serverConfig.agentServerUrl} serverPin={serverConfig.agentServerCertificateSha256} />
+      <EnrollmentView initial={tokens} groups={groups.items} branches={branches.items} departments={departments.items} serverUrl={serverConfig.agentServerUrl} serverPin={serverConfig.agentServerCertificateSha256} />
     </>
   );
 }
