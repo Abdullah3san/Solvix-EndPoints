@@ -240,4 +240,7 @@ public sealed class MigrationTests(ApiFixture fixture)
         await migrator.MigrateAsync();
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
     }
+
+    private static IEnumerable<string> AllRlsTables() =>
+        RowLevelSecurityMigration.TenantTables.Concat(MobileDeviceManagementRlsMigration.TenantTables);
 }

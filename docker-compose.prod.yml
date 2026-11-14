@@ -168,6 +168,20 @@ services:
       Solvix__Assistant__Llm__ApiKey: ${ANTHROPIC_API_KEY:-}
       Solvix__Assistant__Llm__Model: ${SOLVIX_ASSISTANT_MODEL:-claude-sonnet-5-5}
       Solvix__Assistant__UseDemoFleet: "false"
+
+      # --- Mobile device management (Phase 08) --------------------------------------------
+      # Encrypts provider secrets at rest (base64 of 32 random bytes). Required in production;
+      # never change it once providers are connected. Android/Apple stay disabled until their
+      # provider settings are added (docs/PHASE-08-MOBILE-DEVICE-MANAGEMENT.md).
+      Solvix__Mdm__SecretEncryptionKey: ${SOLVIX_MDM_SECRET_KEY:?set SOLVIX_MDM_SECRET_KEY (openssl rand -base64 32)}
+      Solvix__Mdm__PublicBaseUrl: https://${SOLVIX_DOMAIN}
+      Solvix__Mdm__Sync__Enabled: ${SOLVIX_MDM_SYNC_ENABLED:-false}
+      Solvix__Mdm__Android__ProjectId: ${SOLVIX_MDM_ANDROID_PROJECT_ID:-}
+      Solvix__Mdm__Android__ServiceAccountJson: ${SOLVIX_MDM_ANDROID_SERVICE_ACCOUNT_JSON:-}
+      Solvix__Mdm__Apple__PushTopic: ${SOLVIX_MDM_APPLE_PUSH_TOPIC:-}
+      Solvix__Mdm__Apple__ScepUrl: ${SOLVIX_MDM_APPLE_SCEP_URL:-}
+      Solvix__Mdm__Apple__ScepChallenge: ${SOLVIX_MDM_APPLE_SCEP_CHALLENGE:-}
+      Solvix__Mdm__Apple__IdentityCaCertificatePem: ${SOLVIX_MDM_APPLE_IDENTITY_CA_PEM:-}
     volumes:
       - solvix-packages:/var/lib/solvix-packages
     secrets:

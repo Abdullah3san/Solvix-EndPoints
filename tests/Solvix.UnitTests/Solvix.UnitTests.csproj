@@ -25,6 +25,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Security\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Mdm\Solvix.Modules.Mdm.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

@@ -6,12 +6,12 @@ import { ChevronRight, Home } from "lucide-react";
 import { segmentLabels } from "./nav-config";
 import { titleCase } from "@/lib/utils";
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export interface Crumb {
   label: string;
   href?: string;
 }
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Builds crumbs from a pathname; the last segment is the current page (no link). */
 export function crumbsFromPathname(pathname: string): Crumb[] {

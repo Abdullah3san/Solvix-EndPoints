@@ -61,6 +61,7 @@ internal sealed partial class GlobalExceptionHandler(
         {
             ValidationException v => (StatusCodes.Status400BadRequest, "Validation failed", v.Code, v.Errors),
             NotFoundException n => (StatusCodes.Status404NotFound, "Resource not found", n.Code, null),
+            UnsupportedOperationException u => (StatusCodes.Status422UnprocessableEntity, "Unsupported operation", u.Code, null),
             ConflictException c => (StatusCodes.Status409Conflict, "Conflict", c.Code, null),
             ServiceUnavailableException s => (StatusCodes.Status503ServiceUnavailable, "Service unavailable", s.Code, null),
             PayloadTooLargeException p => (StatusCodes.Status413PayloadTooLarge, "Payload too large", p.Code, null),

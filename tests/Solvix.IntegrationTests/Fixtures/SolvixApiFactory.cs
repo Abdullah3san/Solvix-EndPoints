@@ -7,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Solvix.SharedKernel.Abstractions;
 using Solvix.SharedKernel.Email;
+using Solvix.Modules.Mdm.Providers.Android;
+using Solvix.Modules.Mdm.Providers.Apple;
 
 /// <summary>
 /// Hosts the real API (Program.cs) in-process. Configuration is injected
@@ -17,6 +19,12 @@ using Solvix.SharedKernel.Email;
 /// </summary>
 public class SolvixApiFactory : WebApplicationFactory<Program>
 {
+    public const string AppleTopic = "com.apple.mgmt.External.00000000-test";
+
+    public FakeAndroidManagementApi AndroidApi { get; } = new();
+
+    public RecordingApplePushClient ApplePush { get; } = new();
+
     /// <summary>In-process tests have no TLS; the client certificate travels the way a trusted proxy forwards it.</summary>
     public const string ForwardedCertificateHeader = "X-Client-Cert";
 
@@ -93,6 +101,13 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             // Software management: packages in a private temporary directory; tests drive the deployment engine.
             ["Solvix__Software__Storage__RootPath"] = PackageStoragePath,
             ["Solvix__Software__RunProcessor"] = "false",
+            ["Solvix__Mdm__PublicBaseUrl"] = "https://mdm.example.test",
+            ["Solvix__Mdm__Android__ProjectId"] = "solvix-test-project",
+            ["Solvix__Mdm__Android__ServiceAccountJson"] = "{}",
+            ["Solvix__Mdm__Apple__PushTopic"] = AppleTopic,
+            ["Solvix__Mdm__Apple__ScepUrl"] = "https://scep.example.test/scep",
+            ["Solvix__Mdm__Apple__ScepChallenge"] = "challenge",
+            ["Solvix__Mdm__Apple__AllowUntrustedDeviceIdentity"] = "true",
         };
         foreach (var (key, value) in extraSettings ?? new Dictionary<string, string>())
         {
@@ -121,6 +136,13 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             services.Replace(ServiceDescriptor.Singleton<IClock>(Clock));
             services.RemoveAll<IEmailSender>();
             services.AddSingleton<IEmailSender>(Emails);
+            // Provider network calls are replaced by in-memory fakes that tests can inspect and drive.
+            services.RemoveAll<IAndroidManagementApi>();
+            services.RemoveAll<IApplePushClient>();
+            services.AddSingleton(AndroidApi);
+            services.AddSingleton<IAndroidManagementApi>(AndroidApi);
+            services.AddSingleton(ApplePush);
+            services.AddSingleton<IApplePushClient>(ApplePush);
         });
     }
 }

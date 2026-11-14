@@ -121,6 +121,7 @@ src/backend/
     Solvix.Modules.Assets/       asset register, lifecycle, audits, depreciation, labels, endpoint matching
     Solvix.Modules.Assistant/    AI assistant: tools, knowledge base, proposals, tickets, reports, audit
     Solvix.Modules.Security/     Phase 10: endpoint security posture, findings, policy, approvals, audit
+    Solvix.Modules.Mdm/          mobile device management: Android Enterprise + Apple MDM (Phase 08)
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/shared/Solvix.Agent.Contracts/  wire contracts shared by agent and API
@@ -131,7 +132,7 @@ tests/
   Solvix.IntegrationTests/    real PostgreSQL + Redis: migrations, RLS, API isolation, jobs, devices, mTLS, agent end-to-end
   Solvix.Agent.Tests/         agent runtime, enrollment, backoff, renewal, updates, inventory
 docker/postgres/init/         creates the migrator and runtime roles
-docs/                         architecture and phase summaries
+docs/                         architecture and phase summaries (Phase 08: docs/PHASE-08-MOBILE-DEVICE-MANAGEMENT.md)
 ```
 
 ## Documentation

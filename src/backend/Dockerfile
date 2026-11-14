@@ -21,6 +21,7 @@ COPY src/backend/Modules/Solvix.Modules.Software/Solvix.Modules.Software.csproj 
 COPY src/shared/Solvix.Agent.Contracts/Solvix.Agent.Contracts.csproj src/shared/Solvix.Agent.Contracts/
 COPY src/backend/Modules/Solvix.Modules.Assistant/Solvix.Modules.Assistant.csproj src/backend/Modules/Solvix.Modules.Assistant/
 COPY src/backend/Modules/Solvix.Modules.Security/Solvix.Modules.Security.csproj src/backend/Modules/Solvix.Modules.Security/
+COPY src/backend/Modules/Solvix.Modules.Mdm/Solvix.Modules.Mdm.csproj src/backend/Modules/Solvix.Modules.Mdm/
 RUN dotnet restore src/backend/Solvix.Api/Solvix.Api.csproj && dotnet restore src/backend/Solvix.Migrator/Solvix.Migrator.csproj
 
 COPY src/backend/ src/backend/

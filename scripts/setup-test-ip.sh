@@ -61,6 +61,9 @@ for key in POSTGRES_PASSWORD SOLVIX_DB_MIGRATOR_PASSWORD SOLVIX_DB_APP_PASSWORD 
   [[ -n "$(get_var "$key")" ]] || set_var "$key" "$(openssl rand -hex 32)"
 done
 
+# Mobile device management encryption key: base64 of 32 bytes, generated once.
+[[ -n "$(get_var SOLVIX_MDM_SECRET_KEY)" ]] || set_var SOLVIX_MDM_SECRET_KEY "$(openssl rand -base64 32)"
+
 # docker-compose.prod.yml requires these; in test mode they are placeholders that
 # docker-compose.test-ip.yml overrides (no ACME, no SMTP delivery).
 set_var SOLVIX_DOMAIN "$IP"

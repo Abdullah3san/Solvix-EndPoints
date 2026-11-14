@@ -106,7 +106,15 @@ public sealed class PrivilegeEscalationTests(ApiFixture fixture)
             Assert.True((isAnonymous ? 1 : 0) + (permissions.Count > 0 ? 1 : 0) + (authenticatedOnly ? 1 : 0) + (deviceOnly ? 1 : 0) == 1, $"{name}: ambiguous protection");
             if (isAnonymous)
             {
-                anonymousCount++;
+                // Device protocols that authenticate the device themselves (security agent device key,
+                // Apple MDM check-in/command signatures) are anonymous to ASP.NET by design; the guard
+                // below is about everything else.
+                var raw = endpoint.RoutePattern.RawText ?? string.Empty;
+                if (!raw.Contains("/security/ingest", StringComparison.Ordinal) && !raw.Contains("/mdm/apple", StringComparison.Ordinal))
+                {
+                    anonymousCount++;
+                }
+
                 continue;
             }
 
