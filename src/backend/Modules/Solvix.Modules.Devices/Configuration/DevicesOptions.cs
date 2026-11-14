@@ -16,6 +16,10 @@ public sealed class DevicesOptions
     [Required]
     public AgentPolicyOptions Agent { get; set; } = new();
 
+    /// <summary>The downloadable agent package (signed exe + enrollment.json) offered on the enrollment page.</summary>
+    [Required]
+    public AgentPackageOptions AgentPackage { get; set; } = new();
+
     /// <summary>
     /// Name of the request header carrying the client certificate when TLS is
     /// terminated by a trusted reverse proxy (e.g. <c>X-Client-Cert</c>). Leave
@@ -92,6 +96,21 @@ public sealed class AgentPolicyOptions
     public int OfflineAfterSeconds { get; set; } = 300;
 
     public string DefaultUpdateChannel { get; set; } = "stable";
+}
+
+public sealed class AgentPackageOptions
+{
+    /// <summary>
+    /// Folder on the API host containing the published (and code-signed) <c>Solvix.Agent.exe</c> and its
+    /// <c>appsettings.json</c>. The exe is served byte-for-byte so its Authenticode signature stays valid.
+    /// </summary>
+    public string? Directory { get; set; }
+
+    /// <summary>Public HTTPS URL of the agent endpoint written into <c>enrollment.json</c>.</summary>
+    public Uri? PublicServerUrl { get; set; }
+
+    /// <summary>SHA-256 pin of the agent endpoint's TLS certificate; only needed for private/self-signed certificates.</summary>
+    public string? ServerCertificateSha256 { get; set; }
 }
 
 public sealed class AgentReleaseOptions

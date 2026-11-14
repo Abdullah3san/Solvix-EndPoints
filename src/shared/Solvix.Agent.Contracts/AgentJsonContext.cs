@@ -20,6 +20,7 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(InventoryReport))]
 [JsonSerializable(typeof(UpdateCheckResponse))]
 [JsonSerializable(typeof(AgentProblem))]
+[JsonSerializable(typeof(AgentEnrollmentFile))]
 public sealed partial class AgentJsonContext : JsonSerializerContext
 {
 }

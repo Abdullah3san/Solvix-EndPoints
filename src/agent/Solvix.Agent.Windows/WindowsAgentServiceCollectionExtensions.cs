@@ -3,6 +3,7 @@ namespace Solvix.Agent.Windows;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Solvix.Agent.Core.Installation;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.Updates;
@@ -20,6 +21,7 @@ public static class WindowsAgentServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<ISecretProtector, DpapiSecretProtector>());
         services.Replace(ServiceDescriptor.Singleton<IPackageSignatureVerifier, AuthenticodeVerifier>());
         services.Replace(ServiceDescriptor.Singleton<IPackageInstaller>(_ => new MsiPackageInstaller(Path.Combine(dataDirectory, "logs"))));
+        services.Replace(ServiceDescriptor.Singleton<IElevation, WindowsElevation>());
         services.AddSingleton<IInventoryCollector, SystemCollector>();
         services.AddSingleton<IInventoryCollector, BiosCollector>();
         services.AddSingleton<IInventoryCollector, OperatingSystemCollector>();

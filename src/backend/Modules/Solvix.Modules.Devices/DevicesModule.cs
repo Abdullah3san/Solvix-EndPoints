@@ -40,6 +40,7 @@ public sealed class DevicesModule : IModule
 
         services.AddScoped<IEnrollmentTokenService, EnrollmentTokenService>();
         services.AddScoped<IAgentEnrollmentService, AgentEnrollmentService>();
+        services.AddScoped<IAgentPackageService, AgentPackageService>();
         services.AddScoped<IAgentService, AgentService>();
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IDeviceGroupService, DeviceGroupService>();

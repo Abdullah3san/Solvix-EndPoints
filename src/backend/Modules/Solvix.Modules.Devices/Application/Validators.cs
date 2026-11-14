@@ -156,3 +156,11 @@ public sealed class UpdateDeviceRequestValidator : AbstractValidator<UpdateDevic
         RuleFor(x => x.Notes).MaximumLength(Device.NotesMaxLength);
     }
 }
+
+public sealed class AgentPackageRequestValidator : AbstractValidator<AgentPackageRequest>
+{
+    public AgentPackageRequestValidator()
+    {
+        RuleFor(x => x.Token).NotEmpty().MaximumLength(256);
+    }
+}

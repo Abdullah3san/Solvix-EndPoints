@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { connectivityTone, deviceLabel, formatBytes, formatRelative, healthTone, installCommand, tokenStateTone } from "@/lib/devices";
+import { connectivityTone, deviceLabel, formatBytes, formatRelative, healthTone, tokenStateTone } from "@/lib/devices";
+import { filenameFromContentDisposition } from "@/lib/api/client";
 
 describe("device helpers", () => {
   it("formats sizes in binary units", () => {
@@ -32,12 +33,17 @@ describe("device helpers", () => {
     expect(tokenStateTone("Expired")).toBe("neutral");
   });
 
-  it("prefers the display name and builds the install command", () => {
+  it("prefers the display name", () => {
     expect(deviceLabel({ displayName: "Reception PC", hostname: "DESKTOP-1" })).toBe("Reception PC");
     expect(deviceLabel({ displayName: "  ", hostname: "DESKTOP-1" })).toBe("DESKTOP-1");
-    expect(installCommand("https://agents.example:8443/", "svxe_abc")).toBe(
-      ".\\Install-SolvixAgent.ps1 -ServerUrl https://agents.example:8443/ -EnrollmentToken svxe_abc",
-    );
-    expect(installCommand("https://a/", "t", "AB12")).toContain("-ServerCertificateSha256 AB12");
+  });
+
+  it("reads download file names from Content-Disposition safely", () => {
+    const fallback = "agent.zip";
+    expect(filenameFromContentDisposition(`attachment; filename=SolvixAgent-acme.zip; filename*=UTF-8''SolvixAgent-acme.zip`, fallback)).toBe("SolvixAgent-acme.zip");
+    expect(filenameFromContentDisposition('attachment; filename="SolvixAgent-berlin-tills.zip"', fallback)).toBe("SolvixAgent-berlin-tills.zip");
+    expect(filenameFromContentDisposition(null, fallback)).toBe(fallback);
+    expect(filenameFromContentDisposition("inline", fallback)).toBe(fallback);
+    expect(filenameFromContentDisposition("attachment; filename*=UTF-8''..%2F..%2Fevil.exe", fallback)).toBe(".._.._evil.exe");
   });
 });

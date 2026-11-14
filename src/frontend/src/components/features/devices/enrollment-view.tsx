@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Ban, Copy, Plus } from "lucide-react";
-import { api } from "@/lib/api/client";
+import { Ban, Copy, Download, Plus } from "lucide-react";
+import { api, downloadFile } from "@/lib/api/client";
 import type { BranchDto, CreatedEnrollmentTokenDto, DepartmentDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
-import { installCommand, tokenStateTone } from "@/lib/devices";
+import { tokenStateTone } from "@/lib/devices";
 import { fieldErrorsFrom, messageFrom } from "@/lib/forms";
 import { formatDate } from "@/lib/utils";
 import { Alert } from "@/components/ui/alert";
@@ -30,11 +30,9 @@ interface Props {
   groups: DeviceGroupDto[];
   branches: BranchDto[];
   departments: DepartmentDto[];
-  serverUrl: string;
-  serverPin: string | null;
 }
 
-export function EnrollmentView({ initial, groups, branches, departments, serverUrl, serverPin }: Props) {
+export function EnrollmentView({ initial, groups, branches, departments }: Props) {
   const { toast } = useToast();
   const [tokens, setTokens] = React.useState(initial.items);
   const [creating, setCreating] = React.useState(false);
@@ -64,13 +62,13 @@ export function EnrollmentView({ initial, groups, branches, departments, serverU
         <CardHeader>
           <CardTitle>How enrollment works</CardTitle>
           <CardDescription>
-            1. Create a token below. 2. Run the installer on the Windows device as administrator with that token. 3. The agent generates a
-            non-exportable key (TPM when available), receives a device certificate and deletes the token. All further communication is outbound
-            HTTPS with mutual TLS.
+            1. Create a token below and download the agent package. 2. Extract it on the Windows computer and run <span className="font-mono">Solvix.Agent.exe</span>{" "}
+            (approve the administrator prompt). 3. The agent installs itself, generates a non-exportable key (TPM when available), receives a device
+            certificate and deletes the token. All further communication is outbound HTTPS with mutual TLS.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Supported: Windows 10, Windows 11, Windows Server 2016, 2019, 2022 and 2025 (64-bit). Agent endpoint: <span className="font-mono">{serverUrl}</span>
+          Supported: Windows 10, Windows 11, Windows Server 2016, 2019, 2022 and 2025 (64-bit).
         </CardContent>
       </Card>
 
@@ -140,19 +138,62 @@ export function EnrollmentView({ initial, groups, branches, departments, serverU
       ) : null}
 
       {created ? (
-        <Dialog open onClose={() => setCreated(null)} title="Enrollment token created" description="Copy it now: it is shown only once and cannot be retrieved later." className="max-w-2xl">
-          <div className="space-y-4">
-            <CopyField label="Token" value={created.token} />
-            <CopyField label="Install command (PowerShell, as administrator)" value={installCommand(serverUrl, created.token, serverPin)} />
-            <Alert>
-              Valid until {formatDate(created.enrollmentToken.expiresAtUtc)} for {created.enrollmentToken.maxUses} device(s)
-              {created.enrollmentToken.branchName ? `, assigned to ${[created.enrollmentToken.branchName, created.enrollmentToken.departmentName].filter(Boolean).join(" / ")}` : ""}. Treat it like a password and revoke it
-              when the rollout is complete.
-            </Alert>
-          </div>
-        </Dialog>
+        <CreatedDialog created={created} onClose={() => setCreated(null)} />
       ) : null}
     </>
+  );
+}
+
+function CreatedDialog({ created, onClose }: { created: CreatedEnrollmentTokenDto; onClose: () => void }) {
+  const { toast } = useToast();
+  const [downloading, setDownloading] = React.useState(false);
+  const [downloaded, setDownloaded] = React.useState<string | null>(null);
+  const token = created.enrollmentToken;
+  const placement = [token.branchName, token.departmentName].filter(Boolean).join(" / ");
+
+  async function download() {
+    setDownloading(true);
+    try {
+      setDownloaded(await downloadFile("enrollment-tokens/package", { token: created.token }, "SolvixAgent.zip"));
+    } catch (e) {
+      toast({ tone: "error", title: "Could not build the agent package", description: messageFrom(e) });
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <Dialog open onClose={onClose} title="Enrollment token created" description="The agent package is only available now: the token cannot be retrieved later." className="max-w-2xl">
+      <div className="space-y-4">
+        <Button onClick={download} loading={downloading} size="lg" className="w-full">
+          <Download className="h-4 w-4" /> Download agent package (.zip)
+        </Button>
+        {downloaded ? (
+          <Alert tone="success" title={`Downloaded ${downloaded}`}>
+            Extract the whole zip on the Windows computer, run <span className="font-mono">Solvix.Agent.exe</span> and approve the administrator prompt. The
+            device appears under Endpoints → Devices within a minute.
+          </Alert>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            The zip contains the agent and a short-lived <span className="font-mono">enrollment.json</span>. No command line or script is needed.
+          </p>
+        )}
+        <Alert>
+          Valid until {formatDate(token.expiresAtUtc)} for {token.maxUses} device(s){placement ? `, assigned to ${placement}` : ""}. Treat the package like a password and
+          revoke the token when the rollout is complete.
+        </Alert>
+        <details className="text-sm">
+          <summary className="cursor-pointer text-muted-foreground">Deployment tools (Intune, SCCM, GPO) and manual token</summary>
+          <div className="mt-3 space-y-3">
+            <p className="text-muted-foreground">
+              Distribute the extracted folder and run <span className="font-mono">Solvix.Agent.exe install --silent</span> as administrator. To enroll without the
+              file use <span className="font-mono">install --silent --server &lt;https url&gt; --token &lt;token&gt;</span>.
+            </p>
+            <CopyField label="Token" value={created.token} />
+          </div>
+        </details>
+      </div>
+    </Dialog>
   );
 }
 

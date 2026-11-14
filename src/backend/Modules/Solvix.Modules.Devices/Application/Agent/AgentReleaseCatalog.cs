@@ -85,6 +85,16 @@ internal sealed partial class DevicesOptionsValidator : IValidateOptions<Devices
             failures.Add("CertificateAuthority:RenewalWindowDays must be shorter than DeviceCertificateLifetimeDays.");
         }
 
+        if (options.AgentPackage.PublicServerUrl is { } publicUrl && (!publicUrl.IsAbsoluteUri || publicUrl.Scheme != Uri.UriSchemeHttps))
+        {
+            failures.Add("AgentPackage:PublicServerUrl must be an absolute https URL.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(options.AgentPackage.ServerCertificateSha256) && !Sha256Pattern().IsMatch(options.AgentPackage.ServerCertificateSha256.Replace(":", string.Empty, StringComparison.Ordinal)))
+        {
+            failures.Add("AgentPackage:ServerCertificateSha256 must be 64 hexadecimal characters.");
+        }
+
         for (var i = 0; i < options.Releases.Count; i++)
         {
             var release = options.Releases[i];

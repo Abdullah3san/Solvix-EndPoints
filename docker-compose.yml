@@ -80,6 +80,10 @@ services:
       # Development/evaluation: self-signed agent TLS certificate (agents pin its SHA-256).
       Solvix__Devices__GenerateDevelopmentTlsCertificate: ${SOLVIX_AGENT_TLS_GENERATE:-true}
       Solvix__Devices__DevelopmentTlsHostNames: ${SOLVIX_AGENT_TLS_HOSTNAMES:-localhost,127.0.0.1,api}
+      # Downloadable agent package (signed exe + enrollment.json), published into the image at build time.
+      Solvix__Devices__AgentPackage__Directory: /opt/solvix/agent-package
+      Solvix__Devices__AgentPackage__PublicServerUrl: ${SOLVIX_AGENT_PUBLIC_URL:-https://localhost:8443/}
+      Solvix__Devices__AgentPackage__ServerCertificateSha256: ${SOLVIX_AGENT_TLS_CERT_SHA256:-}
       # Device CA: generated once and kept on the solvix-pki volume (use a managed CA bundle in production).
       Solvix__Devices__CertificateAuthority__AutoGenerate: ${SOLVIX_DEVICE_CA_AUTOGENERATE:-true}
       Solvix__Devices__CertificateAuthority__PfxPath: /var/lib/solvix/device-ca.pfx

@@ -10,6 +10,7 @@
     <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
     <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <ServerGarbageCollection>false</ServerGarbageCollection>
     <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
   </PropertyGroup>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { serverApi } from "@/lib/api/server";
 import { ApiError } from "@/lib/api/errors";
-import { serverConfig } from "@/lib/config";
 import type { BranchDto, DepartmentDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
 import { PageHeader } from "@/components/ui/page-header";
 import { EnrollmentView } from "@/components/features/devices/enrollment-view";
@@ -25,8 +24,8 @@ export default async function EnrollmentPage() {
   ]);
   return (
     <>
-      <PageHeader title="Enrollment" description="Short-lived enrollment tokens authorise Windows devices to join this workspace. Tokens are shown once and never embedded in the installer." />
-      <EnrollmentView initial={tokens} groups={groups.items} branches={branches.items} departments={departments.items} serverUrl={serverConfig.agentServerUrl} serverPin={serverConfig.agentServerCertificateSha256} />
+      <PageHeader title="Enrollment" description="Short-lived enrollment tokens authorise Windows devices to join this workspace. A token is shown once; the downloaded package carries it in a separate file next to the signed agent, never inside the exe." />
+      <EnrollmentView initial={tokens} groups={groups.items} branches={branches.items} departments={departments.items} />
     </>
   );
 }

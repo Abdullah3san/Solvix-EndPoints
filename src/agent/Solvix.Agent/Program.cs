@@ -1,8 +1,14 @@
 // Solvix Windows endpoint agent.
 //
-//   Solvix.Agent.exe                         run (as Windows service or console)
-//   Solvix.Agent.exe enroll --server <url> --token <token> [--pin <sha256>]
-//                                            store server URL + protected one-time token (installer)
+//   Solvix.Agent.exe                         double-click: install + enroll from enrollment.json
+//                                            (as a service: run; on Linux/dev: run in the console)
+//   Solvix.Agent.exe install [--silent]      install as a Windows service and enroll (UAC prompt);
+//                                            reads enrollment.json next to the exe, or --server/--token/--pin
+//   Solvix.Agent.exe uninstall [--remove-data]   remove the service (and optionally the device identity)
+//   Solvix.Agent.exe run                     run in the console
+//   Solvix.Agent.exe enroll [--server <url> --token <token> [--pin <sha256>]]
+//                                            store server URL + protected one-time token
+//                                            (no arguments: read enrollment.json next to the exe)
 //   Solvix.Agent.exe status                  print local enrollment / health state (diagnostics)
 //   Solvix.Agent.exe inventory               collect inventory locally and print it (no network)
 //   Solvix.Agent.exe apply-update            privileged updater (scheduled task as SYSTEM)
@@ -20,6 +26,7 @@ using Solvix.Agent.Contracts;
 using Solvix.Agent.Core;
 using Solvix.Agent.Core.Communication;
 using Solvix.Agent.Core.Configuration;
+using Solvix.Agent.Core.Enrollment;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
@@ -27,7 +34,12 @@ using Solvix.Agent.Core.State;
 using Solvix.Agent.Core.Updates;
 using Solvix.Agent.Windows;
 
-var command = args.FirstOrDefault(a => !a.StartsWith('-'))?.ToLowerInvariant() ?? "run";
+// No command: a person double-clicking the exe on Windows gets the installer; the Windows service
+// manager, Linux and development hosts get the agent itself.
+var interactiveWindows = OperatingSystem.IsWindows()
+    && Environment.UserInteractive
+    && !Microsoft.Extensions.Hosting.WindowsServices.WindowsServiceHelpers.IsWindowsService();
+var command = args.FirstOrDefault(a => !a.StartsWith('-'))?.ToLowerInvariant() ?? (interactiveWindows ? "setup" : "run");
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
     Args = args,
@@ -96,7 +108,10 @@ try
     return command switch
     {
         "run" => await RunAsync(host),
-        "enroll" => Commands.Enroll(host, args, machineSettings),
+        "setup" => await SetupCommands.SetupAsync(host, dataDirectory),
+        "install" => await SetupCommands.InstallAsync(host, args, dataDirectory),
+        "uninstall" => await SetupCommands.UninstallAsync(host, args, dataDirectory),
+        "enroll" => Commands.Enroll(host, args),
         "status" => Commands.Status(host),
         "inventory" => await Commands.InventoryAsync(host),
         "apply-update" => await Commands.ApplyUpdateAsync(host),
@@ -126,29 +141,38 @@ namespace Solvix.Agent
     {
         private static readonly JsonSerializerOptions Pretty = new(AgentJsonContext.Default.Options) { WriteIndented = true };
 
-        public static int Enroll(IHost host, string[] args, string machineSettingsPath)
+        public static int Enroll(IHost host, string[] args)
         {
+            var file = Path.Combine(AppContext.BaseDirectory, AgentEnrollmentFile.FileName);
             var server = Option(args, "--server");
             var token = Option(args, "--token") ?? Environment.GetEnvironmentVariable("SOLVIX_ENROLLMENT_TOKEN");
-            var pin = Option(args, "--pin");
-            if (server is null || token is null || !Uri.TryCreate(server, UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps)
+            var fromFile = server is null && token is null && File.Exists(file);
+
+            EnrollmentRequestSettings? settings;
+            string? error;
+            if (fromFile)
             {
-                Console.Error.WriteLine("Usage: Solvix.Agent enroll --server https://<host>[:port]/ --token <enrollment token> [--pin <server cert sha256>]");
+                settings = EnrollmentRequestSettings.TryLoad(file, DateTimeOffset.UtcNow, out error);
+            }
+            else
+            {
+                settings = EnrollmentRequestSettings.Validate(server, token, Option(args, "--pin"), out error);
+            }
+
+            if (settings is null)
+            {
+                Console.Error.WriteLine(error);
+                Console.Error.WriteLine($"Usage: Solvix.Agent enroll [--server https://<host>[:port]/ --token <token> [--pin <sha256>]]  (no arguments: read {AgentEnrollmentFile.FileName} next to the exe)");
                 return 2;
             }
 
-            // Machine settings hold only non-secret values; the token is stored separately and encrypted.
-            var settings = new JsonObject
+            host.Services.GetRequiredService<EnrollmentSetup>().Apply(settings);
+            if (fromFile)
             {
-                [AgentOptions.SectionName] = new JsonObject
-                {
-                    [nameof(AgentOptions.ServerUrl)] = url.AbsoluteUri,
-                    [nameof(AgentOptions.TrustedServerCertificateSha256)] = pin is null ? new JsonArray() : new JsonArray(pin),
-                },
-            };
-            AtomicFile.WriteAllText(machineSettingsPath, settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
-            host.Services.GetRequiredService<BootstrapTokenStore>().Save(token);
-            Console.WriteLine("Enrollment configured. The Solvix Agent service enrolls on its next start.");
+                File.Delete(file); // the token now lives encrypted in the data directory
+            }
+
+            Console.WriteLine("Enrollment configured. The Solvix Agent enrolls on its next start.");
             return 0;
         }
 
@@ -204,7 +228,7 @@ namespace Solvix.Agent
 
         public static int Usage()
         {
-            Console.Error.WriteLine("Commands: run | enroll --server <url> --token <token> [--pin <sha256>] | status | inventory | apply-update | reset");
+            Console.Error.WriteLine("Commands: install | uninstall | run | enroll | status | inventory | apply-update | reset");
             return 2;
         }
 

@@ -14,7 +14,7 @@ Supported: Windows 10, Windows 11, Windows Server 2016 / 2019 / 2022 / 2025 (x64
 | `Solvix.Agent.Windows` | Windows modules: WMI/registry inventory collectors, CNG/TPM key store, DPAPI, Authenticode verification, MSI installer. Annotated `[SupportedOSPlatform("windows")]`. |
 | `Solvix.Agent` | Service host (`UseWindowsService`), configuration, Serilog file + Event Log logging, CLI commands. |
 | `../shared/Solvix.Agent.Contracts` | Wire contracts shared with the API (source-generated JSON). |
-| `installer/` | `Install-SolvixAgent.ps1`, `Uninstall-SolvixAgent.ps1`, `Build-AgentPackage.ps1`. |
+| `installer/` | `Build-AgentPackage.ps1` (publish). There is no install script: the exe installs itself. |
 
 ## Modules
 
@@ -35,38 +35,47 @@ Supported: Windows 10, Windows 11, Windows Server 2016 / 2019 / 2022 / 2025 (x64
 | 13 | Update management | `UpdateManager` (offer → local policy → download → SHA-256 → Authenticode publisher pin → stage; privileged apply re-verifies) |
 | 14 | Diagnostic logging | Rolling JSON logs in `%ProgramData%\Solvix\Agent\logs` (14 days, 10 MB), Windows Event Log for warnings |
 
-## Install
+## Install (no command line)
 
-The installer package contains **no secret**. A tenant administrator creates a
-short-lived enrollment token in *Endpoints → Enrollment* and passes it at install time:
+1. An administrator creates an enrollment token in *Endpoints → Enrollment* (optionally with group, branch
+   and department) and clicks **Download agent package**. The server builds a zip containing the
+   **unmodified, code-signed `Solvix.Agent.exe`**, `appsettings.json` and `enrollment.json` (server URL,
+   short-lived token, optional certificate pin).
+2. On the Windows computer: extract the whole zip and **double-click `Solvix.Agent.exe`**, approve the
+   administrator (UAC) prompt. The exe installs itself, enrolls and starts; the device appears under
+   *Endpoints → Devices* within a minute. `enrollment.json` is deleted after use.
 
-```powershell
-# elevated PowerShell, from the folder produced by Build-AgentPackage.ps1
-.\Install-SolvixAgent.ps1 -ServerUrl https://agents.example.com:8443/ -EnrollmentToken svxe_...
-```
+The token lives in a separate file rather than inside the exe so the exe keeps its Authenticode signature
+(agents and updates rely on it). It is short-lived, use-limited and revocable; the exe stores it DPAPI-encrypted
+until enrollment completes. Treat the zip like a password.
 
-For deployment tools, set `SOLVIX_ENROLLMENT_TOKEN` instead of the parameter. For a
-server with a private (self-signed) TLS certificate add `-ServerCertificateSha256 <thumbprint>`.
+For deployment tools (Intune, SCCM, GPO) run `Solvix.Agent.exe install --silent` from the extracted folder as
+administrator, or pass settings explicitly: `install --silent --server <https url> --token <token> [--pin <sha256>]`
+(the token may also come from `SOLVIX_ENROLLMENT_TOKEN`). Exit code 0 = installed.
 
-The installer:
+What the installer does (`AgentInstaller`, unit-tested command by command):
 
-* checks the Windows version;
+* checks the Windows version (Windows 10/11, Server 2016+, 64-bit);
+* copies the exe to `%ProgramFiles%\Solvix\Agent` (writable only by SYSTEM/Administrators);
 * creates `%ProgramData%\Solvix\Agent` accessible only to SYSTEM, Administrators and the service;
-* installs the `SolvixAgent` service running as the virtual account **`NT SERVICE\SolvixAgent`**
-  (no administrative rights, restricted privileges, restart on failure);
-* registers the **Solvix Agent Updater** scheduled task (SYSTEM) which only installs packages the
-  agent staged *and* that pass the hash + Authenticode checks again;
-* stores the server URL and the DPAPI-encrypted token, then starts the service.
+* installs the `SolvixAgent` service as the virtual account **`NT SERVICE\SolvixAgent`** (no administrative rights,
+  restricted privileges, delayed auto-start, restart on failure);
+* registers the **Solvix Agent Updater** scheduled tasks (SYSTEM) which only install packages the agent staged
+  *and* that pass the hash + Authenticode checks again;
+* stores the server settings and the DPAPI-encrypted token, then starts the service.
 
-On first start the agent generates an ECDSA P-256 key in the TPM (Microsoft Platform Crypto
-Provider) or, if unavailable, the software key storage provider — always non-exportable —
-sends a CSR with the token, receives its device certificate and deletes the token.
+Re-running the exe on an installed computer reinstalls in place. On first start the agent generates an ECDSA P-256
+key in the TPM (Microsoft Platform Crypto Provider) or, if unavailable, the software key storage provider —
+always non-exportable — sends a CSR with the token, receives its device certificate and deletes the token.
 
 ## Commands
 
 ```
-Solvix.Agent.exe                       run (service or console)
-Solvix.Agent.exe enroll --server <url> --token <token> [--pin <sha256>]
+Solvix.Agent.exe                       double-click: install + enroll from enrollment.json (as a service: run the agent)
+Solvix.Agent.exe install [--silent]    install as a Windows service and enroll (UAC prompt)
+Solvix.Agent.exe uninstall [--remove-data]   remove the service; --remove-data also deletes the device identity
+Solvix.Agent.exe run                   run in the console
+Solvix.Agent.exe enroll [--server <url> --token <token> [--pin <sha256>]]   (no arguments: read enrollment.json)
 Solvix.Agent.exe status                local enrollment / certificate / contact state
 Solvix.Agent.exe inventory             collect and print inventory locally (no network)
 Solvix.Agent.exe apply-update          privileged updater (scheduled task)
@@ -75,8 +84,9 @@ Solvix.Agent.exe reset                 delete device key, certificate and state
 
 ## Smoke test
 
-`scripts/smoke-agent.sh <api-url> <agent-url> [agent-binary]` drives the commands above against a running
-API (workspace with two stores → one token per store → three terminals → placement checks).
+`scripts/smoke-agent.sh <api-url>` does what an administrator does against a running API: two stores → one token
+per store → download each package → extract → run the extracted agent → placement checks. (The API needs the agent
+package configured; see ARCHITECTURE.md.)
 
 ## Behaviour
 
@@ -121,5 +131,6 @@ dotnet test tests/Solvix.Agent.Tests
 dotnet publish src/agent/Solvix.Agent -c Release -r win-x64   # self-contained single-file exe
 ```
 
-Sign `Solvix.Agent.exe` and the MSI with the organisation's code-signing certificate and put its
-thumbprint into `Updates:TrustedPublisherThumbprints` of the shipped `appsettings.json`.
+Sign `Solvix.Agent.exe` with the organisation's code-signing certificate, place it with `appsettings.json` in the
+folder the API serves as the agent package, and put the certificate thumbprint into `Updates:TrustedPublisherThumbprints`
+of that `appsettings.json`.

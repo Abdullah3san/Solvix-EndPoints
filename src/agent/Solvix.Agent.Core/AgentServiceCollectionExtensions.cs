@@ -8,6 +8,7 @@ using Solvix.Agent.Core.Communication;
 using Solvix.Agent.Core.Configuration;
 using Solvix.Agent.Core.Enrollment;
 using Solvix.Agent.Core.Health;
+using Solvix.Agent.Core.Installation;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
@@ -39,6 +40,9 @@ public static class AgentServiceCollectionExtensions
         services.AddSingleton<IInventoryCollector, NetworkInventoryCollector>();
         services.AddSingleton<IInventoryCollector, VolumeInventoryCollector>();
         services.TryAddSingleton<EnrollmentCoordinator>();
+        services.TryAddSingleton<EnrollmentSetup>();
+        services.TryAddSingleton<ICommandRunner, ProcessCommandRunner>();
+        services.TryAddSingleton<IElevation, NoElevation>();
         services.TryAddSingleton<UpdateManager>();
         services.TryAddSingleton<IPackageSignatureVerifier, UnsupportedSignatureVerifier>();
         services.TryAddSingleton<AgentRuntime>();

@@ -68,3 +68,16 @@ internal static class Wmi
         }
     }
 }
+
+/// <summary>Small typed helpers over WMI for code outside the collectors.</summary>
+[SupportedOSPlatform("windows")]
+internal static class WmiFacade
+{
+    public static (int Build, Solvix.Agent.Core.Inventory.WindowsVersionInfo.ProductType ProductType, string Caption) OperatingSystem()
+    {
+        var os = Wmi.Query(Wmi.Cimv2, "Win32_OperatingSystem", "Caption", "BuildNumber", "ProductType").FirstOrDefault();
+        var build = os?.Int("BuildNumber") ?? Environment.OSVersion.Version.Build;
+        var type = (Solvix.Agent.Core.Inventory.WindowsVersionInfo.ProductType)(os?.Int("ProductType") ?? 1);
+        return (build, type, os?.Text("Caption") ?? "Windows");
+    }
+}

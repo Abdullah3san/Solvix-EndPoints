@@ -54,9 +54,3 @@ export function tokenStateTone(state: EnrollmentTokenState): Tone {
 export function deviceLabel(device: { displayName: string | null; hostname: string }): string {
   return device.displayName?.trim() ? device.displayName : device.hostname;
 }
-
-/** PowerShell command shown once after creating an enrollment token. */
-export function installCommand(serverUrl: string, token: string, pin?: string | null): string {
-  const base = `.\\Install-SolvixAgent.ps1 -ServerUrl ${serverUrl} -EnrollmentToken ${token}`;
-  return pin ? `${base} -ServerCertificateSha256 ${pin}` : base;
-}

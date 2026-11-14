@@ -59,7 +59,7 @@ Design details: `docs/ARCHITECTURE.md` (section *Device management*), agent oper
 
 *Endpoints → Devices* (stats, filters, list), device details (overview, hardware, network, storage,
 software, security tabs; edit, assign, groups, refresh inventory, retire, delete), *Device groups*,
-*Enrollment* (admin only; token with optional group, branch and department, shown once with the install command), dashboard tile.
+*Enrollment* (admin only; token with optional group, branch and department; **Download agent package** instead of a command to paste), dashboard tile.
 
 ## Security
 
@@ -90,9 +90,9 @@ All suites run against real PostgreSQL 16 and Redis 7.
 | Suite | Result |
 |-------|--------|
 | `Solvix.UnitTests` | **44 / 44** (unchanged Phase 01 suite) |
-| `Solvix.IntegrationTests` | **76 / 76** (31 Phase 01 + 45 Phase 03) |
-| `Solvix.Agent.Tests` | **68 / 68** |
-| Frontend `npm run check` | typecheck + lint clean, **16 / 16** tests; `next build` succeeds |
+| `Solvix.IntegrationTests` | **82 / 82** (31 Phase 01 + 51 Phase 03) |
+| `Solvix.Agent.Tests` | **85 / 85** |
+| Frontend `npm run check` | typecheck + lint clean, **17 / 17** tests; `next build` succeeds |
 | `dotnet build` | 0 warnings (warnings are errors) |
 
 Requested test areas:
@@ -124,8 +124,10 @@ Additional manual verification performed in this environment:
 * The Windows-only code paths were compiled (and their pure mapping logic unit-tested) but **not
   executed**: WMI/registry collectors, CNG/TPM key creation under the virtual service account,
   SChannel client authentication with a CNG key, DPAPI, `WinVerifyTrust`, msiexec, Event Log.
-* `Install-SolvixAgent.ps1` / `Uninstall-SolvixAgent.ps1` were not run (no PowerShell/Windows).
-* No MSI (WiX) project is included yet; `Build-AgentPackage.ps1` produces the folder an MSI would wrap.
+* The self-installer (`install` / double-click, `AgentInstaller`, UAC relaunch) was not run on Windows. Its command
+  sequence, pre-flight checks and failure handling are unit-tested with a recording runner; the real `sc.exe`, `icacls`,
+  `schtasks` and `eventcreate` calls and the UAC prompt are unverified.
+* The exe in the Docker image is unsigned; production must serve a code-signed `Solvix.Agent.exe` (see ARCHITECTURE.md).
 
 Recommended next step: run the integration checklist above on Windows 10, Windows 11 and Windows
 Server 2016/2022 VMs (with and without TPM), then add a WiX MSI and CI code signing.
@@ -139,6 +141,15 @@ registers a workspace with two stores, creates one token per store, enrolls thre
 published binary (separate data directories), and verifies placement, group, online status,
 token exhaustion and the rejected-token status line. The same flow was run with a self-contained
 `linux-x64` single-file build of the agent and passed; the Windows build uses the same CLI.
+
+## Download-and-run enrollment (no pasted command)
+
+The administrator downloads a zip (unmodified agent exe + `enrollment.json`) from the Enrollment page and double-clicks the
+exe; it installs itself, enrolls and deletes the token file. Verified: package contents/tenant isolation/token states
+(`AgentPackageTests`), the extracted `enrollment.json` enrolling an agent with the token's branch/department, and live
+runs where `scripts/smoke-agent.sh` downloads real zips from a running API and runs the extracted agent (Linux build) for
+three terminals; the browser download button; the Docker image bundling the Windows agent and serving packages with the
+correct URL and a pin matching the live TLS certificate.
 
 ## Database changes
 

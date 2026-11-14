@@ -234,3 +234,22 @@ department is "not found". The columns have tenant-safe composite foreign keys w
 `ON DELETE SET NULL (column)` (migration `DeviceEnrollmentPlacement`): deleting a store clears only that
 reference and the token stays usable. Re-enrolling known hardware never overrides an existing
 assignment; the token's placement only fills in an empty one.
+
+## Agent package (download instead of a pasted command)
+
+`POST /api/v1/enrollment-tokens/package` (admin) takes the plaintext token the administrator has just created
+(the server only stores its hash) and returns `SolvixAgent-<workspace>-<token>.zip`: the agent exe from
+`Solvix:Devices:AgentPackage:Directory` **byte-for-byte** (so the Authenticode signature stays valid), its
+`appsettings.json`, `README.txt` and an `enrollment.json` (`Solvix.Agent.Contracts.AgentEnrollmentFile`: agent URL from
+`AgentPackage:PublicServerUrl`, the token, its expiry, optional certificate pin, workspace and placement for display).
+The token is verified in constant time inside the caller's tenant; another tenant's token, a forged secret, or
+an unknown id are "not found", and revoked / expired / used-up tokens are refused (`enrollment_token_not_active`).
+A server without a published agent answers `agent_package_unavailable`. The response is `no-store`.
+
+The certificate pin is `AgentPackage:ServerCertificateSha256`, or, with the generated development agent TLS
+certificate, derived from that certificate automatically. The Docker image builds the Windows agent
+(unsigned) into `/opt/solvix/agent-package`; in production mount the signed exe over it.
+
+The token deliberately travels in a separate file, not inside the exe: editing a signed exe invalidates its signature,
+which agents and updates depend on. The exe installs itself (`AgentInstaller`) and deletes `enrollment.json` after
+use. See `src/agent/README.md`.

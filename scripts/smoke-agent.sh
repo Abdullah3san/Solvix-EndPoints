@@ -1,37 +1,26 @@
 #!/usr/bin/env bash
-# End-to-end smoke test of the agent AS A COMMAND against a running Solvix API.
+# End-to-end smoke test of the agent PACKAGE flow against a running Solvix API.
 #
-# Registers a throw-away workspace with two stores, creates one enrollment token
-# per store, then runs the published agent binary's CLI (enroll + run) for three
-# terminals and verifies that each device appears in the right branch/department.
+# Registers a throw-away workspace with two stores, creates one enrollment token per store, then does what an
+# administrator does: downloads the agent package (zip) for each token, extracts it, and runs the agent from the
+# extracted folder. The server URL and token come from the package's enrollment.json -- nothing is pasted.
+# Verifies each device lands in the right branch/department and that tokens are single-purpose.
 #
-#   scripts/smoke-agent.sh <api-base> <agent-url> [agent-binary] [server-cert-sha256]
-#   scripts/smoke-agent.sh http://localhost:8080 https://localhost:8443/ ./artifacts/agent/Solvix.Agent
+# The API must have an agent package configured (Solvix:Devices:AgentPackage:Directory with the agent binary named
+# Solvix.Agent.exe -- built into the Docker image). To run the agent on this machine the package must contain a
+# build for this OS (e.g. `dotnet publish src/agent/Solvix.Agent -c Release -r linux-x64`, copied to the package
+# directory as Solvix.Agent.exe). The agent endpoint must be reachable at the URL configured as PublicServerUrl.
 #
-# Without an agent binary the script publishes one for the current OS. A pin is
-# only needed when the agent endpoint uses a self-signed certificate; if omitted
-# it is read from the endpoint with openssl.
+#   scripts/smoke-agent.sh <api-base>
+#   scripts/smoke-agent.sh http://localhost:8080
 set -euo pipefail
 API="${1:?api base url, e.g. http://localhost:8080}"
-AGENT_URL="${2:?agent endpoint, e.g. https://localhost:8443/}"
-AGENT="${3:-}"
-PIN="${4:-}"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 V1="$API/api/v1"
 JSON='Content-Type: application/json'
 fail() { echo "FAIL: $*" >&2; exit 1; }
 field() { python3 -c "import sys,json;print(json.load(sys.stdin)$1)"; }
-
-if [[ -z "$AGENT" ]]; then
-  echo "== publishing the agent"
-  dotnet publish "$(dirname "$0")/../src/agent/Solvix.Agent" -c Release -o "$WORK/bin" >/dev/null
-  AGENT="$WORK/bin/Solvix.Agent"
-fi
-if [[ -z "$PIN" && "$AGENT_URL" == https://* ]]; then
-  hostport="${AGENT_URL#https://}"; hostport="${hostport%%/*}"
-  PIN="$(echo | openssl s_client -connect "$hostport" -servername "${hostport%%:*}" 2>/dev/null | openssl x509 -noout -fingerprint -sha256 | cut -d= -f2 | tr -d :)"
-fi
 
 slug="smoke-$RANDOM$RANDOM"
 echo "== registering workspace $slug"
@@ -48,16 +37,23 @@ T_BER="$(post enrollment-tokens "{\"name\":\"Berlin tills\",\"maxUses\":2,\"devi
 T_PAR="$(post enrollment-tokens "{\"name\":\"Paris POS\",\"maxUses\":1,\"deviceGroupId\":\"$GRP\",\"branchId\":\"$PAR\"}" | field '["token"]')"
 
 export SolvixAgent__Updates__Enabled=false
-pin_args=(); [[ -n "$PIN" ]] && pin_args=(--pin "$PIN")
-for terminal in "berlin-1:$T_BER" "berlin-2:$T_BER" "paris-1:$T_PAR"; do
-  name="${terminal%%:*}"; token="${terminal#*:}"
-  export SolvixAgent__DataDirectory="$WORK/$name"
-  echo "== terminal $name"
-  "$AGENT" enroll --server "$AGENT_URL" --token "$token" "${pin_args[@]}" >/dev/null
-  timeout 12 "$AGENT" >"$WORK/$name.log" 2>&1 || true
-  grep -q "Enrolled as device" "$WORK/$name.log" || { cat "$WORK/$name.log"; fail "$name did not enroll"; }
-  "$AGENT" status | grep -q "Enrolled: *True" || fail "$name status does not say enrolled"
-done
+run_terminal() { # <name> <token>
+  local name="$1" token="$2" dir="$WORK/$1"
+  mkdir -p "$dir"
+  echo "== terminal $name: download package"
+  curl -fsS -X POST "$V1/enrollment-tokens/package" -H "Authorization: Bearer $JWT" -H "$JSON" -d "{\"token\":\"$token\"}" -o "$dir/package.zip"
+  python3 -m zipfile -e "$dir/package.zip" "$dir/package"
+  [[ -f "$dir/package/Solvix.Agent.exe" && -f "$dir/package/enrollment.json" ]] || fail "$name: package is incomplete"
+  chmod +x "$dir/package/Solvix.Agent.exe"
+  export SolvixAgent__DataDirectory="$dir/data"
+  "$dir/package/Solvix.Agent.exe" enroll >/dev/null          # no --server/--token: read from enrollment.json
+  [[ ! -e "$dir/package/enrollment.json" ]] || fail "$name: enrollment.json was not deleted after use"
+  timeout 12 "$dir/package/Solvix.Agent.exe" run >"$dir/agent.log" 2>&1 || true
+  grep -q "Enrolled as device" "$dir/agent.log" || { cat "$dir/agent.log"; fail "$name did not enroll"; }
+}
+run_terminal berlin-1 "$T_BER"
+run_terminal berlin-2 "$T_BER"
+run_terminal paris-1 "$T_PAR"
 
 echo "== verifying on the platform"
 devices="$(get 'devices?pageSize=50')"
@@ -74,10 +70,8 @@ for id in $(echo "$devices" | python3 -c 'import sys,json;[print(d["id"]) for d 
 done
 [[ $berlin == 2 && $paris == 1 ]] || fail "placement wrong (berlin=$berlin paris=$paris)"
 
-echo "== exhausted token is refused"
-export SolvixAgent__DataDirectory="$WORK/berlin-3"
-"$AGENT" enroll --server "$AGENT_URL" --token "$T_BER" "${pin_args[@]}" >/dev/null
-timeout 8 "$AGENT" >"$WORK/berlin-3.log" 2>&1 || true
-"$AGENT" status | grep -q "REJECTED" || fail "rejected token not reported by status"
+echo "== a used-up token can no longer be packaged or enrolled"
+code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "$V1/enrollment-tokens/package" -H "Authorization: Bearer $JWT" -H "$JSON" -d "{\"token\":\"$T_PAR\"}")"
+[[ "$code" == "409" ]] || fail "expected 409 for an exhausted token, got $code"
 
-echo "OK: 3 terminals enrolled via the agent command and placed in the right store/department"
+echo "OK: 3 terminals enrolled from downloaded packages and placed in the right store/department"
