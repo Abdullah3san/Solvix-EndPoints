@@ -1,0 +1,51 @@
+{
+	email {$ACME_EMAIL}
+	# Empty in production. Tests may set CADDY_GLOBAL=local_certs to use Caddy's internal CA instead of Let's Encrypt.
+	{$CADDY_GLOBAL}
+}
+
+# --- Web app (people) ---------------------------------------------------------------------------
+{$SOLVIX_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	reverse_proxy web:3000 {
+		# Never let a browser-supplied header reach the app as if it came from us.
+		header_up -X-Client-Cert
+	}
+}
+
+# --- Agent endpoint (devices, mutual TLS) -------------------------------------------------------
+# The agent presents its device certificate in the TLS handshake. Caddy only *asks* for it (it is validated by
+# the API against the Solvix device CA and the database), then passes it to the API in X-Client-Cert.
+# Security-critical: the header is SET from the TLS session on every request. A set REPLACES whatever the client sent
+# (an empty value when no certificate was presented), so a client can never supply it. Do NOT add a separate
+# "header_up -X-Client-Cert": Caddy applies deletions last, which would delete the value that was just set.
+# Only agent routes are exposed on this hostname. (Verified by deploy/scripts/verify-proxy.sh.)
+agents.{$SOLVIX_DOMAIN} {
+	tls {
+		client_auth {
+			mode request
+		}
+	}
+	header -Server
+
+	@agent path /api/v1/agent/*
+	handle @agent {
+		request_body {
+			max_size 9MB
+		}
+		reverse_proxy api:8080 {
+			header_up X-Client-Cert {http.request.tls.client.certificate_der_base64}
+			# The API must see the request as HTTPS (certificate authentication requires it).
+			header_up X-Forwarded-Proto https
+		}
+	}
+	handle {
+		respond "Not found" 404
+	}
+}

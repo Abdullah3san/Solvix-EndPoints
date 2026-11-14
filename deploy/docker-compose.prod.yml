@@ -1,0 +1,146 @@
+# Solvix EndPoints - production stack for a single VPS (Docker Compose v2).
+#
+#   cp .env.production.example .env      # fill in every value (see deploy/README.md)
+#   ./scripts/deploy.sh                  # build, migrate, start, health-check
+#
+# Only Caddy publishes ports (80/443). Postgres, Redis, the API and the web app live on a private network.
+#   https://${SOLVIX_DOMAIN}          -> web app (Next.js; its server calls the API internally)
+#   https://agents.${SOLVIX_DOMAIN}   -> ONLY /api/v1/agent/* of the API, with the device certificate (mutual TLS)
+name: solvix
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-solvix}
+      SOLVIX_DB_MIGRATOR_USER: ${SOLVIX_DB_MIGRATOR_USER:-solvix_migrator}
+      SOLVIX_DB_MIGRATOR_PASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:?set SOLVIX_DB_MIGRATOR_PASSWORD}
+      SOLVIX_DB_APP_USER: ${SOLVIX_DB_APP_USER:-solvix_app}
+      SOLVIX_DB_APP_PASSWORD: ${SOLVIX_DB_APP_PASSWORD:?set SOLVIX_DB_APP_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-solvix}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a $$REDIS_PASSWORD ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    restart: unless-stopped
+
+  migrator:
+    build:
+      context: ..
+      dockerfile: src/backend/Dockerfile
+      target: migrator
+    image: solvix-migrator:${SOLVIX_VERSION:-latest}
+    environment:
+      ConnectionStrings__PostgresMigrator: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_MIGRATOR_USER:-solvix_migrator};Password=${SOLVIX_DB_MIGRATOR_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+    networks: [internal]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: src/backend/Dockerfile
+      target: api
+    image: solvix-api:${SOLVIX_VERSION:-latest}
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_APP_USER:-solvix_app};Password=${SOLVIX_DB_APP_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD}"
+      Solvix__Database__MigrateOnStartup: "false"
+      Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY (>= 32 chars)}
+      Solvix__Cors__AllowedOrigins__0: https://${SOLVIX_DOMAIN:?set SOLVIX_DOMAIN}
+      Solvix__Logging__Format: json
+      Kestrel__Endpoints__Http__Url: http://+:8080
+
+      # Device identity. TLS is terminated by Caddy, which forwards the agent's client certificate in X-Client-Cert.
+      # SAFE ONLY because the API is not published: only Caddy can reach it, and Caddy overwrites the header on
+      # every request (see Caddyfile). Never publish port 8080.
+      Solvix__Devices__ForwardedClientCertificateHeader: X-Client-Cert
+      Solvix__Devices__CertificateAuthority__AutoGenerate: ${SOLVIX_DEVICE_CA_AUTOGENERATE:-true}
+      Solvix__Devices__CertificateAuthority__PfxPath: /var/lib/solvix/device-ca.pfx
+      Solvix__Devices__CertificateAuthority__PfxPassword: ${SOLVIX_DEVICE_CA_PASSWORD:?set SOLVIX_DEVICE_CA_PASSWORD}
+      Solvix__Devices__Enrollment__RateLimitPerMinute: ${SOLVIX_ENROLLMENT_RATE_LIMIT:-30}
+
+      # Downloadable agent package. Defaults to the unsigned build inside the image; after dropping a code-signed
+      # Solvix.Agent.exe (+ appsettings.json) into deploy/agent-package set SOLVIX_AGENT_PACKAGE_DIR=/opt/solvix/signed-agent.
+      Solvix__Devices__AgentPackage__Directory: ${SOLVIX_AGENT_PACKAGE_DIR:-/opt/solvix/agent-package}
+      Solvix__Devices__AgentPackage__PublicServerUrl: ${SOLVIX_AGENT_PUBLIC_URL:-https://agents.${SOLVIX_DOMAIN}/}
+      # Only for a private/self-signed agent certificate; empty with Let's Encrypt (the OS already trusts it).
+      Solvix__Devices__AgentPackage__ServerCertificateSha256: ${SOLVIX_AGENT_TLS_CERT_SHA256:-}
+    volumes:
+      - solvix-pki:/var/lib/solvix
+      - ./agent-package:/opt/solvix/signed-agent:ro
+    networks: [internal]
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../src/frontend
+      dockerfile: Dockerfile
+    image: solvix-web:${SOLVIX_VERSION:-latest}
+    environment:
+      SOLVIX_API_INTERNAL_URL: http://api:8080
+      SOLVIX_COOKIE_SECURE: "true"
+    networks: [internal]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      SOLVIX_DOMAIN: ${SOLVIX_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL (Let's Encrypt contact)}
+      CADDY_GLOBAL: ${CADDY_GLOBAL:-}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [internal]
+    depends_on:
+      - web
+      - api
+    restart: unless-stopped
+
+networks:
+  internal:
+
+volumes:
+  postgres-data:
+  redis-data:
+  solvix-pki:
+  caddy-data:
+  caddy-config:

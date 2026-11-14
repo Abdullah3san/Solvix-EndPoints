@@ -33,3 +33,9 @@ Thumbs.db
 .docker-data/
 dump.rdb
 .solvix/
+
+# deploy
+deploy/.env
+deploy/backups/
+deploy/agent-package/*
+!deploy/agent-package/.gitkeep
