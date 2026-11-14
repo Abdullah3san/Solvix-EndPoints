@@ -90,6 +90,7 @@ public sealed record CheckResultDto(
     string Title,
     string Evidence,
     string? RemediationActionKey,
+    string? RemediationParameter,
     ExplanationDto Explanation);
 
 /// <summary>What the latest report says about the device, grouped by Windows security feature.</summary>

@@ -47,6 +47,11 @@ Development settings live in `src/backend/Solvix.Api/appsettings.Development.jso
 (Redis password `solvix_redis_dev`; start Redis with `redis-server --requirepass solvix_redis_dev`
 or change the connection string).
 
+## Endpoint security (Phase 10)
+
+Posture visibility, compliance scoring and approval-gated remediation for Windows devices. It is **not** antivirus or EDR.
+See [docs/PHASE-10-SECURITY.md](docs/PHASE-10-SECURITY.md) and [agent/windows/README.md](agent/windows/README.md).
+
 ## Repository layout
 
 ```
@@ -57,6 +62,7 @@ src/backend/
     Solvix.Modules.Tenancy/      tenant entity, registration, management, tenant directory
     Solvix.Modules.Identity/     users, memberships, JWT auth, member management
     Solvix.Modules.Organization/ company profile, branches, departments
+    Solvix.Modules.Security/     Phase 10: endpoint security posture, findings, policy, approvals, audit
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/frontend/                 Next.js app (BFF proxy, app shell, feature pages)

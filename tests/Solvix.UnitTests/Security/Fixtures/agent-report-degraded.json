@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "collectedAtUtc": "2026-11-14T01:01:21.4278904Z",
+  "agentVersion": "1.0.0",
+  "hostname": "",
+  "osCaption": null,
+  "osVersion": null,
+  "isDomainJoined": null,
+  "defender": null,
+  "firewall": null,
+  "bitLocker": {
+    "available": false,
+    "tpmPresent": null,
+    "volumes": []
+  },
+  "localAdmins": null,
+  "usb": {
+    "storageDriverDisabled": null,
+    "denyWrite": false,
+    "denyRead": false
+  },
+  "software": [],
+  "configuration": {
+    "smb1ServerEnabled": null,
+    "uacEnabled": null,
+    "rdpEnabled": null,
+    "rdpNlaRequired": null,
+    "secureBootEnabled": null,
+    "windowsUpdateDisabledByPolicy": false
+  },
+  "events": [],
+  "errors": [
+    {
+      "section": "os",
+      "message": "The term 'Get-CimInstance' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    },
+    {
+      "section": "computer",
+      "message": "The term 'Get-CimInstance' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    },
+    {
+      "section": "defender",
+      "message": "Get-MpComputerStatus is not available (Microsoft Defender module missing)."
+    },
+    {
+      "section": "firewall",
+      "message": "The term 'Get-NetFirewallProfile' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    },
+    {
+      "section": "localAdmins",
+      "message": "The term 'Get-LocalGroupMember' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    },
+    {
+      "section": "configuration.smb1",
+      "message": "The term 'Get-SmbServerConfiguration' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    },
+    {
+      "section": "events.Security",
+      "message": "The term 'Get-WinEvent' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    },
+    {
+      "section": "events.System",
+      "message": "The term 'Get-WinEvent' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    },
+    {
+      "section": "events.Microsoft-Windows-Windows Defender/Operational",
+      "message": "The term 'Get-WinEvent' is not recognized as a name of a cmdlet, function, script file, or executable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again."
+    }
+  ]
+}

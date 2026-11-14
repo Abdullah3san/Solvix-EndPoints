@@ -110,7 +110,7 @@ internal sealed class EndpointService(
             .ThenBy(c => c.RuleKey, StringComparer.Ordinal)
             .Select(c => new CheckResultDto(
                 c.RuleKey, c.SubjectKey, RuleCatalog.TryGet(c.RuleKey, out var rule) ? rule.Category : RuleCategory.Configuration,
-                c.Outcome, c.Severity, c.Title, c.Evidence, c.RemediationActionKey, ExplanationDto.For(c.RuleKey)))
+                c.Outcome, c.Severity, c.Title, c.Evidence, c.RemediationActionKey, c.RemediationParameter, ExplanationDto.For(c.RuleKey)))
             .ToList();
 
         var report = snapshot.Report;

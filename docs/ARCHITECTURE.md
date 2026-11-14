@@ -105,3 +105,8 @@ Serilog with compact JSON in containers (text in Development), enriched with
 environment. `GlobalExceptionHandler` turns domain exceptions and PostgreSQL
 constraint violations into RFC 9457 problem details with a stable `code` and, for
 validation, an `errors` map keyed by camelCase property.
+
+
+## Phase 10 addendum
+
+The `Security` module adds nine tenant-owned tables (all under forced RLS; `security_audit` is append-only) and an anonymous, device-key-authenticated ingest surface that runs inside a tenant-bound scope created by `ITenantScopeFactory`. See [PHASE-10-SECURITY.md](PHASE-10-SECURITY.md).

@@ -10,7 +10,7 @@ import { SESSION_COOKIE, isSessionValid } from "@/lib/auth/session";
  * is allowed, so the proxy cannot be used to reach other upstream paths.
  */
 const FORWARDED_REQUEST_HEADERS = ["content-type", "accept", "x-correlation-id"];
-const FORWARDED_RESPONSE_HEADERS = ["content-type", "x-correlation-id", "api-supported-versions", "location"];
+const FORWARDED_RESPONSE_HEADERS = ["content-type", "content-disposition", "x-correlation-id", "api-supported-versions", "location"];
 
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
