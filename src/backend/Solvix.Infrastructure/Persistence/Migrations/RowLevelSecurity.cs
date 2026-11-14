@@ -24,6 +24,7 @@ public static class RowLevelSecurity
         .. AssetManagementSecurityMigration.TenantTables,
         .. RemoteManagementSecurityMigration.TenantTables,
         .. SoftwareManagementSecurityMigration.TenantTables,
+        .. AddAssistant.TenantTables,
     ];
 
     public static void CreateHelperFunctions(MigrationBuilder migrationBuilder)

@@ -14,6 +14,10 @@ using Solvix.SharedKernel.Tenancy;
 [Collection(ApiCollection.Name)]
 public sealed class MigrationTests(ApiFixture fixture)
 {
+    /// <summary>Every tenant table across all migrations that enable Row-Level Security.</summary>
+    internal static readonly string[] AllTenantTables =
+        [.. RowLevelSecurityMigration.TenantTables, .. Solvix.Infrastructure.Persistence.Migrations.AddAssistant.TenantTables];
+
     [Fact]
     public async Task All_migrations_are_applied_and_model_matches_snapshot()
     {

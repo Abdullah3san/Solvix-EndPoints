@@ -114,6 +114,11 @@ public static class InfrastructureServiceCollectionExtensions
             .AddNpgSql(configuration.GetConnectionString(PostgresConnectionName)!, name: "postgres", tags: ["ready"])
             .AddRedis(redis, name: "redis", tags: ["ready"]);
 
+        // Real fleet data for the AI assistant's IFleetQueryService port. Registered before the modules:
+        // the assistant only adds its "not connected" placeholder when nothing else is registered
+        // (its demo fleet, used in Development/tests when enabled, still replaces this).
+        services.AddScoped<Solvix.SharedKernel.Fleet.IFleetQueryService, Solvix.Infrastructure.Fleet.PlatformFleetQueryService>();
+
         foreach (var module in SolvixModules.All)
         {
             module.ConfigureServices(services, configuration);

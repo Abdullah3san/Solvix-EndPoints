@@ -65,6 +65,22 @@ public static class Permissions
         public const string Manage = "mdm.manage";
     }
 
+    /// <summary>
+    /// AI IT Assistant (Phase 11). The assistant acts only as the signed-in user: its tools
+    /// additionally check the permission of the data they read (devices.view, software.view, ...).
+    /// </summary>
+    public static class Assistant
+    {
+        /// <summary>Chat, tickets, AI reports and knowledge base search.</summary>
+        public const string Use = "assistant.use";
+
+        /// <summary>Knowledge base management, proposing remediation, approving Low/Medium risk proposals, the AI audit log.</summary>
+        public const string Manage = "assistant.manage";
+
+        /// <summary>Approving High risk remediation proposals.</summary>
+        public const string ApproveHigh = "assistant.approve_high";
+    }
+
     public static class Users
     {
         public const string View = "users.view";

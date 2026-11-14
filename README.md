@@ -95,6 +95,12 @@ Development settings live in `src/backend/Solvix.Api/appsettings.Development.jso
 or change the connection string). Without an SMTP server, e-mails (including their
 one-time links) are written to the API log in Development only.
 
+## AI assistant (Phase 11)
+
+Natural-language assistant with tool calling, knowledge base, tickets, reports and approval-gated remediation
+proposals. Set `ANTHROPIC_API_KEY` in `.env` (and `SOLVIX_ASSISTANT_DEMO_FLEET=true` to try it with a synthetic fleet
+until the device modules exist). Design, security model and limitations: [docs/PHASE-11-SUMMARY.md](docs/PHASE-11-SUMMARY.md).
+
 ## Repository layout
 
 ```
@@ -108,6 +114,7 @@ src/backend/
     Solvix.Modules.Software/     packages, deployments, approvals, inventory, restriction policies
     Solvix.Modules.Devices/      devices, enrollment, device CA, mTLS device auth, inventory, groups
     Solvix.Modules.Assets/       asset register, lifecycle, audits, depreciation, labels, endpoint matching
+    Solvix.Modules.Assistant/    AI assistant: tools, knowledge base, proposals, tickets, reports, audit
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/shared/Solvix.Agent.Contracts/  wire contracts shared by agent and API

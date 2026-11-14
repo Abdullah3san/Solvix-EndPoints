@@ -161,6 +161,13 @@ services:
       # only readable by the API. Back it up together with the database.
       Solvix__Software__Storage__RootPath: /var/lib/solvix-packages
       Solvix__Software__MaxPackageBytes: ${SOLVIX_MAX_PACKAGE_BYTES:-2147483648}
+
+      # --- AI IT Assistant (Phase 11) -----------------------------------------------------
+      # Server-side only: the key never reaches the browser or the model. Empty = assistant
+      # pages explain that the AI model is not configured; everything else keeps working.
+      Solvix__Assistant__Llm__ApiKey: ${ANTHROPIC_API_KEY:-}
+      Solvix__Assistant__Llm__Model: ${SOLVIX_ASSISTANT_MODEL:-claude-sonnet-5-5}
+      Solvix__Assistant__UseDemoFleet: "false"
     volumes:
       - solvix-packages:/var/lib/solvix-packages
     secrets:

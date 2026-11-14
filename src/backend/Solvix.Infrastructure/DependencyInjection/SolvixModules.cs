@@ -3,6 +3,7 @@ namespace Solvix.Infrastructure.DependencyInjection;
 using System.Reflection;
 using Solvix.Modules.Assets;
 using Solvix.Modules.Devices;
+using Solvix.Modules.Assistant;
 using Solvix.Modules.Identity;
 using Solvix.Modules.Organization;
 using Solvix.Modules.RemoteManagement;
@@ -22,6 +23,7 @@ public static class SolvixModules
         new AssetsModule(),
         new RemoteManagementModule(),
         new SoftwareModule(),
+        new AssistantModule(),
     ];
 
     public static IReadOnlyList<Assembly> ConfigurationAssemblies { get; } =

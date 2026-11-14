@@ -299,7 +299,7 @@ public sealed class DeviceManagementApiTests(ApiFixture fixture)
         Assert.Equal(0, await update.ExecuteNonQueryAsync());
     }
 
-    private static InventoryReport SampleInventory(string hostname) => new()
+    internal static InventoryReport SampleInventory(string hostname) => new()
     {
         CollectedAtUtc = DateTimeOffset.UtcNow,
         AgentVersion = DeviceTestKit.AgentVersion,

@@ -73,6 +73,7 @@ public static class SystemRoles
             Permissions.Assets.View, Permissions.Assets.Create, Permissions.Assets.Edit, Permissions.Assets.Transfer,
             Permissions.Mdm.Manage, Permissions.Reports.View, Permissions.Users.View, Permissions.Organization.View,
             .. ItManagerSoftware,
+            Permissions.Assistant.Use, Permissions.Assistant.Manage,
         ]);
 
     public static SystemRoleDefinition ItTechnician { get; } = Define(
@@ -84,6 +85,7 @@ public static class SystemRoles
             .. ItTechnicianRemote,
             Permissions.Assets.View, Permissions.Assets.Edit, Permissions.Organization.View,
             Permissions.Software.View, Permissions.Software.Deploy,
+            Permissions.Assistant.Use,
         ]);
 
     public static SystemRoleDefinition AssetManager { get; } = Define(
@@ -94,6 +96,7 @@ public static class SystemRoles
             Permissions.Assets.View, Permissions.Assets.Create, Permissions.Assets.Edit, Permissions.Assets.Transfer,
             Permissions.Devices.View, Permissions.Reports.View, Permissions.Organization.View,
             Permissions.Software.View,
+            Permissions.Assistant.Use,
         ]);
 
     public static SystemRoleDefinition SecurityAdministrator { get; } = Define(
@@ -106,6 +109,7 @@ public static class SystemRoles
             Permissions.Remote.View, Permissions.Remote.SessionsView,
             Permissions.Reports.View, Permissions.Organization.View,
             Permissions.Software.View,
+            Permissions.Assistant.Use,
         ]);
 
     public static SystemRoleDefinition ReadOnlyAuditor { get; } = Define(

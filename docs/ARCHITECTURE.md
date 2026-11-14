@@ -452,3 +452,10 @@ for the application role *and* the schema owner.
 All register, matching, audit, maintenance, vendor, report and settings endpoints require
 `TenantAdmin` (they contain financial data). Members get `GET /my-assets` (their own assets, no
 costs). Device certificates satisfy no user policy. Other tenants' ids resolve to 404.
+
+## AI assistant (Phase 11)
+
+See `docs/PHASE-11-SUMMARY.md`. In short: `Solvix.Modules.Assistant` runs a tool-calling loop where every tool executes as
+the signed-in user through application services; device data and commands enter only through the SharedKernel ports
+`IFleetQueryService` / `IDeviceCommandGateway`; actions are proposals that humans approve; all AI activity is written to
+an append-only, tenant-isolated audit log. Its nine tables are tenant-scoped with FORCEd RLS like every other tenant table.

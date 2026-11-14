@@ -2,9 +2,12 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   BarChart3,
+  BookOpen,
+  Bot,
   Boxes,
   Building2,
   ClipboardCheck,
+  FileText,
   GitBranch,
   GitMerge,
   KeyRound,
@@ -21,6 +24,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Store,
+  Ticket,
   UserRoundCog,
   Users,
   Wrench,
@@ -92,6 +96,17 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "AI assistant",
+    items: [
+      { label: "Assistant", href: "/assistant", icon: Bot, permission: "assistant.use" },
+      { label: "Approvals", href: "/assistant/approvals", icon: ShieldCheck, permission: "assistant.use" },
+      { label: "Knowledge base", href: "/assistant/knowledge", icon: BookOpen, permission: "assistant.use" },
+      { label: "Tickets", href: "/assistant/tickets", icon: Ticket, permission: "assistant.use" },
+      { label: "Reports", href: "/assistant/reports", icon: FileText, permission: "assistant.use" },
+      { label: "AI audit log", href: "/assistant/audit", icon: ScrollText, permission: "assistant.manage" },
+    ],
+  },
+  {
     title: "Settings",
     items: [
       { label: "Workspace", href: "/settings/workspace", icon: Settings2 },
@@ -135,6 +150,10 @@ export const segmentLabels: Record<string, string> = {
   reports: "Reports",
   labels: "Labels",
   "my-assets": "My assets",
+  assistant: "AI assistant",
+  approvals: "Approvals",
+  knowledge: "Knowledge base",
+  tickets: "Tickets",
 };
 
 export function isActivePath(pathname: string, href: string): boolean {

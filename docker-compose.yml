@@ -114,6 +114,10 @@ services:
       Solvix__Software__Storage__RootPath: /var/lib/solvix-packages
       # Asset labels: QR codes encode {web URL}/assets/{id} when set, otherwise "SOLVIX-ASSET:{tag}".
       Solvix__Assets__LabelBaseUrl: ${SOLVIX_ASSET_LABEL_BASE_URL:-}
+      # AI assistant (Phase 11). The key is a secret: set it in .env, never commit it.
+      Solvix__Assistant__Llm__ApiKey: ${ANTHROPIC_API_KEY:-}
+      Solvix__Assistant__Llm__Model: ${SOLVIX_ASSISTANT_MODEL:-claude-sonnet-5-5}
+      Solvix__Assistant__UseDemoFleet: ${SOLVIX_ASSISTANT_DEMO_FLEET:-false}
     volumes:
       - solvix-pki:/var/lib/solvix
       - solvix-packages:/var/lib/solvix-packages
