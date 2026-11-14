@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Wire contracts shared by the Windows agent and the Solvix API. No
+    dependencies, so the agent stays small and the two sides cannot drift.
+  -->
+  <PropertyGroup>
+    <IsTrimmable>true</IsTrimmable>
+  </PropertyGroup>
+</Project>

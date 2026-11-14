@@ -1,0 +1,11 @@
+**/bin
+**/obj
+**/node_modules
+**/.next
+**/coverage
+**/TestResults
+.git
+.docker-data
+docs
+tests
+*.md

@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" />
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" />
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Solvix.SharedKernel\Solvix.SharedKernel.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Tenancy\Solvix.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Identity\Solvix.Modules.Identity.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Organization\Solvix.Modules.Organization.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Devices\Solvix.Modules.Devices.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Solvix.UnitTests" />
+    <InternalsVisibleTo Include="Solvix.IntegrationTests" />
+  </ItemGroup>
+</Project>

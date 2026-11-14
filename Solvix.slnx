@@ -1,0 +1,28 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/Solvix.Api/Solvix.Api.csproj" />
+    <Project Path="src/backend/Solvix.Infrastructure/Solvix.Infrastructure.csproj" />
+    <Project Path="src/backend/Solvix.Migrator/Solvix.Migrator.csproj" />
+    <Project Path="src/backend/Solvix.SharedKernel/Solvix.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/backend/Modules/">
+    <Project Path="src/backend/Modules/Solvix.Modules.Devices/Solvix.Modules.Devices.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj" />
+  </Folder>
+  <Folder Name="/src/agent/">
+    <Project Path="src/agent/Solvix.Agent/Solvix.Agent.csproj" />
+    <Project Path="src/agent/Solvix.Agent.Core/Solvix.Agent.Core.csproj" />
+    <Project Path="src/agent/Solvix.Agent.Windows/Solvix.Agent.Windows.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/shared/Solvix.Agent.Contracts/Solvix.Agent.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Solvix.Agent.Tests/Solvix.Agent.Tests.csproj" />
+    <Project Path="tests/Solvix.IntegrationTests/Solvix.IntegrationTests.csproj" />
+    <Project Path="tests/Solvix.UnitTests/Solvix.UnitTests.csproj" />
+  </Folder>
+</Solution>

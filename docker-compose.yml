@@ -1,0 +1,120 @@
+# Local development stack. Copy .env.example to .env first.
+#   docker compose up --build
+# Services:
+#   postgres  - PostgreSQL 16 with the two application roles (init script)
+#   redis     - Redis 7 (password protected)
+#   migrator  - applies EF Core migrations as the schema owner, then exits
+#   api       - ASP.NET Core API (runtime role, RLS enforced)   -> http://localhost:${API_HTTP_PORT:-8080}
+#   web       - Next.js app                                     -> http://localhost:${WEB_PORT:-3000}
+name: solvix
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-solvix}
+      SOLVIX_DB_MIGRATOR_USER: ${SOLVIX_DB_MIGRATOR_USER:-solvix_migrator}
+      SOLVIX_DB_MIGRATOR_PASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:-solvix_migrator_dev}
+      SOLVIX_DB_APP_USER: ${SOLVIX_DB_APP_USER:-solvix_app}
+      SOLVIX_DB_APP_PASSWORD: ${SOLVIX_DB_APP_PASSWORD:-solvix_app_dev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-solvix}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-solvix_redis_dev}", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-solvix_redis_dev} ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  migrator:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: migrator
+    environment:
+      ConnectionStrings__PostgresMigrator: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_MIGRATOR_USER:-solvix_migrator};Password=${SOLVIX_DB_MIGRATOR_PASSWORD:-solvix_migrator_dev}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-solvix_redis_dev}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      target: api
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_APP_USER:-solvix_app};Password=${SOLVIX_DB_APP_PASSWORD:-solvix_app_dev}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:-solvix_redis_dev}"
+      Solvix__Database__MigrateOnStartup: "false"
+      Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY in .env}
+      Solvix__Jwt__Issuer: ${SOLVIX_JWT_ISSUER:-solvix-endpoints}
+      Solvix__Jwt__Audience: ${SOLVIX_JWT_AUDIENCE:-solvix-endpoints-web}
+      Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-60}
+      Solvix__Cors__AllowedOrigins__0: ${SOLVIX_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      Solvix__Logging__Format: json
+      # Endpoints: HTTP for the web app/BFF, dedicated mutual-TLS HTTPS endpoint for agents.
+      Kestrel__Endpoints__Http__Url: http://+:8080
+      Kestrel__Endpoints__Agents__Url: https://+:8443
+      Kestrel__Endpoints__Agents__Certificate__Path: /var/lib/solvix/agents-tls.pfx
+      Kestrel__Endpoints__Agents__Certificate__Password: ${SOLVIX_AGENT_TLS_PASSWORD:-dev-only-agent-tls}
+      # Development/evaluation: self-signed agent TLS certificate (agents pin its SHA-256).
+      Solvix__Devices__GenerateDevelopmentTlsCertificate: ${SOLVIX_AGENT_TLS_GENERATE:-true}
+      Solvix__Devices__DevelopmentTlsHostNames: ${SOLVIX_AGENT_TLS_HOSTNAMES:-localhost,127.0.0.1,api}
+      # Downloadable agent package (signed exe + enrollment.json), published into the image at build time.
+      Solvix__Devices__AgentPackage__Directory: /opt/solvix/agent-package
+      Solvix__Devices__AgentPackage__PublicServerUrl: ${SOLVIX_AGENT_PUBLIC_URL:-https://localhost:8443/}
+      Solvix__Devices__AgentPackage__ServerCertificateSha256: ${SOLVIX_AGENT_TLS_CERT_SHA256:-}
+      # Device CA: generated once and kept on the solvix-pki volume (use a managed CA bundle in production).
+      Solvix__Devices__CertificateAuthority__AutoGenerate: ${SOLVIX_DEVICE_CA_AUTOGENERATE:-true}
+      Solvix__Devices__CertificateAuthority__PfxPath: /var/lib/solvix/device-ca.pfx
+      Solvix__Devices__CertificateAuthority__PfxPassword: ${SOLVIX_DEVICE_CA_PASSWORD:-dev-only-device-ca}
+    volumes:
+      - solvix-pki:/var/lib/solvix
+    ports:
+      - "${API_HTTP_PORT:-8080}:8080"
+      - "${API_AGENT_PORT:-8443}:8443"
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    environment:
+      SOLVIX_API_INTERNAL_URL: ${SOLVIX_API_INTERNAL_URL:-http://api:8080}
+      SOLVIX_COOKIE_SECURE: "false"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  solvix-pki:
