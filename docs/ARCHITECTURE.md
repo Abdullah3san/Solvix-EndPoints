@@ -105,3 +105,151 @@ Serilog with compact JSON in containers (text in Development), enriched with
 environment. `GlobalExceptionHandler` turns domain exceptions and PostgreSQL
 constraint violations into RFC 9457 problem details with a stable `code` and, for
 validation, an `errors` map keyed by camelCase property.
+
+---
+
+# Device management (Phase 03)
+
+## Components
+
+```
+Windows device                                         Solvix platform
+┌──────────────────────────────┐   outbound HTTPS     ┌──────────────────────────────────────────┐
+│ SolvixAgent service          │   mutual TLS         │ Kestrel "Agents" endpoint :8443          │
+│ (NT SERVICE\SolvixAgent)     │ ───────────────────► │  (or TLS proxy + forwarded cert header)  │
+│  runtime loop · inventory    │                      │ DeviceCertificate auth handler           │
+│  key in TPM / CNG (no export)│                      │  → DeviceCredentialValidator (RLS scope) │
+│  logs %ProgramData%\…\logs   │                      │ Devices module (Solvix.Modules.Devices)  │
+└──────────────────────────────┘                      │ Device CA (ECDSA P-384, PKCS#12)         │
+  Solvix Agent Updater task (SYSTEM)                  └──────────────────────────────────────────┘
+  installs only re-verified staged MSIs                 Admin UI / API (JWT, unchanged)
+```
+
+`Solvix.Modules.Devices` follows the module pattern of Phase 01 and depends only on the
+SharedKernel and `Solvix.Agent.Contracts`. It reaches Identity and Organization through two
+new read-only SharedKernel contracts, `IMemberDirectory` and `IOrganizationDirectory`.
+
+## Device identity and authentication
+
+1. **Enrollment token** — created by a tenant admin, `svxe_` + base64url(tenantId ‖ tokenId ‖
+   256-bit secret). Only SHA-256(secret) is stored. Default lifetime 24 h, maximum 7 days
+   (configurable), limited uses, revocable, shown once. The embedded tenant id lets the server bind
+   the anonymous request to that tenant *before* reading the token row, so the lookup runs under RLS;
+   a tampered tenant or token id simply finds nothing.
+2. **Enrollment** (`POST /api/v1/agent/enroll`, anonymous, rate limited per client IP): token
+   checks (constant-time hash compare, expiry, revocation, remaining uses) → CSR validation
+   (signature = proof of possession; ECDSA P-256/P-384 or RSA 2048–4096; requested subject ignored)
+   → atomic token consumption (`UPDATE … WHERE use_count < max_uses`) → device created or re-enrolled
+   → device CA signs a client certificate → one transaction; any failure leaves the token unused.
+3. **Device certificate** — `CN=<deviceId>, OU=<tenantId>`, SAN `urn:solvix:device:<tenant>:<device>`,
+   EKU clientAuth, 90 days. Only the public certificate is stored (`device_credentials`, keyed by
+   SHA-256 thumbprint); the private key never leaves the device.
+4. **Every agent request** — the `DeviceCertificate` scheme validates the chain against the device
+   CA only (`CustomRootTrust`, never the OS store), validity period and EKU. The validator then reads
+   the tenant from the SAN, checks the tenant is active, binds the tenant context and verifies, under
+   RLS, that the thumbprint belongs to that device, is not revoked and the device is active. Agent
+   endpoints require policy `Device` (certificate scheme only); user endpoints keep the JWT default
+   scheme, so neither credential type can call the other's API.
+5. **Renewal** — `POST /api/v1/agent/certificate` with a new CSR. The previous certificate stays
+   valid until the new one is first used, then it is revoked (`Superseded`): an agent that crashes
+   mid-renewal is never locked out.
+6. **Revocation** — retiring a device revokes all of its credentials immediately; deleting it removes
+   them. Re-enrollment of the same hardware revokes the previous credentials (`ReEnrolled`).
+
+TLS can terminate in Kestrel (named endpoint `Agents`, `ClientCertificateMode.AllowCertificate`) or
+at a trusted reverse proxy that forwards the client certificate in a configured header
+(`Solvix:Devices:ForwardedClientCertificateHeader`). The header mode must only be enabled when the
+API is reachable exclusively through that proxy.
+
+## Duplicate devices
+
+The hardware fingerprint is SHA-256(SMBIOS UUID ‖ serial). Placeholder values (all-zero/all-F UUIDs,
+"To be filled by O.E.M.", …) produce no fingerprint, so unrelated machines are never merged. A
+unique index `(tenant_id, hardware_fingerprint)` keeps one record per machine *per tenant*; the
+same machine in two tenants yields two independent records. Re-enrolling known hardware keeps the
+record (groups, assignment, history) and revokes its old credentials; a *retired* device cannot
+re-enroll until its record is deleted.
+
+## Data model
+
+```
+devices (RLS)                  (tenant_id, id) AK; unique (tenant_id, hardware_fingerprint)
+  ├── device_credentials       FK (tenant_id, device_id) CASCADE; unique thumbprint
+  ├── device_inventories       FK (tenant_id, device_id) CASCADE; 1:1; jsonb report
+  └── device_group_memberships FK (tenant_id, device_id) CASCADE, FK (tenant_id, device_group_id) CASCADE
+device_groups (RLS)            unique (tenant_id, normalized_name)
+enrollment_tokens (RLS)        secret_hash bytea; FK (tenant_id, device_group_id) RESTRICT
+                               branch_id / department_id → branches / departments (tenant-safe, ON DELETE SET NULL)
+devices.assigned_user_id → users(id) ON DELETE SET NULL
+devices.(tenant_id, branch_id) → branches ON DELETE SET NULL (branch_id)
+devices.(tenant_id, department_id) → departments ON DELETE SET NULL (department_id)
+```
+
+All six tables are covered by the `tenant_isolation` policy (migration
+`DeviceManagementSecurity`), verified by `MigrationTests` through `TenantIsolatedTables.All`.
+Inventory-derived columns on `devices` (OS, model, IPs, MACs, agent version, last seen) are a
+denormalised summary for listing/filtering; the full validated report lives in
+`device_inventories.report_json`. Connectivity is derived: a device is *online* when it has
+been seen within `Agent:OfflineAfterSeconds` (default 300 s, i.e. 5 missed heartbeats).
+
+## API
+
+| Route | Auth | |
+|-------|------|--|
+| `POST /api/v1/agent/enroll` | anonymous + token | rate limited, 64 KB |
+| `POST /api/v1/agent/heartbeat` | device cert | health report → schedules + boolean hints |
+| `PUT /api/v1/agent/inventory` | device cert | ≤ 8 MB, bounded collections |
+| `POST /api/v1/agent/certificate` | device cert | renewal |
+| `GET /api/v1/agent/updates` | device cert | release offer from the platform catalog |
+| `GET /api/v1/devices` (+`stats`, `{id}`, `{id}/inventory`) | member | filters: search, status, connectivity, group, agent version, user |
+| `PUT /api/v1/devices/{id}` `…/assignment` `…/groups`, `POST …/inventory-request` `…/retire`, `DELETE` | admin | |
+| `/api/v1/device-groups` (+`{id}/devices`) | member read / admin write | |
+| `/api/v1/enrollment-tokens` (+`{id}/revoke`) | admin | token value returned once, `Cache-Control: no-store` |
+
+## Configuration (`Solvix:Devices`)
+
+| Key | Default | |
+|-----|---------|--|
+| `CertificateAuthority:PfxPath` / `PfxBase64` / `PfxPassword` | – | Device CA bundle (required in production) |
+| `CertificateAuthority:AutoGenerate` | `false` | Development/evaluation: create a CA (persisted to `PfxPath` if set) |
+| `CertificateAuthority:DeviceCertificateLifetimeDays` / `RenewalWindowDays` | 90 / 30 | |
+| `Enrollment:DefaultTokenLifetimeHours` / `MaxTokenLifetimeHours` / `MaxTokenUses` | 24 / 168 / 10000 | |
+| `Enrollment:RateLimitPerMinute` | 30 | per client IP |
+| `Agent:HeartbeatIntervalSeconds` / `InventoryIntervalMinutes` / `UpdateCheckIntervalMinutes` | 60 / 240 / 360 | delivered to agents |
+| `Agent:OfflineAfterSeconds` | 300 | |
+| `ForwardedClientCertificateHeader` | – | only behind a trusted TLS proxy |
+| `Releases[]` | – | `Version`, `Channel`, `DownloadUrl` (https), `Sha256`, `SizeBytes`, `Mandatory` |
+| `GenerateDevelopmentTlsCertificate` / `DevelopmentTlsHostNames` | `false` | self-signed cert for `Kestrel:Endpoints:Agents` (refused in Production) |
+
+The options are validated at start-up (ranges, release URLs/hashes, CA presence) and the CA is
+loaded eagerly, so misconfiguration fails fast.
+
+## Token placement (one token per store)
+
+An enrollment token may carry a group, a branch and/or a department. Devices enrolled with it are
+added to the group and assigned to the branch/department (a department implies its branch; a
+department that does not belong to the chosen branch is rejected). The references are validated
+through `IOrganizationDirectory` under the caller's tenant scope, so another tenant's branch or
+department is "not found". The columns have tenant-safe composite foreign keys with
+`ON DELETE SET NULL (column)` (migration `DeviceEnrollmentPlacement`): deleting a store clears only that
+reference and the token stays usable. Re-enrolling known hardware never overrides an existing
+assignment; the token's placement only fills in an empty one.
+
+## Agent package (download instead of a pasted command)
+
+`POST /api/v1/enrollment-tokens/package` (admin) takes the plaintext token the administrator has just created
+(the server only stores its hash) and returns `SolvixAgent-<workspace>-<token>.zip`: the agent exe from
+`Solvix:Devices:AgentPackage:Directory` **byte-for-byte** (so the Authenticode signature stays valid), its
+`appsettings.json`, `README.txt` and an `enrollment.json` (`Solvix.Agent.Contracts.AgentEnrollmentFile`: agent URL from
+`AgentPackage:PublicServerUrl`, the token, its expiry, optional certificate pin, workspace and placement for display).
+The token is verified in constant time inside the caller's tenant; another tenant's token, a forged secret, or
+an unknown id are "not found", and revoked / expired / used-up tokens are refused (`enrollment_token_not_active`).
+A server without a published agent answers `agent_package_unavailable`. The response is `no-store`.
+
+The certificate pin is `AgentPackage:ServerCertificateSha256`, or, with the generated development agent TLS
+certificate, derived from that certificate automatically. The Docker image builds the Windows agent
+(unsigned) into `/opt/solvix/agent-package`; in production mount the signed exe over it.
+
+The token deliberately travels in a separate file, not inside the exe: editing a signed exe invalidates its signature,
+which agents and updates depend on. The exe installs itself (`AgentInstaller`) and deletes `enrollment.json` after
+use. See `src/agent/README.md`.

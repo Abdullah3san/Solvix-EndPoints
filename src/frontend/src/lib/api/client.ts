@@ -66,3 +66,45 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => apiFetch<T>(path, { method: "PATCH", body }),
   delete: <T = void>(path: string) => apiFetch<T>(path, { method: "DELETE" }),
 };
+
+/** File name from a Content-Disposition header (RFC 6266 `filename*` or `filename`). */
+export function filenameFromContentDisposition(header: string | null, fallback: string): string {
+  if (!header) return fallback;
+  const encoded = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(header)?.[1];
+  const plain = /filename="?([^";]+)"?/i.exec(header)?.[1];
+  const raw = encoded ?? plain;
+  if (!raw) return fallback;
+  try {
+    const name = decodeURIComponent(raw.trim().replace(/^"|"$/g, ""));
+    // Never trust path separators from a header.
+    return name.replace(/[\\/]/g, "_") || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/** POSTs through the BFF and saves the binary response as a file (e.g. the agent package). */
+export async function downloadFile(path: string, body: unknown, fallbackName: string): Promise<string> {
+  const response = await fetch(buildUrl(path), {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, await problemFromResponse(response));
+  }
+  const name = filenameFromContentDisposition(response.headers.get("content-disposition"), fallbackName);
+  const url = URL.createObjectURL(await response.blob());
+  try {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+  return name;
+}

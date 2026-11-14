@@ -26,7 +26,7 @@ interface NotificationsContextValue {
 const NotificationsContext = React.createContext<NotificationsContextValue | null>(null);
 
 /**
- * In-app notification centre. Phase 01 has no server-side notification feed,
+ * In-app notification centre. There is no server-side notification feed yet,
  * so entries are produced by UI actions (e.g. "Branch created") and kept per
  * browser tab in sessionStorage. The provider exposes the same API a
  * push-based feed will use later, so consumers do not change.

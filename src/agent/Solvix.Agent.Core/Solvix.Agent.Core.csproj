@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\shared\Solvix.Agent.Contracts\Solvix.Agent.Contracts.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Solvix.Agent.Tests" />
+  </ItemGroup>
+</Project>

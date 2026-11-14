@@ -23,4 +23,24 @@ describe("sidebar", () => {
     expect(screen.getByRole("link", { name: /branches/i })).not.toHaveAttribute("aria-current");
     expect(screen.getByRole("link", { name: /dashboard/i })).toHaveAttribute("href", "/dashboard");
   });
+
+  it("shows endpoint management and hides enrollment from members", () => {
+    const { unmount } = render(
+      <SessionProvider session={session}>
+        <Sidebar open onClose={() => {}} />
+      </SessionProvider>,
+    );
+    expect(screen.getByRole("link", { name: /^devices$/i })).toHaveAttribute("href", "/endpoints/devices");
+    expect(screen.getByRole("link", { name: /device groups/i })).toHaveAttribute("href", "/endpoints/groups");
+    expect(screen.getByRole("link", { name: /enrollment/i })).toHaveAttribute("href", "/endpoints/enrollment");
+    unmount();
+
+    render(
+      <SessionProvider session={{ ...session, tenant: { ...session.tenant, role: "Member" as const } }}>
+        <Sidebar open onClose={() => {}} />
+      </SessionProvider>,
+    );
+    expect(screen.getByRole("link", { name: /^devices$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /enrollment/i })).not.toBeInTheDocument();
+  });
 });

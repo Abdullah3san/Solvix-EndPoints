@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Windows implementations (WMI, registry, CNG/TPM keys, DPAPI, Authenticode, MSI).
+    Every type is annotated [SupportedOSPlatform("windows")]; the platform analyzer
+    (CA1416) guarantees they are only reached behind OperatingSystem.IsWindows().
+  -->
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Management" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Solvix.Agent.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Solvix.Agent.Core\Solvix.Agent.Core.csproj" />
+  </ItemGroup>
+</Project>

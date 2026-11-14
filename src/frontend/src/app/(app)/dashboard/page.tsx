@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Building2, GitBranch, Network, Users } from "lucide-react";
+import { Building2, GitBranch, Monitor, Network, Users } from "lucide-react";
 import { serverApi } from "@/lib/api/server";
-import type { CompanyProfileDto, TenantOverviewDto } from "@/lib/api/types";
+import type { CompanyProfileDto, DeviceStatsDto, TenantOverviewDto } from "@/lib/api/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -11,21 +11,23 @@ import { formatDate } from "@/lib/utils";
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const [overview, profile] = await Promise.all([
+  const [overview, profile, devices] = await Promise.all([
     serverApi<TenantOverviewDto>("tenant/overview"),
     serverApi<CompanyProfileDto>("company-profile"),
+    serverApi<DeviceStatsDto>("devices/stats"),
   ]);
 
   const stats = [
     { label: "Members", value: overview.memberCount, icon: Users, href: "/settings/workspace" },
     { label: "Branches", value: overview.branchCount, icon: GitBranch, href: "/organization/branches" },
     { label: "Departments", value: overview.departmentCount, icon: Network, href: "/organization/departments" },
+    { label: `Devices · ${devices.online} online`, value: devices.active, icon: Monitor, href: "/endpoints/devices" },
   ];
 
   return (
     <>
       <PageHeader title={`Welcome to ${overview.tenant.name}`} description="A snapshot of your workspace." />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
           <Link key={stat.label} href={stat.href} className="rounded-lg">
             <Card className="transition-colors hover:border-primary/50">
