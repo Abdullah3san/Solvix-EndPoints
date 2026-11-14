@@ -24,6 +24,7 @@
     <ProjectReference Include="..\Modules\Solvix.Modules.RemoteManagement\Solvix.Modules.RemoteManagement.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Software\Solvix.Modules.Software.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Assistant\Solvix.Modules.Assistant.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Security\Solvix.Modules.Security.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Solvix.UnitTests" />

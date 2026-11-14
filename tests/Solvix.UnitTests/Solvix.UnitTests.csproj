@@ -21,6 +21,10 @@
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Assets\Solvix.Modules.Assets.csproj" />
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Software\Solvix.Modules.Software.csproj" />
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Assistant\Solvix.Modules.Assistant.csproj" />
+    <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Security\Solvix.Modules.Security.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Security\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

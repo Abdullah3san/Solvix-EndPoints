@@ -239,6 +239,13 @@ try
         AddClientPolicy(options, RateLimitPolicies.Email, o => o.Email);
         AddClientPolicy(options, RateLimitPolicies.Refresh, o => o.Refresh);
         AddClientPolicy(options, RateLimitPolicies.Registration, o => o.Registration);
+
+        // Endpoint security agents (Phase 10) authenticate with a device key, so they are limited
+        // by remote address before any key is checked.
+        options.AddPolicy(Solvix.Modules.Security.Api.RateLimitPolicies.DeviceIngest, httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 600, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
     });
 
     // ------------------------------------------------------ forwarded headers

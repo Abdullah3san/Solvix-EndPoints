@@ -1,16 +1,20 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  AlertTriangle,
   BarChart3,
   BookOpen,
   Bot,
   Boxes,
+  Bug,
   Building2,
   ClipboardCheck,
+  FileCheck,
   FileText,
   GitBranch,
   GitMerge,
   KeyRound,
+  Laptop,
   LayoutDashboard,
   Monitor,
   Network,
@@ -107,6 +111,20 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Endpoint security",
+    items: [
+      { label: "Overview", href: "/security", icon: ShieldCheck, permission: "posture.view" },
+      { label: "Devices", href: "/security/devices", icon: Laptop, permission: "posture.view" },
+      { label: "Findings", href: "/security/findings", icon: Bug, permission: "posture.view" },
+      { label: "Alerts", href: "/security/alerts", icon: AlertTriangle, permission: "posture.view" },
+      { label: "Approvals", href: "/security/approvals", icon: ClipboardCheck, permission: "posture.approve" },
+      { label: "Policies", href: "/security/policies", icon: FileCheck, permission: "posture.view" },
+      { label: "Vulnerable software", href: "/security/advisories", icon: ScrollText, permission: "posture.view" },
+      { label: "Audit trail", href: "/security/audit", icon: ScrollText, permission: "posture.view" },
+      { label: "Rules and scoring", href: "/security/rules", icon: BookOpen, permission: "posture.view" },
+    ],
+  },
+  {
     title: "Settings",
     items: [
       { label: "Workspace", href: "/settings/workspace", icon: Settings2 },
@@ -154,9 +172,17 @@ export const segmentLabels: Record<string, string> = {
   approvals: "Approvals",
   knowledge: "Knowledge base",
   tickets: "Tickets",
+  findings: "Findings",
+  alerts: "Alerts",
+  advisories: "Vulnerable software",
+  rules: "Rules and scoring",
 };
 
+/** Hrefs that are parents of other nav items must match exactly, or they would always look active. */
+const exactOnly = new Set(["/security"]);
+
 export function isActivePath(pathname: string, href: string): boolean {
+  if (exactOnly.has(href)) return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

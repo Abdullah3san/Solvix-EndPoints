@@ -101,6 +101,11 @@ Natural-language assistant with tool calling, knowledge base, tickets, reports a
 proposals. Set `ANTHROPIC_API_KEY` in `.env` (and `SOLVIX_ASSISTANT_DEMO_FLEET=true` to try it with a synthetic fleet
 until the device modules exist). Design, security model and limitations: [docs/PHASE-11-SUMMARY.md](docs/PHASE-11-SUMMARY.md).
 
+## Endpoint security (Phase 10)
+
+Posture visibility, compliance scoring and approval-gated remediation for Windows devices. It is **not** antivirus or EDR.
+See [docs/PHASE-10-SECURITY.md](docs/PHASE-10-SECURITY.md) and [agent/windows/README.md](agent/windows/README.md).
+
 ## Repository layout
 
 ```
@@ -115,6 +120,7 @@ src/backend/
     Solvix.Modules.Devices/      devices, enrollment, device CA, mTLS device auth, inventory, groups
     Solvix.Modules.Assets/       asset register, lifecycle, audits, depreciation, labels, endpoint matching
     Solvix.Modules.Assistant/    AI assistant: tools, knowledge base, proposals, tickets, reports, audit
+    Solvix.Modules.Security/     Phase 10: endpoint security posture, findings, policy, approvals, audit
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/shared/Solvix.Agent.Contracts/  wire contracts shared by agent and API

@@ -60,7 +60,7 @@ public sealed class MigrationTests(ApiFixture fixture)
 
         await using var connection = new NpgsqlConnection(fixture.Database.MigratorConnectionString);
         await connection.OpenAsync();
-        foreach (var table in tenantTables)
+        foreach (var table in tenantTables.Except(Phase10SecurityRlsMigration.AppendOnlyTables))
         {
             await using var command = new NpgsqlCommand(
                 """

@@ -72,6 +72,7 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             // The real fleet adapter is used everywhere; AssistantHost swaps in the demo fleet for chat tests.
             ["Solvix__Assistant__UseDemoFleet"] = "false",
             ["Solvix__Assistant__ChatPermitsPerMinute"] = "10000",
+            ["Solvix__Security__MinReportIntervalSeconds"] = "1",
             ["Serilog__MinimumLevel__Default"] = "Warning",
             ["Solvix__Devices__CertificateAuthority__AutoGenerate"] = "true",
             ["Solvix__Devices__ForwardedClientCertificateHeader"] = ForwardedCertificateHeader,

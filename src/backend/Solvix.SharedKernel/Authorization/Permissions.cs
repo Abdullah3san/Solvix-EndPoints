@@ -66,6 +66,25 @@ public static class Permissions
     }
 
     /// <summary>
+    /// Endpoint security management (Phase 10): posture, findings, alerts, security policies,
+    /// vulnerable-software advisories and approval-gated remediation.
+    /// </summary>
+    public static class EndpointSecurity
+    {
+        /// <summary>Read posture, findings, alerts, events, reports and the security audit trail.</summary>
+        public const string View = "posture.view";
+
+        /// <summary>Register security agents, triage findings and alerts, author policies and advisories, request remediation.</summary>
+        public const string Manage = "posture.manage";
+
+        /// <summary>Decide Low/Medium approvals (never one's own request).</summary>
+        public const string Approve = "posture.approve";
+
+        /// <summary>High-impact decisions: High risk remediation, enforcing policies, accepting High/Critical findings.</summary>
+        public const string ApproveHigh = "posture.approve_high";
+    }
+
+    /// <summary>
     /// AI IT Assistant (Phase 11). The assistant acts only as the signed-in user: its tools
     /// additionally check the permission of the data they read (devices.view, software.view, ...).
     /// </summary>

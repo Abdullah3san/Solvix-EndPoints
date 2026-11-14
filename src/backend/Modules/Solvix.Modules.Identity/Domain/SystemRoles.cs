@@ -74,6 +74,7 @@ public static class SystemRoles
             Permissions.Mdm.Manage, Permissions.Reports.View, Permissions.Users.View, Permissions.Organization.View,
             .. ItManagerSoftware,
             Permissions.Assistant.Use, Permissions.Assistant.Manage,
+            Permissions.EndpointSecurity.View, Permissions.EndpointSecurity.Manage, Permissions.EndpointSecurity.Approve,
         ]);
 
     public static SystemRoleDefinition ItTechnician { get; } = Define(
@@ -110,6 +111,8 @@ public static class SystemRoles
             Permissions.Reports.View, Permissions.Organization.View,
             Permissions.Software.View,
             Permissions.Assistant.Use,
+            Permissions.EndpointSecurity.View, Permissions.EndpointSecurity.Manage, Permissions.EndpointSecurity.Approve,
+            Permissions.EndpointSecurity.ApproveHigh,
         ]);
 
     public static SystemRoleDefinition ReadOnlyAuditor { get; } = Define(
@@ -121,6 +124,7 @@ public static class SystemRoles
             Permissions.Security.View, Permissions.Audit.View, Permissions.Reports.View, Permissions.Organization.View,
             Permissions.Remote.View, Permissions.Remote.SessionsView,
             Permissions.Software.View,
+            Permissions.EndpointSecurity.View,
         ]);
 
     public static IReadOnlyList<SystemRoleDefinition> All { get; } =

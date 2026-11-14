@@ -459,3 +459,7 @@ See `docs/PHASE-11-SUMMARY.md`. In short: `Solvix.Modules.Assistant` runs a tool
 the signed-in user through application services; device data and commands enter only through the SharedKernel ports
 `IFleetQueryService` / `IDeviceCommandGateway`; actions are proposals that humans approve; all AI activity is written to
 an append-only, tenant-isolated audit log. Its nine tables are tenant-scoped with FORCEd RLS like every other tenant table.
+
+## Phase 10 addendum
+
+The `Security` module adds nine tenant-owned tables (all under forced RLS; `security_audit` is append-only) and an anonymous, device-key-authenticated ingest surface that runs inside a tenant-bound scope created by `ITenantScopeFactory`. See [PHASE-10-SECURITY.md](PHASE-10-SECURITY.md).

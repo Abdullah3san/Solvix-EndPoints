@@ -30,6 +30,11 @@ internal sealed partial class GlobalExceptionHandler(
         }
 
         httpContext.Response.StatusCode = status;
+        if (exception is TooManyRequestsException tooMany)
+        {
+            httpContext.Response.Headers.RetryAfter = tooMany.RetryAfterSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+
         var problem = new ProblemDetails
         {
             Status = status,
@@ -59,6 +64,8 @@ internal sealed partial class GlobalExceptionHandler(
             ConflictException c => (StatusCodes.Status409Conflict, "Conflict", c.Code, null),
             ServiceUnavailableException s => (StatusCodes.Status503ServiceUnavailable, "Service unavailable", s.Code, null),
             PayloadTooLargeException p => (StatusCodes.Status413PayloadTooLarge, "Payload too large", p.Code, null),
+            TooManyRequestsException r => (StatusCodes.Status429TooManyRequests, "Too many requests", r.Code, null),
+            DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Conflict", "concurrent_update", null),
             UnauthorizedException u => (StatusCodes.Status401Unauthorized, "Unauthorized", u.Code, null),
             TenantInactiveException t => (StatusCodes.Status403Forbidden, "Tenant inactive", t.Code, null),
             TenantContextMissingException t => (StatusCodes.Status401Unauthorized, "Tenant context missing", t.Code, null),
