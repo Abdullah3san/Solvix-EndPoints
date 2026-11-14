@@ -24,6 +24,8 @@ COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
 USER nextjs
 EXPOSE 3000
+# 127.0.0.1, not localhost: busybox wget resolves localhost to ::1, but the server
+# listens on IPv4 only (HOSTNAME=0.0.0.0), so a localhost check is always refused.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=15s --retries=5 \
-  CMD wget -qO- http://localhost:3000/login >/dev/null || exit 1
+  CMD wget -qO- http://127.0.0.1:3000/login >/dev/null || exit 1
 CMD ["node", "server.js"]
