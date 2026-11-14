@@ -1,5 +1,8 @@
 # Architecture (Phases 01–02)
 
+> The original target architecture (system-wide design, ADR links) is kept in
+> [ARCHITECTURE-TARGET.md](ARCHITECTURE-TARGET.md); this document describes what is built.
+
 ## Modular monolith
 
 The backend is one deployable ASP.NET Core process composed of feature modules.
