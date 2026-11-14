@@ -14,8 +14,17 @@ import { isSessionValid } from "@/lib/auth/session";
  * the proxy cannot be used to reach other upstream paths, and the sign-in
  * endpoints (whose responses contain tokens) are not reachable through it.
  */
-const FORWARDED_REQUEST_HEADERS = ["content-type", "accept"];
-const FORWARDED_RESPONSE_HEADERS = ["content-type", "content-disposition", "x-correlation-id", "api-supported-versions", "location", "retry-after"];
+const FORWARDED_REQUEST_HEADERS = ["content-type", "accept", "x-correlation-id"];
+const FORWARDED_RESPONSE_HEADERS = [
+  "content-type",
+  "content-disposition",
+  "content-security-policy",
+  "x-content-type-options",
+  "x-correlation-id",
+  "api-supported-versions",
+  "location",
+  "retry-after",
+];
 
 // Responses of these endpoints carry tokens; they are only ever called by the dedicated /api/auth routes.
 const TOKEN_ENDPOINTS = new Set(["auth/login", "auth/refresh", "auth/mfa/verify", "auth/switch-tenant", "auth/logout", "tenant/register"]);

@@ -159,13 +159,13 @@ internal sealed partial class AssetMatchingService(
 
         var asset = await db.Set<Asset>().AsNoTracking().FirstAsync(a => a.Id == link.AssetId, cancellationToken);
         asset.EnsureNotDisposed();
-        _ = await RequireEndpointAsync(link.DeviceId, cancellationToken);
+        var endpoint = await RequireEndpointAsync(link.DeviceId, cancellationToken);
         await EnsureNotLinkedElsewhereAsync(link.AssetId, link.DeviceId, cancellationToken);
 
         var now = clock.UtcNow;
         link.Approve(now, user.UserId, request.Note);
         await SupersedeOthersAsync(link, now, cancellationToken);
-        audit.Record(AssetAuditTrail.LinkEntity, link.Id, link.AssetId, "endpoint_link.approved", $"Associated with endpoint {link.DeviceId} ({link.Confidence} confidence).");
+        audit.Record(AssetAuditTrail.LinkEntity, link.Id, link.AssetId, "endpoint_link.approved", $"Associated with endpoint {endpoint.Hostname} ({link.Confidence} confidence).");
         await AssetPersistence.SaveAsync(db, cancellationToken);
         return (await ToDtosAsync([link], cancellationToken))[0];
     }

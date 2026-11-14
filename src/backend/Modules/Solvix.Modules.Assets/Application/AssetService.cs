@@ -595,7 +595,8 @@ internal sealed class AssetService(
         var before = asset.Snapshot();
         asset.Assign(assignee, now);
         db.Set<AssetAssignment>().Add(AssetAssignment.Open(asset, assignee, now, user.UserId, request.ExpectedReturnDate, request.Notes));
-        audit.Asset(asset, "asset.assigned", $"Assigned to {assignee.Name ?? "member " + assignee.UserId}.", AssetAuditTrail.Diff(before, asset.Snapshot()));
+        var holder = assignee.Name ?? references.Assignee(assignee.UserId, null, null)?.DisplayName ?? "a workspace member";
+        audit.Asset(asset, "asset.assigned", $"Assigned to {holder}{(assignee.EmployeeNumber is null ? string.Empty : $" ({assignee.EmployeeNumber})")}.", AssetAuditTrail.Diff(before, asset.Snapshot()));
     }
 
     private void Return(Asset asset, AssetAssignment? open, AssetCondition? condition, string? notes)

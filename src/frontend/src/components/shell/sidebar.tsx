@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { navigation, isActivePath } from "./nav-config";
+import { navigation, activeHref } from "./nav-config";
 import { SolvixWordmark } from "./logo";
 import { hasPermission, useSession } from "@/components/providers/session-provider";
 
@@ -17,6 +17,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
   const session = useSession();
   const { tenant } = session;
+  const current = activeHref(pathname);
 
   return (
     <>
@@ -54,7 +55,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               <ul className="space-y-0.5">
                 {section.items
                   .map((item) => {
-                    const active = isActivePath(pathname, item.href);
+                    const active = item.href === current;
                     return (
                       <li key={item.href}>
                         <Link
@@ -79,7 +80,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="border-t border-sidebar-border px-5 py-3 text-xs text-sidebar-muted">Solvix EndPoints · Phase 06</div>
+        <div className="border-t border-sidebar-border px-5 py-3 text-xs text-sidebar-muted">Solvix EndPoints</div>
       </aside>
     </>
   );

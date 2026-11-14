@@ -112,6 +112,8 @@ services:
       Solvix__RemoteManagement__CommandSigning__KeyPath: /var/lib/solvix/command-signing.pem
       # Software management (Phase 07): uploaded packages, outside any web root, readable by the API only.
       Solvix__Software__Storage__RootPath: /var/lib/solvix-packages
+      # Asset labels: QR codes encode {web URL}/assets/{id} when set, otherwise "SOLVIX-ASSET:{tag}".
+      Solvix__Assets__LabelBaseUrl: ${SOLVIX_ASSET_LABEL_BASE_URL:-}
     volumes:
       - solvix-pki:/var/lib/solvix
       - solvix-packages:/var/lib/solvix-packages

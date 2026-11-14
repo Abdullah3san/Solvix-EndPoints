@@ -1,22 +1,29 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
+  BarChart3,
   Boxes,
   Building2,
   ClipboardCheck,
-  PackageOpen,
-  Rocket,
-  ShieldBan,
   GitBranch,
+  GitMerge,
   KeyRound,
   LayoutDashboard,
   Monitor,
   Network,
+  Package,
+  PackageCheck,
+  PackageOpen,
+  Rocket,
   ScrollText,
   Settings2,
+  ShieldBan,
   ShieldCheck,
+  SlidersHorizontal,
+  Store,
   UserRoundCog,
   Users,
+  Wrench,
 } from "lucide-react";
 import type { Permission } from "@/lib/api/types";
 
@@ -73,9 +80,22 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Assets",
+    items: [
+      { label: "Asset register", href: "/assets", icon: Package, permission: "assets.view" },
+      { label: "Endpoint matching", href: "/assets/matching", icon: GitMerge, permission: "assets.view" },
+      { label: "Physical audits", href: "/assets/audits", icon: ClipboardCheck, permission: "assets.view" },
+      { label: "Maintenance", href: "/assets/maintenance", icon: Wrench, permission: "assets.view" },
+      { label: "Vendors", href: "/assets/vendors", icon: Store, permission: "assets.view" },
+      { label: "Reports", href: "/assets/reports", icon: BarChart3, permission: "reports.view" },
+      { label: "My assets", href: "/my-assets", icon: PackageCheck },
+    ],
+  },
+  {
     title: "Settings",
     items: [
       { label: "Workspace", href: "/settings/workspace", icon: Settings2 },
+      { label: "Asset management", href: "/settings/assets", icon: SlidersHorizontal, permission: "assets.edit" },
       { label: "My account", href: "/account/security", icon: KeyRound },
     ],
   },
@@ -107,8 +127,28 @@ export const segmentLabels: Record<string, string> = {
   inventory: "Inventory",
   policies: "Policies",
   new: "New",
+  assets: "Assets",
+  matching: "Endpoint matching",
+  audits: "Physical audits",
+  maintenance: "Maintenance",
+  vendors: "Vendors",
+  reports: "Reports",
+  labels: "Labels",
+  "my-assets": "My assets",
 };
 
 export function isActivePath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+/**
+ * The navigation href that best matches the path: the longest matching one,
+ * so /assets/matching highlights "Endpoint matching" and not also "Asset register".
+ */
+export function activeHref(pathname: string, sections: NavSection[] = navigation): string | null {
+  let best: string | null = null;
+  for (const item of sections.flatMap((s) => s.items)) {
+    if (isActivePath(pathname, item.href) && (best === null || item.href.length > best.length)) best = item.href;
+  }
+  return best;
 }
