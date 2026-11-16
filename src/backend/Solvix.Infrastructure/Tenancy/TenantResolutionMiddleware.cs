@@ -64,6 +64,23 @@ public sealed partial class TenantResolutionMiddleware(RequestDelegate next, ILo
             throw new ForbiddenException("Your membership in this workspace is no longer active.");
         }
 
+        // The membership is authoritative for the role. A token keeps the role it was issued with, so after a demotion
+        // the stale claim would otherwise keep granting admin/owner rights (including billing) until it expires.
+        if (principal.Identity is System.Security.Claims.ClaimsIdentity identity)
+        {
+            var current = membership.Role.ToString();
+            var claimed = identity.FindFirst(SolvixClaimTypes.Role);
+            if (claimed is null || !string.Equals(claimed.Value, current, StringComparison.Ordinal))
+            {
+                if (claimed is not null)
+                {
+                    identity.RemoveClaim(claimed);
+                }
+
+                identity.AddClaim(new System.Security.Claims.Claim(SolvixClaimTypes.Role, current));
+            }
+        }
+
         using (LogContext.PushProperty("TenantId", tenantId))
         using (LogContext.PushProperty("TenantSlug", tenant.Slug))
         using (LogContext.PushProperty("UserId", userId))

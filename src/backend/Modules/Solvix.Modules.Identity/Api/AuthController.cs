@@ -15,6 +15,7 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
 {
     /// <summary>Exchanges e-mail + password for a tenant-bound access token.</summary>
     [HttpPost("login")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
     [AllowAnonymous]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -23,6 +24,7 @@ public sealed class AuthController(IAuthService authService, ICurrentUser curren
 
     /// <summary>Issues a new token for another workspace the caller belongs to.</summary>
     [HttpPost("switch-tenant")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<AuthResponse>> SwitchTenant([FromBody] SwitchTenantRequest request, CancellationToken cancellationToken) =>
         Ok(await authService.SwitchTenantAsync(currentUser.RequireUserId(), request.TenantSlug, cancellationToken));

@@ -9,8 +9,10 @@ using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Domain;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Abstractions;
+using Solvix.SharedKernel.Billing;
 using Solvix.SharedKernel.Exceptions;
 using Solvix.SharedKernel.Persistence;
+using Solvix.SharedKernel.Telemetry;
 using Solvix.SharedKernel.Tenancy;
 
 public interface IAgentEnrollmentService
@@ -35,6 +37,8 @@ internal sealed partial class AgentEnrollmentService(
     IDeviceCertificateAuthority certificateAuthority,
     IOptions<DevicesOptions> options,
     IClock clock,
+    IDeviceEntitlementProvider entitlements,
+    IDeviceUsageReader deviceUsage,
     ILogger<AgentEnrollmentService> logger) : IAgentEnrollmentService
 {
     private const string InvalidTokenCode = "enrollment_token_invalid";
@@ -105,6 +109,8 @@ internal sealed partial class AgentEnrollmentService(
                     var reEnrolled = device is not null;
                     if (device is null)
                     {
+                        // Plan limits are enforced here, on the server, inside the enrollment transaction.
+                        await EnforceSubscriptionAsync(tenantId, ct);
                         device = Device.Enroll(tenantId, DevicePlatform.Windows, request.Device, fingerprint, tokenId, now);
                         device.AssignIfUnassigned(token.BranchId, token.DepartmentId);
                         db.Set<Device>().Add(device);
@@ -161,6 +167,33 @@ internal sealed partial class AgentEnrollmentService(
         {
             LogRejected(logger, tokenId, reason);
             return new UnauthorizedException("The enrollment token is invalid.", InvalidTokenCode);
+        }
+    }
+
+    /// <summary>
+    /// A NEW device needs an entitled subscription and a free slot. A per-tenant advisory lock, held until the
+    /// enrollment transaction ends, serialises concurrent enrollments so two agents cannot both take the last slot.
+    /// Re-enrolling a device that already exists never consumes a slot.
+    /// </summary>
+    private async Task EnforceSubscriptionAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var lockKey = $"solvix:device-quota:{tenantId:N}";
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))", cancellationToken);
+
+        var entitlement = await entitlements.GetAsync(tenantId, cancellationToken);
+        if (!entitlement.IsEntitled)
+        {
+            SolvixMetrics.DeviceEnrollmentsDenied.Add(1, new KeyValuePair<string, object?>("reason", entitlement.DenyCode));
+            throw new PaymentRequiredException(entitlement.DenyMessage ?? "The subscription does not allow enrolling devices.", entitlement.DenyCode ?? "subscription_inactive");
+        }
+
+        var used = await deviceUsage.CountBillableDevicesAsync(cancellationToken);
+        if (used >= entitlement.DeviceLimit)
+        {
+            SolvixMetrics.DeviceEnrollmentsDenied.Add(1, new KeyValuePair<string, object?>("reason", "device_limit_reached"));
+            throw new PaymentRequiredException(
+                $"The device limit of the current plan has been reached ({used} of {entitlement.DeviceLimit}). Upgrade the plan or retire unused devices.",
+                "device_limit_reached");
         }
     }
 

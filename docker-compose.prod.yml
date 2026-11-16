@@ -1,0 +1,104 @@
+# Production overlay. Use it with the main file (and optionally the monitoring file):
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml [-f docker-compose.monitoring.yml] up -d
+#
+# What it changes versus the development stack:
+#   * no database/cache ports are published; only the web and API ports are exposed (put a TLS reverse proxy in front)
+#   * Production environment, secure cookies, no development TLS certificate, no development defaults for secrets
+#   * hardened containers: read-only root filesystem, no capabilities, no privilege escalation
+#   * resource limits and restart policies
+#   * a daily, encrypted PostgreSQL backup written to the "solvix-backups" volume (copy it off-host: docs/OPERATIONS.md)
+# Every secret below is REQUIRED: compose refuses to start without it.
+services:
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      SOLVIX_DB_MIGRATOR_PASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:?set SOLVIX_DB_MIGRATOR_PASSWORD}
+      SOLVIX_DB_APP_PASSWORD: ${SOLVIX_DB_APP_PASSWORD:?set SOLVIX_DB_APP_PASSWORD}
+    deploy:
+      resources:
+        limits: { memory: 2g }
+    restart: unless-stopped
+
+  redis:
+    ports: !reset []
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:?set REDIS_PASSWORD}", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:?set REDIS_PASSWORD} ping | grep PONG"]
+    deploy:
+      resources:
+        limits: { memory: 512m }
+    restart: unless-stopped
+
+  migrator:
+    environment:
+      ConnectionStrings__PostgresMigrator: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_MIGRATOR_USER:-solvix_migrator};Password=${SOLVIX_DB_MIGRATOR_PASSWORD:?set SOLVIX_DB_MIGRATOR_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:?set REDIS_PASSWORD}"
+
+  api:
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-solvix};Username=${SOLVIX_DB_APP_USER:-solvix_app};Password=${SOLVIX_DB_APP_PASSWORD:?set SOLVIX_DB_APP_PASSWORD}"
+      ConnectionStrings__Redis: "redis:6379,password=${REDIS_PASSWORD:?set REDIS_PASSWORD}"
+      Solvix__Cors__AllowedOrigins__0: ${SOLVIX_CORS_ALLOWED_ORIGINS:?set SOLVIX_CORS_ALLOWED_ORIGINS to the public web origin}
+      # Agents: real certificates only.
+      Solvix__Devices__GenerateDevelopmentTlsCertificate: "false"
+      Solvix__Devices__CertificateAuthority__AutoGenerate: "false"
+      Kestrel__Endpoints__Agents__Certificate__Password: ${SOLVIX_AGENT_TLS_PASSWORD:?set SOLVIX_AGENT_TLS_PASSWORD}
+      Solvix__Devices__CertificateAuthority__PfxPassword: ${SOLVIX_DEVICE_CA_PASSWORD:?set SOLVIX_DEVICE_CA_PASSWORD}
+      Solvix__Devices__AgentPackage__PublicServerUrl: ${SOLVIX_AGENT_PUBLIC_URL:?set SOLVIX_AGENT_PUBLIC_URL}
+      Solvix__Devices__AgentPackage__ServerCertificateSha256: ${SOLVIX_AGENT_TLS_CERT_SHA256:?set SOLVIX_AGENT_TLS_CERT_SHA256}
+    deploy:
+      resources:
+        limits: { memory: 1g }
+    restart: unless-stopped
+
+  web:
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      SOLVIX_COOKIE_SECURE: "true"
+    deploy:
+      resources:
+        limits: { memory: 512m }
+    restart: unless-stopped
+
+  # Daily encrypted backup. The passphrase lives in a Docker secret/file, never in an image.
+  backup:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${SOLVIX_DB_MIGRATOR_USER:-solvix_migrator}
+      PGPASSWORD: ${SOLVIX_DB_MIGRATOR_PASSWORD:?set SOLVIX_DB_MIGRATOR_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB:-solvix}
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_PASSPHRASE_FILE: /run/secrets/backup_passphrase
+    entrypoint: ["/bin/sh", "-c", "apk add --no-cache bash openssl coreutils findutils > /dev/null && while true; do /scripts/backup-postgres.sh || echo 'BACKUP FAILED' >&2; sleep ${BACKUP_INTERVAL_SECONDS:-86400}; done"]
+    volumes:
+      - ./scripts/ops:/scripts:ro
+      - solvix-backups:/backups
+    secrets:
+      - backup_passphrase
+    restart: unless-stopped
+
+secrets:
+  backup_passphrase:
+    file: ${BACKUP_PASSPHRASE_FILE:?set BACKUP_PASSPHRASE_FILE to a file containing the backup passphrase}
+
+volumes:
+  solvix-backups:

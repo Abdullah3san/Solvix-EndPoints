@@ -9,7 +9,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using System.Threading.RateLimiting;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -23,6 +29,7 @@ using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Security;
 using Solvix.Modules.Identity.Configuration;
 using Solvix.SharedKernel.Identity;
+using Solvix.SharedKernel.Telemetry;
 using Solvix.SharedKernel.Tenancy;
 using Solvix.SharedKernel.Web;
 
@@ -201,6 +208,42 @@ try
         });
     }
 
+    // --------------------------------------------------------- rate limiting
+    // Shared auth throttle (credential stuffing, signup abuse). Limits are read lazily from options so they can be
+    // tuned per environment; module-specific policies (agent enrollment, webhooks, inbound e-mail) are registered by
+    // their modules.
+    builder.Services.AddOptions<RateLimitOptions>().Bind(builder.Configuration.GetSection(RateLimitOptions.SectionName));
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+        options.AddPolicy(RateLimitOptions.AuthPolicy, context =>
+        {
+            var limit = context.RequestServices.GetRequiredService<IOptions<RateLimitOptions>>().Value.AuthPerMinute;
+            return RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, limit), Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+        });
+    });
+
+    // -------------------------------------------------------------- telemetry
+    // Metrics and traces are exported over OTLP when OTEL_EXPORTER_OTLP_ENDPOINT (or Solvix:Telemetry:OtlpEndpoint)
+    // is set; without it instrumentation stays in-process and costs nothing.
+    var otlpEndpoint = builder.Configuration["Solvix:Telemetry:OtlpEndpoint"] ?? builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+    var telemetry = builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("solvix-api", serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString()))
+        .WithMetrics(metrics => metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddMeter(SolvixMetrics.MeterName))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation(o => o.Filter = ctx => !ctx.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
+            .AddHttpClientInstrumentation());
+    if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+    {
+        telemetry.UseOtlpExporter();
+    }
+
     // ------------------------------------------------------------------ CORS
     builder.Services.AddCors(options =>
     {
@@ -226,6 +269,7 @@ try
     // -------------------------------------------------------------- pipeline
     app.UseExceptionHandler();
     app.UseStatusCodePages();
+    app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseSerilogRequestLogging(options =>
     {

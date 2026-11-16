@@ -6,6 +6,7 @@ using Solvix.Modules.Identity.Application.Auth;
 using Solvix.Modules.Identity.Application.Provisioning;
 using Solvix.Modules.Organization.Application.Provisioning;
 using Solvix.Modules.Tenancy.Domain;
+using Solvix.SharedKernel.Billing;
 using Solvix.SharedKernel.Exceptions;
 using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Persistence;
@@ -29,6 +30,8 @@ internal sealed partial class TenantRegistrationService(
     ITenantContextMutator tenantContextMutator,
     IUserProvisioningService users,
     IOrganizationProvisioningService organization,
+    ISubscriptionProvisioner subscriptions,
+    IEnumerable<ITenantProvisioningStep> provisioningSteps,
     ITokenService tokenService,
     ILogger<TenantRegistrationService> logger) : ITenantRegistrationService
 {
@@ -63,6 +66,11 @@ internal sealed partial class TenantRegistrationService(
             await users.AddMembershipAsync(tenant.Id, owner.Id, TenantRole.Owner, ct);
             await organization.CreateCompanyProfileAsync(tenant.Id, request.CompanyName, ct);
             await organization.CreateHeadquartersAsync(tenant.Id, "Headquarters", ct);
+            await subscriptions.StartTrialAsync(tenant.Id, ct);
+            foreach (var step in provisioningSteps)
+            {
+                await step.ProvisionAsync(tenant.Id, ct);
+            }
 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

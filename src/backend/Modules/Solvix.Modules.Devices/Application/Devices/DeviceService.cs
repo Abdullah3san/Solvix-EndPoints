@@ -28,6 +28,8 @@ public interface IDeviceService
 
     Task<DeviceDetailsDto> AssignAsync(Guid id, UpdateDeviceAssignmentRequest request, CancellationToken cancellationToken);
 
+    Task<DeviceDetailsDto> UpdateLifecycleAsync(Guid id, UpdateDeviceLifecycleRequest request, CancellationToken cancellationToken);
+
     Task<DeviceDetailsDto> SetGroupsAsync(Guid id, SetDeviceGroupsRequest request, CancellationToken cancellationToken);
 
     Task<DeviceDetailsDto> RequestInventoryAsync(Guid id, CancellationToken cancellationToken);
@@ -155,6 +157,15 @@ internal sealed class DeviceService(
         ArgumentNullException.ThrowIfNull(request);
         var device = await FindAsync(id, tracking: true, cancellationToken);
         device.UpdateDetails(request.DisplayName, request.Notes);
+        await db.SaveChangesAsync(cancellationToken);
+        return await ToDetailsAsync(device, cancellationToken);
+    }
+
+    public async Task<DeviceDetailsDto> UpdateLifecycleAsync(Guid id, UpdateDeviceLifecycleRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        var device = await FindAsync(id, tracking: true, cancellationToken);
+        device.UpdateLifecycle(request.PurchasedOn, request.WarrantyExpiresOn);
         await db.SaveChangesAsync(cancellationToken);
         return await ToDetailsAsync(device, cancellationToken);
     }
@@ -342,6 +353,8 @@ internal sealed class DeviceService(
             ProcessorName = d.ProcessorName,
             TotalMemoryBytes = d.TotalMemoryBytes,
             LastBootAtUtc = d.LastBootAtUtc,
+            PurchasedOn = d.PurchasedOn,
+            WarrantyExpiresOn = d.WarrantyExpiresOn,
             MacAddresses = d.MacAddresses,
             AgentVersionChangedAtUtc = d.AgentVersionChangedAtUtc,
             Health = d.AgentHealthJson is null ? null : JsonSerializer.Deserialize<AgentHealthReport>(d.AgentHealthJson, DevicesJson.Options),

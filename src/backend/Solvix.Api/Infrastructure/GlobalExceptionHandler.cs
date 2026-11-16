@@ -57,11 +57,15 @@ internal sealed partial class GlobalExceptionHandler(
             ValidationException v => (StatusCodes.Status400BadRequest, "Validation failed", v.Code, v.Errors),
             NotFoundException n => (StatusCodes.Status404NotFound, "Resource not found", n.Code, null),
             ConflictException c => (StatusCodes.Status409Conflict, "Conflict", c.Code, null),
+            PaymentRequiredException p => (StatusCodes.Status402PaymentRequired, "Payment required", p.Code, null),
+            ExternalServiceException e => (StatusCodes.Status502BadGateway, "Upstream service unavailable", e.Code, null),
             UnauthorizedException u => (StatusCodes.Status401Unauthorized, "Unauthorized", u.Code, null),
             TenantInactiveException t => (StatusCodes.Status403Forbidden, "Tenant inactive", t.Code, null),
             TenantContextMissingException t => (StatusCodes.Status401Unauthorized, "Tenant context missing", t.Code, null),
             CrossTenantAccessException x => (StatusCodes.Status403Forbidden, "Forbidden", x.Code, null),
             ForbiddenException f => (StatusCodes.Status403Forbidden, "Forbidden", f.Code, null),
+            DbUpdateConcurrencyException =>
+                (StatusCodes.Status409Conflict, "Conflict", "concurrent_update", null),
             DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } } =>
                 (StatusCodes.Status409Conflict, "Conflict", "unique_violation", null),
             DbUpdateException { InnerException: PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation } } =>

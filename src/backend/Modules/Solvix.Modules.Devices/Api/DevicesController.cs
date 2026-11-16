@@ -39,6 +39,12 @@ public sealed class DevicesController(IDeviceService service) : ApiControllerBas
     public async Task<ActionResult<DeviceDetailsDto>> Update(Guid id, [FromBody] UpdateDeviceRequest request, CancellationToken cancellationToken) =>
         Ok(await service.UpdateAsync(id, request, cancellationToken));
 
+    /// <summary>Asset lifecycle data used by lifecycle reports: purchase date and warranty end.</summary>
+    [HttpPut("{id:guid}/lifecycle")]
+    [Authorize(Policy = Policies.TenantAdmin)]
+    public async Task<ActionResult<DeviceDetailsDto>> UpdateLifecycle(Guid id, [FromBody] UpdateDeviceLifecycleRequest request, CancellationToken cancellationToken) =>
+        Ok(await service.UpdateLifecycleAsync(id, request, cancellationToken));
+
     [HttpPut("{id:guid}/assignment")]
     [Authorize(Policy = Policies.TenantAdmin)]
     public async Task<ActionResult<DeviceDetailsDto>> Assign(Guid id, [FromBody] UpdateDeviceAssignmentRequest request, CancellationToken cancellationToken) =>

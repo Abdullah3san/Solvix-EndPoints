@@ -17,6 +17,7 @@ using Solvix.Modules.Devices.Application.Enrollment;
 using Solvix.Modules.Devices.Application.Groups;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Security;
+using Solvix.SharedKernel.Billing;
 using Solvix.SharedKernel.Modules;
 
 /// <summary>Windows endpoint management: enrollment, device identity, inventory, groups and agent tracking.</summary>
@@ -43,6 +44,8 @@ public sealed class DevicesModule : IModule
         services.AddScoped<IAgentPackageService, AgentPackageService>();
         services.AddScoped<IAgentService, AgentService>();
         services.AddScoped<IDeviceService, DeviceService>();
+        services.AddScoped<IDeviceUsageReader, DeviceUsageReader>();
+        services.AddScoped<Solvix.SharedKernel.Directory.IDeviceDirectory, DeviceDirectory>();
         services.AddScoped<IDeviceGroupService, DeviceGroupService>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
 

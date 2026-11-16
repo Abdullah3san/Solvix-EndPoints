@@ -157,6 +157,15 @@ public sealed class UpdateDeviceRequestValidator : AbstractValidator<UpdateDevic
     }
 }
 
+public sealed class UpdateDeviceLifecycleRequestValidator : AbstractValidator<UpdateDeviceLifecycleRequest>
+{
+    public UpdateDeviceLifecycleRequestValidator()
+    {
+        RuleFor(x => x.PurchasedOn).GreaterThanOrEqualTo(new DateOnly(1990, 1, 1)).When(x => x.PurchasedOn is not null);
+        RuleFor(x => x.WarrantyExpiresOn).LessThanOrEqualTo(new DateOnly(2100, 1, 1)).When(x => x.WarrantyExpiresOn is not null);
+    }
+}
+
 public sealed class AgentPackageRequestValidator : AbstractValidator<AgentPackageRequest>
 {
     public AgentPackageRequestValidator()

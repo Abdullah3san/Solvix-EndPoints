@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Solvix.SharedKernel\Solvix.SharedKernel.csproj" />
+    <!-- Read-only reporting over other modules' data: a deliberate, documented dependency (see docs/ARCHITECTURE.md). -->
+    <ProjectReference Include="..\Solvix.Modules.Devices\Solvix.Modules.Devices.csproj" />
+    <ProjectReference Include="..\Solvix.Modules.Helpdesk\Solvix.Modules.Helpdesk.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Solvix.UnitTests" />
+    <InternalsVisibleTo Include="Solvix.IntegrationTests" />
+  </ItemGroup>
+</Project>

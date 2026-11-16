@@ -16,6 +16,8 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
 
     public const string LatestAgentVersion = "1.2.0";
 
+    public const string OperatorKey = "integration-tests-operator-key-0123456789abcdef";
+
     public const string AgentPublicUrl = "https://agents.solvix.test:8443/";
 
     /// <summary>Stand-in for the published agent: the package must carry these exact bytes.</summary>
@@ -46,6 +48,11 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__Devices__AgentPackage__Directory"] = AgentPackageDirectory,
             ["Solvix__Devices__AgentPackage__PublicServerUrl"] = AgentPublicUrl,
             ["Solvix__Devices__AgentPackage__ServerCertificateSha256"] = new string('d', 64),
+            ["Solvix__RateLimits__AuthPerMinute"] = "100000",
+            ["Solvix__Billing__OperatorApiKey"] = OperatorKey,
+            ["Solvix__Billing__Worker__Enabled"] = "false",
+            ["Solvix__Helpdesk__Worker__Enabled"] = "false",
+            ["Solvix__Reporting__AvailabilityWorkerEnabled"] = "false",
             ["Solvix__Devices__Releases__0__Version"] = LatestAgentVersion,
             ["Solvix__Devices__Releases__0__Channel"] = "stable",
             ["Solvix__Devices__Releases__0__DownloadUrl"] = "https://downloads.solvix.test/agent/SolvixAgent-" + LatestAgentVersion + ".msi",

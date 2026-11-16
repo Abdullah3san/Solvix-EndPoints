@@ -88,6 +88,22 @@ services:
       Solvix__Devices__CertificateAuthority__AutoGenerate: ${SOLVIX_DEVICE_CA_AUTOGENERATE:-true}
       Solvix__Devices__CertificateAuthority__PfxPath: /var/lib/solvix/device-ca.pfx
       Solvix__Devices__CertificateAuthority__PfxPassword: ${SOLVIX_DEVICE_CA_PASSWORD:-dev-only-device-ca}
+      # Phase 12 - billing, helpdesk, rate limits (all optional; see .env.example and docs/DEPLOYMENT.md)
+      Solvix__Billing__Provider: ${SOLVIX_BILLING_PROVIDER:-manual}
+      Solvix__Billing__TrialDays: ${SOLVIX_BILLING_TRIAL_DAYS:-14}
+      Solvix__Billing__PublicAppUrl: ${SOLVIX_PUBLIC_APP_URL:-http://localhost:3000}
+      Solvix__Billing__DefaultTaxRateBasisPoints: ${SOLVIX_BILLING_DEFAULT_TAX_BASIS_POINTS:-0}
+      Solvix__Billing__OperatorApiKey: ${SOLVIX_OPERATOR_API_KEY:-}
+      Solvix__Billing__Stripe__SecretKey: ${SOLVIX_STRIPE_SECRET_KEY:-}
+      Solvix__Billing__Stripe__WebhookSecret: ${SOLVIX_STRIPE_WEBHOOK_SECRET:-}
+      Solvix__Billing__Seller__Name: ${SOLVIX_SELLER_NAME:-Solvix}
+      Solvix__Billing__Seller__Address: ${SOLVIX_SELLER_ADDRESS:-}
+      Solvix__Billing__Seller__TaxId: ${SOLVIX_SELLER_TAX_ID:-}
+      Solvix__Billing__Seller__SupportEmail: ${SOLVIX_SELLER_SUPPORT_EMAIL:-}
+      Solvix__Helpdesk__Ai__Provider: ${SOLVIX_AI_PROVIDER:-none}
+      Solvix__Helpdesk__Ai__ApiKey: ${SOLVIX_AI_API_KEY:-}
+      Solvix__Helpdesk__Ai__Model: ${SOLVIX_AI_MODEL:-claude-haiku-5-5}
+      Solvix__RateLimits__AuthPerMinute: ${SOLVIX_AUTH_RATE_LIMIT_PER_MINUTE:-20}
     volumes:
       - solvix-pki:/var/lib/solvix
     ports:

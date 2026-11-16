@@ -14,6 +14,7 @@ public sealed class TenantController(ITenantRegistrationService registration, IT
 {
     /// <summary>Self-service registration of a new workspace and its owner.</summary>
     [HttpPost("register")]
+    [Microsoft.AspNetCore.RateLimiting.EnableRateLimiting("auth")]
     [AllowAnonymous]
     [ProducesResponseType<RegisterTenantResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]

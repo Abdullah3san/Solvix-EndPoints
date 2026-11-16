@@ -253,3 +253,65 @@ certificate, derived from that certificate automatically. The Docker image build
 The token deliberately travels in a separate file, not inside the exe: editing a signed exe invalidates its signature,
 which agents and updates depend on. The exe installs itself (`AgentInstaller`) and deletes `enrollment.json` after
 use. See `src/agent/README.md`.
+
+
+---
+
+# Billing, helpdesk and reporting (Phase 12)
+
+Details: `BILLING.md`, `HELPDESK.md`, `REPORTING.md`, `SECURITY-REVIEW.md`, `OPERATIONS.md`.
+
+## Module relationships
+
+```
+Devices ──IDeviceUsageReader──► Billing        Billing ──IDeviceEntitlementProvider──► Devices (enrollment)
+Tenancy ──ISubscriptionProvisioner / ITenantProvisioningStep──► Billing, Helpdesk (registration transaction)
+Helpdesk ──IDeviceDirectory (Devices), IMemberDirectory (Identity)
+Reporting ──reads Devices + Helpdesk entities (read-only, deliberate)
+```
+
+Modules still depend only on the SharedKernel for write paths; `Reporting` is the single documented exception because a
+report is by nature a cross-module read model.
+
+## Device-limit enforcement (server side)
+
+`AgentEnrollmentService` (inside the enrollment transaction, only for a *new* device):
+`pg_advisory_xact_lock(tenant)` → `IDeviceEntitlementProvider.GetAsync` (fail-closed; evaluated from timestamps by
+`EntitlementEvaluator`, independent of any worker) → count of active devices → `PaymentRequiredException` (HTTP 402).
+Two concurrent enrollments cannot both take the last slot, and a refusal rolls back without consuming the token.
+
+## Data model (new tables)
+
+```
+plans (platform; trigger-protected)         billing_webhook_events (platform; ids only)
+subscriptions (1 per tenant, xmin concurrency) · subscription_events · invoices (+invoice_lines, per-tenant numbers,
+  unique renewal per period) · payments (global unique provider reference) · billing_profiles · usage_snapshots · invoice_counters
+ticket_categories · technicians · sla_policies (+sla_targets, one default per tenant) · escalation_rules · tickets
+  (composite tenant-safe FKs to category/technician/policy; device FK declared in SQL) · ticket_comments · ticket_attachments
+  (+ticket_attachment_contents, bytea) · ticket_events · ticket_resolutions · ticket_applied_escalations · ticket_counters
+  · inbound_email_channels (hashed secret)
+availability_snapshots (hourly fleet availability)
+```
+
+All tenant-owned tables have forced RLS (33 in total); platform tables hold no tenant data except identifiers.
+
+## Request pipeline additions
+
+`ExceptionHandler → StatusCodePages → SecurityHeaders → CorrelationId → … → Authentication → TenantResolution`
+(now also re-syncs the role claim from the live membership) `→ Authorization → RateLimiter`. New problem mappings:
+402 `payment_required`, 502 `upstream_unavailable`, 409 `concurrent_update`.
+
+## Background workers
+
+| Worker | Interval | Work | Safety |
+|--------|----------|------|--------|
+| `BillingWorker` | 60 min | expire trials/subscriptions, cancel at period end, issue renewal invoices, record usage | advisory lock, per-tenant scope, idempotent (unique renewal index, xmin) |
+| `HelpdeskWorker` | 5 min | SLA breach flags, escalation rules (once per ticket per rule) | advisory lock, per-tenant scope |
+| `AvailabilityWorker` | 60 min | hourly availability sample per tenant | advisory lock, atomic upsert |
+
+Platform scope is used only to *list* tenants; all work for a tenant runs in a scope bound to that tenant (RLS enforced).
+
+## Telemetry
+
+OpenTelemetry metrics (ASP.NET Core, HTTP client, runtime, `Solvix` meter) and traces, exported over OTLP when
+`OTEL_EXPORTER_OTLP_ENDPOINT` is set. Business counters never carry tenant or user data as tags.
