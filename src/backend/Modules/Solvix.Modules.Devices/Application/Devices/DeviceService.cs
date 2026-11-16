@@ -94,12 +94,58 @@ internal sealed class DeviceService(
             devices = devices.Where(d => d.AssignedUserId == userId);
         }
 
+        if (query.BranchId is { } branchId)
+        {
+            devices = devices.Where(d => d.BranchId == branchId);
+        }
+
+        if (query.Attention == true)
+        {
+            devices = devices.Where(NeedsAttention);
+        }
+
         var total = await devices.LongCountAsync(cancellationToken);
-        var items = await devices
-            .OrderBy(d => d.Hostname).ThenBy(d => d.Id)
+        var items = await Sort(devices, query.SortBy, query.SortDirection)
             .Skip(page.Skip).Take(page.SafePageSize)
             .ToListAsync(cancellationToken);
-        return new PagedResult<DeviceSummaryDto>(items.Select(d => ToSummary(d, now)).ToList(), page.SafePage, page.SafePageSize, total);
+
+        // Names live in other modules: resolve them for this page only, in two batched lookups.
+        var userIds = items.Where(d => d.AssignedUserId.HasValue).Select(d => d.AssignedUserId!.Value).Distinct().ToList();
+        var branchIds = items.Where(d => d.BranchId.HasValue).Select(d => d.BranchId!.Value).Distinct().ToList();
+        var users = userIds.Count > 0 ? await members.FindAsync(userIds, cancellationToken) : null;
+        var branches = branchIds.Count > 0 ? await organization.FindBranchesAsync(branchIds, cancellationToken) : null;
+
+        var summaries = items
+            .Select(d => ToSummary(d, now) with
+            {
+                AssignedUserName = d.AssignedUserId is { } u && users is not null && users.TryGetValue(u, out var member) ? member.DisplayName : null,
+                BranchName = d.BranchId is { } b && branches is not null && branches.TryGetValue(b, out var branch) ? branch.Name : null,
+            })
+            .ToList();
+        return new PagedResult<DeviceSummaryDto>(summaries, page.SafePage, page.SafePageSize, total);
+    }
+
+    /// <summary>"Requires attention": an active device whose agent reports a degraded or unhealthy state.</summary>
+    private static readonly System.Linq.Expressions.Expression<Func<Device, bool>> NeedsAttention = d =>
+        d.Status == DeviceStatus.Active && (d.HealthStatus == AgentHealthStatus.Degraded || d.HealthStatus == AgentHealthStatus.Unhealthy);
+
+    private static IQueryable<Device> Sort(IQueryable<Device> devices, DeviceSortField field, SortDirection direction)
+    {
+        var descending = direction == SortDirection.Desc;
+        IOrderedQueryable<Device> ordered = field switch
+        {
+            DeviceSortField.OperatingSystem => descending
+                ? devices.OrderBy(d => d.OsName == null).ThenByDescending(d => d.OsName).ThenByDescending(d => d.OsBuild)
+                : devices.OrderBy(d => d.OsName == null).ThenBy(d => d.OsName).ThenBy(d => d.OsBuild),
+
+            // Devices that never checked in sort last in both directions.
+            DeviceSortField.LastSeen => descending
+                ? devices.OrderBy(d => d.LastSeenAtUtc == null).ThenByDescending(d => d.LastSeenAtUtc)
+                : devices.OrderBy(d => d.LastSeenAtUtc == null).ThenBy(d => d.LastSeenAtUtc),
+            DeviceSortField.EnrolledAt => descending ? devices.OrderByDescending(d => d.EnrolledAtUtc) : devices.OrderBy(d => d.EnrolledAtUtc),
+            _ => descending ? devices.OrderByDescending(d => d.DisplayName ?? d.Hostname) : devices.OrderBy(d => d.DisplayName ?? d.Hostname),
+        };
+        return ordered.ThenBy(d => d.Id);
     }
 
     public async Task<DeviceStatsDto> GetStatsAsync(CancellationToken cancellationToken)
@@ -109,6 +155,7 @@ internal sealed class DeviceService(
         var total = await devices.CountAsync(cancellationToken);
         var retired = await devices.CountAsync(d => d.Status == DeviceStatus.Retired, cancellationToken);
         var online = await devices.CountAsync(d => d.Status == DeviceStatus.Active && d.LastSeenAtUtc >= onlineSince, cancellationToken);
+        var attention = await devices.CountAsync(NeedsAttention, cancellationToken);
         var versions = await devices
             .Where(d => d.Status == DeviceStatus.Active)
             .GroupBy(d => d.AgentVersion)
@@ -134,7 +181,10 @@ internal sealed class DeviceService(
             retired,
             versionCounts.Where(v => v.UpdateAvailable).Sum(v => v.DeviceCount),
             latest,
-            versionCounts);
+            versionCounts)
+        {
+            RequiringAttention = attention,
+        };
     }
 
     public async Task<DeviceDetailsDto> GetAsync(Guid id, CancellationToken cancellationToken) =>
@@ -291,7 +341,10 @@ internal sealed class DeviceService(
             d.AssignedUserId,
             d.LastSeenAtUtc,
             d.LastInventoryAtUtc,
-            d.EnrolledAtUtc);
+            d.EnrolledAtUtc)
+        {
+            BranchId = d.BranchId,
+        };
 
     private async Task<DeviceDetailsDto> ToDetailsAsync(Device d, CancellationToken cancellationToken)
     {
@@ -334,7 +387,7 @@ internal sealed class DeviceService(
 
         return new DeviceDetailsDto
         {
-            Summary = ToSummary(d, clock.UtcNow),
+            Summary = ToSummary(d, clock.UtcNow) with { AssignedUserName = user?.IsMember == true ? user.DisplayName : null, BranchName = branch?.Name },
             Notes = d.Notes,
             HardwareId = d.HardwareId,
             DomainName = d.DomainName,

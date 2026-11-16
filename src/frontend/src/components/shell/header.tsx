@@ -2,28 +2,26 @@
 
 import { Menu as MenuIcon } from "lucide-react";
 import { Breadcrumbs } from "./breadcrumbs";
+import { GlobalSearch } from "./global-search";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationsMenu } from "./notifications-menu";
 import { UserMenu } from "./user-menu";
+import { Button } from "@/components/ui/button";
 
 export function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
-      <button
-        type="button"
-        onClick={onOpenSidebar}
-        className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground lg:hidden"
-        aria-label="Open navigation"
-      >
-        <MenuIcon className="h-5 w-5" />
-      </button>
+    <header className="sticky top-0 z-30 flex h-header items-center gap-2 border-b border-border bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:gap-3 sm:px-6 lg:px-8">
+      <Button variant="ghost" size="icon" onClick={onOpenSidebar} className="-ml-2 text-muted-foreground lg:hidden" aria-label="Open navigation">
+        <MenuIcon className="size-5" />
+      </Button>
       <div className="min-w-0 flex-1">
         <Breadcrumbs />
       </div>
-      <div className="flex items-center gap-1">
+      <GlobalSearch />
+      <div className="flex items-center gap-0.5">
         <ThemeToggle />
         <NotificationsMenu />
-        <div className="mx-1 h-6 w-px bg-border" aria-hidden />
+        <div className="mx-1.5 hidden h-6 w-px bg-border sm:block" aria-hidden />
         <UserMenu />
       </div>
     </header>

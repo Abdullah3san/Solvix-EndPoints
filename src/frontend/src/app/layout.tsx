@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import "@fontsource-variable/inter";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ToastProvider } from "@/components/providers/toast-provider";
 
 export const metadata: Metadata = {
-  title: { default: "Solvix EndPoints", template: "%s · Solvix" },
-  description: "Multi-tenant endpoint management platform.",
+  title: { default: "Solvix EndPoint", template: "%s · Solvix EndPoint" },
+  description: "Unified endpoint management and IT asset management.",
   icons: { icon: "/icon.svg" },
 };
 

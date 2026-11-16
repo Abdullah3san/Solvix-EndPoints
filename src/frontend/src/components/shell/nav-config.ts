@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Boxes, Building2, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Settings2 } from "lucide-react";
+import { Boxes, Building2, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Palette, Settings2 } from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -7,6 +7,10 @@ export interface NavItem {
   icon: LucideIcon;
   /** Restrict visibility to tenant admins/owners. */
   adminOnly?: boolean;
+  /** Only shown under `next dev` (internal tooling such as the design system reference). */
+  devOnly?: boolean;
+  /** Extra words the global search matches on. */
+  keywords?: string;
 }
 
 export interface NavSection {
@@ -14,31 +18,44 @@ export interface NavSection {
   items: NavItem[];
 }
 
+/** Single source of truth for the sidebar, the global search and breadcrumbs. Only real routes belong here. */
 export const navigation: NavSection[] = [
   {
-    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard }],
+    items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, keywords: "overview home" }],
+  },
+  {
+    title: "Endpoints",
+    items: [
+      { label: "Devices", href: "/endpoints/devices", icon: Monitor, keywords: "computers inventory fleet" },
+      { label: "Device groups", href: "/endpoints/groups", icon: Boxes },
+      { label: "Enrollment", href: "/endpoints/enrollment", icon: KeyRound, adminOnly: true, keywords: "token agent install" },
+    ],
   },
   {
     title: "Organization",
     items: [
       { label: "Company profile", href: "/organization/company", icon: Building2 },
-      { label: "Branches", href: "/organization/branches", icon: GitBranch },
+      { label: "Branches", href: "/organization/branches", icon: GitBranch, keywords: "sites locations" },
       { label: "Departments", href: "/organization/departments", icon: Network },
     ],
   },
   {
-    title: "Endpoints",
+    title: "Settings",
     items: [
-      { label: "Devices", href: "/endpoints/devices", icon: Monitor },
-      { label: "Device groups", href: "/endpoints/groups", icon: Boxes },
-      { label: "Enrollment", href: "/endpoints/enrollment", icon: KeyRound, adminOnly: true },
+      { label: "Workspace", href: "/settings/workspace", icon: Settings2, keywords: "members roles" },
+      { label: "Design system", href: "/design-system", icon: Palette, devOnly: true, keywords: "components tokens" },
     ],
   },
-  {
-    title: "Settings",
-    items: [{ label: "Workspace", href: "/settings/workspace", icon: Settings2 }],
-  },
 ];
+
+export function visibleNavigation(options: { isAdmin: boolean; isDevelopment: boolean }): NavSection[] {
+  return navigation
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => (!item.adminOnly || options.isAdmin) && (!item.devOnly || options.isDevelopment)),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 /** Human-readable labels for breadcrumb segments that are not navigation items. */
 export const segmentLabels: Record<string, string> = {
@@ -53,6 +70,7 @@ export const segmentLabels: Record<string, string> = {
   devices: "Devices",
   groups: "Device groups",
   enrollment: "Enrollment",
+  "design-system": "Design system",
 };
 
 export function isActivePath(pathname: string, href: string): boolean {

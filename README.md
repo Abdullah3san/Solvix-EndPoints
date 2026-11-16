@@ -13,11 +13,15 @@ Multi-tenant SaaS platform for endpoint management.
 
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|
-| Frontend   | Next.js 16 (App Router, TypeScript, Tailwind CSS 4), Vitest           |
+| Frontend   | Next.js 16 (App Router, TypeScript, Tailwind CSS 4), shadcn/ui on Radix UI, Lucide, Recharts, Vitest |
 | Backend    | ASP.NET Core 10, EF Core 10, Npgsql, Serilog, FluentValidation, Asp.Versioning |
 | Data       | PostgreSQL 16 (RLS), Redis 7                                          |
 | Agent      | .NET 10 Worker Service (Windows service), WMI/registry, CNG/TPM keys, Serilog |
 | Local dev  | Docker Compose                                                        |
+
+The web console follows the Solvix-EndPoint design system (tokens, components, navigation shell,
+dashboard): see [`docs/DESIGN-SYSTEM.md`](docs/DESIGN-SYSTEM.md). Under `npm run dev` a living
+reference is available at `/design-system`.
 
 ## Quick start (Docker)
 
@@ -82,7 +86,7 @@ tests/
   Solvix.IntegrationTests/    real PostgreSQL + Redis: migrations, RLS, API isolation, jobs, devices, mTLS, agent end-to-end
   Solvix.Agent.Tests/         agent runtime, enrollment, backoff, renewal, updates, inventory
 docker/postgres/init/         creates the migrator and runtime roles
-docs/                         architecture and phase summaries
+docs/                         architecture, design system and phase summaries
 ```
 
 ## Tests

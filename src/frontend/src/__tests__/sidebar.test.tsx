@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Sidebar } from "@/components/shell/sidebar";
+import { SidebarContent } from "@/components/shell/sidebar";
 import { SessionProvider } from "@/components/providers/session-provider";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/organization/departments" }));
@@ -14,7 +14,7 @@ describe("sidebar", () => {
   it("shows the tenant and highlights the active navigation item", () => {
     render(
       <SessionProvider session={session}>
-        <Sidebar open onClose={() => {}} />
+        <SidebarContent />
       </SessionProvider>,
     );
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe("sidebar", () => {
   it("shows endpoint management and hides enrollment from members", () => {
     const { unmount } = render(
       <SessionProvider session={session}>
-        <Sidebar open onClose={() => {}} />
+        <SidebarContent />
       </SessionProvider>,
     );
     expect(screen.getByRole("link", { name: /^devices$/i })).toHaveAttribute("href", "/endpoints/devices");
@@ -37,10 +37,22 @@ describe("sidebar", () => {
 
     render(
       <SessionProvider session={{ ...session, tenant: { ...session.tenant, role: "Member" as const } }}>
-        <Sidebar open onClose={() => {}} />
+        <SidebarContent />
       </SessionProvider>,
     );
     expect(screen.getByRole("link", { name: /^devices$/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /enrollment/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("sidebar (collapsed rail)", () => {
+  it("keeps every destination reachable by its accessible name", () => {
+    render(
+      <SessionProvider session={session}>
+        <SidebarContent collapsed onToggleCollapsed={() => {}} />
+      </SessionProvider>,
+    );
+    expect(screen.getByRole("link", { name: "Devices" })).toHaveAttribute("href", "/endpoints/devices");
+    expect(screen.getByRole("button", { name: /expand navigation/i })).toHaveAttribute("aria-expanded", "false");
   });
 });

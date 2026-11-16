@@ -171,6 +171,71 @@ public sealed class DeviceManagementApiTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task Device_list_carries_assignment_names_and_supports_branch_attention_and_sorting()
+    {
+        var tenant = await fixture.RegisterTenantAsync();
+        using var admin = fixture.CreateClient(tenant.Token);
+        var token = await fixture.CreateTokenAsync(tenant, maxUses: 3);
+        var alpha = await fixture.EnrollAsync(token, DeviceTestKit.Identity(hostname: "ALPHA"));
+        var bravo = await fixture.EnrollAsync(token, DeviceTestKit.Identity(hostname: "BRAVO"));
+        var charlie = await fixture.EnrollAsync(token, DeviceTestKit.Identity(hostname: "CHARLIE"));
+        var hq = Assert.Single((await HttpAssert.OkAsync<PagedResult<BranchDto>>(await admin.GetAsync("/api/v1/branches"))).Items);
+
+        await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.PutAsJsonAsync(
+            $"/api/v1/devices/{bravo.DeviceId}/assignment", new UpdateDeviceAssignmentRequest(tenant.Auth.User.Id, hq.Id, null), ApiFixture.Json));
+
+        // BRAVO reports an unhealthy agent, then CHARLIE checks in healthy; ALPHA was last seen at enrollment.
+        using (var agent = fixture.CreateDeviceClient(bravo.Certificate))
+        {
+            var unhealthy = new HeartbeatRequest
+            {
+                AgentVersion = DeviceTestKit.AgentVersion,
+                Health = new AgentHealthReport { Status = AgentHealthStatus.Unhealthy, StartedAtUtc = DateTimeOffset.UtcNow, UptimeSeconds = 5 },
+            };
+            await HttpAssert.OkAsync<HeartbeatResponse>(await agent.PostAsJsonAsync("/" + AgentRoutes.Heartbeat, unhealthy, ApiFixture.Json));
+        }
+
+        using (var agent = fixture.CreateDeviceClient(charlie.Certificate))
+        {
+            await HttpAssert.OkAsync<HeartbeatResponse>(await agent.HeartbeatAsync());
+        }
+
+        var all = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync("/api/v1/devices"));
+        Assert.Equal(["ALPHA", "BRAVO", "CHARLIE"], all.Items.Select(d => d.Hostname));
+        var assigned = all.Items.Single(d => d.Id == bravo.DeviceId);
+        Assert.Equal(tenant.Auth.User.DisplayName, assigned.AssignedUserName);
+        Assert.Equal(hq.Id, assigned.BranchId);
+        Assert.Equal(hq.Name, assigned.BranchName);
+        var unassigned = all.Items.Single(d => d.Id == alpha.DeviceId);
+        Assert.Null(unassigned.AssignedUserName);
+        Assert.Null(unassigned.BranchName);
+
+        var details = await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.GetAsync($"/api/v1/devices/{bravo.DeviceId}"));
+        Assert.Equal(hq.Name, details.Summary.BranchName);
+        Assert.Equal(tenant.Auth.User.DisplayName, details.Summary.AssignedUserName);
+
+        var inBranch = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync($"/api/v1/devices?branchId={hq.Id}"));
+        Assert.Equal(bravo.DeviceId, Assert.Single(inBranch.Items).Id);
+
+        var attention = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync("/api/v1/devices?attention=true"));
+        Assert.Equal(bravo.DeviceId, Assert.Single(attention.Items).Id);
+        var stats = await HttpAssert.OkAsync<DeviceStatsDto>(await admin.GetAsync("/api/v1/devices/stats"));
+        Assert.Equal(1, stats.RequiringAttention);
+
+        var byNameDesc = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync("/api/v1/devices?sortBy=Name&sortDirection=Desc"));
+        Assert.Equal(["CHARLIE", "BRAVO", "ALPHA"], byNameDesc.Items.Select(d => d.Hostname));
+
+        var lastSeenDesc = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync("/api/v1/devices?sortBy=LastSeen&sortDirection=Desc"));
+        Assert.Equal(["CHARLIE", "BRAVO", "ALPHA"], lastSeenDesc.Items.Select(d => d.Hostname));
+        var lastSeenAsc = await HttpAssert.OkAsync<PagedResult<DeviceSummaryDto>>(await admin.GetAsync("/api/v1/devices?sortBy=LastSeen&sortDirection=Asc"));
+        Assert.Equal(["ALPHA", "BRAVO", "CHARLIE"], lastSeenAsc.Items.Select(d => d.Hostname));
+
+        // A retired device no longer requires attention.
+        await HttpAssert.OkAsync<DeviceDetailsDto>(await admin.PostAsync($"/api/v1/devices/{bravo.DeviceId}/retire", null));
+        Assert.Equal(0, (await HttpAssert.OkAsync<DeviceStatsDto>(await admin.GetAsync("/api/v1/devices/stats"))).RequiringAttention);
+    }
+
+    [Fact]
     public async Task Devices_can_be_assigned_to_members_branches_and_departments()
     {
         var tenant = await fixture.RegisterTenantAsync();

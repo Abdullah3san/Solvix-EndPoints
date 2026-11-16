@@ -1,66 +1,177 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ---------------------------------------------------------------------------
-   Design tokens. Light is the default; `.dark` on <html> (set by next-themes)
-   switches the palette. Brand oranges come from the Solvix mark.
---------------------------------------------------------------------------- */
+/* ===========================================================================
+   Solvix-EndPoint design tokens
+   ---------------------------------------------------------------------------
+   Layer 1  primitives   raw palette steps (--navy-*, --blue-*, --cyan-*, --slate-*)
+   Layer 2  semantic     roles components consume (--background, --primary, ...)
+   Layer 3  Tailwind     `@theme inline` exposes the roles as utilities
+
+   Components only ever reference layer 2/3. Light is the default; `.dark` on
+   <html> (set by next-themes) re-points the semantic roles. Documented in
+   docs/DESIGN-SYSTEM.md and mirrored for TypeScript in lib/design-tokens.ts.
+=========================================================================== */
 :root {
-  --background: #f7f6f3;
-  --foreground: #1a1410;
-  --card: #ffffff;
-  --card-foreground: #1a1410;
-  --muted: #efece6;
-  --muted-foreground: #6b625a;
-  --border: #e4dfd7;
-  --input: #e4dfd7;
-  --ring: #ff6a1a;
-  --primary: #ff5a0f;
+  /* ---- primitives: brand ------------------------------------------------ */
+  --navy-50: #eef2fa;
+  --navy-100: #dbe4f5;
+  --navy-200: #b6c7e8;
+  --navy-300: #8aa3d3;
+  --navy-400: #5677b3;
+  --navy-500: #2f5296;
+  --navy-600: #1e3f80;
+  --navy-700: #14306a;
+  --navy-800: #0f2350;
+  --navy-900: #0b1730;
+  --navy-950: #060c1a;
+
+  --blue-50: #eaf1fe;
+  --blue-100: #d5e3fd;
+  --blue-300: #8db6ff;
+  --blue-400: #4c8dff;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4fc4;
+
+  --cyan-100: #cff5fb;
+  --cyan-300: #67dff0;
+  --cyan-400: #22d3ee;
+  --cyan-500: #0fb5d2;
+  --cyan-600: #0891b2;
+  --cyan-700: #0b7490;
+
+  /* ---- primitives: neutrals (blue-tinted slate) -------------------------- */
+  --slate-0: #ffffff;
+  --slate-50: #f5f7fb;
+  --slate-100: #eef2f8;
+  --slate-200: #dde3ee;
+  --slate-300: #c6cfdf;
+  --slate-400: #93a3bf;
+  --slate-500: #6b7a96;
+  --slate-600: #55637d;
+  --slate-700: #36435c;
+  --slate-800: #1e2c4a;
+  --slate-900: #0f1a30;
+  --slate-950: #081020;
+
+  /* ---- semantic: surfaces & text ----------------------------------------- */
+  --background: var(--slate-50);
+  --foreground: #0c1a33;
+  --card: var(--slate-0);
+  --card-foreground: #0c1a33;
+  --popover: var(--slate-0);
+  --popover-foreground: #0c1a33;
+  --muted: var(--slate-100);
+  --muted-foreground: var(--slate-600);
+  --border: var(--slate-200);
+  --input: var(--slate-300);
+  --ring: var(--blue-600);
+
+  /* ---- semantic: actions -------------------------------------------------- */
+  --primary: var(--navy-700);
   --primary-foreground: #ffffff;
-  --secondary: #fff1e8;
-  --secondary-foreground: #9a3a05;
-  --accent: #ffe7d6;
-  --accent-foreground: #7a2e05;
-  --destructive: #d02b2b;
+  --secondary: #e6edfa;
+  --secondary-foreground: var(--navy-700);
+  --accent: var(--blue-50);
+  --accent-foreground: var(--navy-700);
+  --link: var(--blue-600);
+  --highlight: var(--cyan-600);
+
+  /* ---- semantic: status (always paired with an icon or label) ------------- */
+  --destructive: #c8322f;
   --destructive-foreground: #ffffff;
-  --success: #1f8a4c;
-  --warning: #c77a00;
-  --sidebar: #140d08;
-  --sidebar-foreground: #f5efe9;
-  --sidebar-muted: #a8988c;
-  --sidebar-border: #2a1d13;
-  --sidebar-active: #ff6a1a;
+  --success: #177a45;
+  --warning: #a76200;
+  --info: #1d5fd6;
+
+  /* ---- semantic: navigation shell (navy in both themes) ------------------- */
+  --sidebar: var(--navy-900);
+  --sidebar-foreground: #e6ecf7;
+  --sidebar-muted: #93a3bf;
+  --sidebar-border: #18284a;
+  --sidebar-hover: rgb(255 255 255 / 0.06);
+  --sidebar-active: #173261;
   --sidebar-active-foreground: #ffffff;
-  --radius: 0.625rem;
+  --sidebar-indicator: var(--cyan-400);
+
+  /* ---- semantic: data visualisation ---------------------------------------
+     Categorical order is fixed (never cycled) and validated for colour-vision
+     deficiency against the card surface of each theme. */
+  --chart-1: #2563eb;
+  --chart-2: #d97a1e;
+  --chart-3: #0e9bb8;
+  --chart-4: #7c5cd6;
+  --chart-5: #3f9b5b;
+  --chart-neutral: #b4bfd2;
+  --chart-grid: #e6ebf3;
+  --chart-axis: #c6cfdf;
+
+  /* ---- shape, elevation, motion ------------------------------------------- */
+  --radius: 0.5rem;
+  --shadow-color: 15 35 80;
+  --elevation-1: 0 1px 2px rgb(var(--shadow-color) / 0.06);
+  --elevation-2: 0 1px 2px rgb(var(--shadow-color) / 0.06), 0 4px 12px rgb(var(--shadow-color) / 0.08);
+  --elevation-3: 0 4px 8px rgb(var(--shadow-color) / 0.08), 0 16px 40px rgb(var(--shadow-color) / 0.16);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+
+  /* ---- layout -------------------------------------------------------------- */
+  --header-height: 3.5rem;
+  --sidebar-width: 15.5rem;
+  --sidebar-width-collapsed: 3.75rem;
+  --content-max-width: 96rem;
 }
 
 .dark {
-  --background: #0f0a07;
-  --foreground: #f5efe9;
-  --card: #18110c;
-  --card-foreground: #f5efe9;
-  --muted: #221912;
-  --muted-foreground: #a8988c;
-  --border: #2d2219;
-  --input: #2d2219;
-  --ring: #ff7a2a;
-  --primary: #ff6a1a;
-  --primary-foreground: #150a03;
-  --secondary: #2a1a0f;
-  --secondary-foreground: #ffb27a;
-  --accent: #33200f;
-  --accent-foreground: #ffc89c;
-  --destructive: #ef5350;
-  --destructive-foreground: #150a03;
-  --success: #3ddc84;
-  --warning: #ffb547;
-  --sidebar: #0b0705;
-  --sidebar-foreground: #f5efe9;
-  --sidebar-muted: #8d7d70;
-  --sidebar-border: #221912;
-  --sidebar-active: #ff6a1a;
-  --sidebar-active-foreground: #150a03;
+  --background: var(--slate-950);
+  --foreground: #e6ecf7;
+  --card: var(--slate-900);
+  --card-foreground: #e6ecf7;
+  --popover: #121f3a;
+  --popover-foreground: #e6ecf7;
+  --muted: #15223d;
+  --muted-foreground: var(--slate-400);
+  --border: var(--slate-800);
+  --input: #2a3a5e;
+  --ring: #5b9bff;
+
+  --primary: var(--blue-400);
+  --primary-foreground: #06122a;
+  --secondary: #17274a;
+  --secondary-foreground: #cfe0ff;
+  --accent: #17274a;
+  --accent-foreground: #e6ecf7;
+  --link: #7fb0ff;
+  --highlight: var(--cyan-400);
+
+  --destructive: #f0625f;
+  --destructive-foreground: #1a0606;
+  --success: #3ecf8e;
+  --warning: #f2b441;
+  --info: #6aa5ff;
+
+  --sidebar: var(--navy-950);
+  --sidebar-foreground: #e6ecf7;
+  --sidebar-muted: #8394b2;
+  --sidebar-border: #14203a;
+  --sidebar-active: #14284f;
+
+  --chart-1: #3b82f6;
+  --chart-2: #c9722a;
+  --chart-3: #1596b3;
+  --chart-4: #9b6be6;
+  --chart-5: #3f9e60;
+  --chart-neutral: #3a4a6b;
+  --chart-grid: #1a2742;
+  --chart-axis: #2a3a5e;
+
+  --shadow-color: 0 0 0;
+  --elevation-1: 0 1px 2px rgb(var(--shadow-color) / 0.4);
+  --elevation-2: 0 1px 2px rgb(var(--shadow-color) / 0.4), 0 4px 12px rgb(var(--shadow-color) / 0.35);
+  --elevation-3: 0 4px 8px rgb(var(--shadow-color) / 0.4), 0 16px 40px rgb(var(--shadow-color) / 0.55);
 }
 
 @theme inline {
@@ -68,6 +179,8 @@
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
@@ -79,44 +192,108 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-link: var(--link);
+  --color-highlight: var(--highlight);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-muted: var(--sidebar-muted);
   --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-active-foreground: var(--sidebar-active-foreground);
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
+  --color-sidebar-indicator: var(--sidebar-indicator);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-neutral: var(--chart-neutral);
+  --color-navy-900: var(--navy-900);
+  --color-navy-950: var(--navy-950);
+  --color-slate-100: var(--slate-100);
+
   --radius-sm: calc(var(--radius) - 4px);
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-xs: var(--elevation-1);
+  --shadow-sm: var(--elevation-1);
+  --shadow-md: var(--elevation-2);
+  --shadow-lg: var(--elevation-2);
+  --shadow-xl: var(--elevation-3);
+
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "Cascadia Mono", Menlo, Monaco, Consolas, monospace;
+
+  /* Type scale: compact, built for dense admin screens. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --spacing-header: var(--header-height);
+  --spacing-sidebar: var(--sidebar-width);
+  --spacing-sidebar-collapsed: var(--sidebar-width-collapsed);
+  --container-content: var(--content-max-width);
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* One focus treatment for every interactive element, in both themes. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--ring) 28%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
-html {
-  color-scheme: light;
-}
+@layer components {
+  /* Thin, unobtrusive scrollbars inside panels and the sidebar. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, currentColor 25%, transparent) transparent;
+  }
 
-html.dark {
-  color-scheme: dark;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* Focus ring that works on both themes. */
-:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  /* Recharts draws focus rectangles on click; keyboard focus keeps the global ring. */
+  .recharts-wrapper :focus:not(:focus-visible),
+  .recharts-surface:focus:not(:focus-visible) {
+    outline: none;
+  }
 }

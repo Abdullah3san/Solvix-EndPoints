@@ -30,7 +30,16 @@ public sealed record DeviceSummaryDto(
     Guid? AssignedUserId,
     DateTimeOffset? LastSeenAtUtc,
     DateTimeOffset? LastInventoryAtUtc,
-    DateTimeOffset EnrolledAtUtc);
+    DateTimeOffset EnrolledAtUtc)
+{
+    /// <summary>Display name of the assigned member; null when unassigned or the user has left the workspace.</summary>
+    public string? AssignedUserName { get; init; }
+
+    public Guid? BranchId { get; init; }
+
+    /// <summary>Name of the assigned branch; null when unassigned.</summary>
+    public string? BranchName { get; init; }
+}
 
 public sealed record DeviceDetailsDto
 {
@@ -101,6 +110,21 @@ public sealed record DeviceCredentialDto(
 
 public sealed record DeviceInventoryDto(Guid DeviceId, DateTimeOffset CollectedAtUtc, DateTimeOffset ReceivedAtUtc, string? ContentHash, InventoryReport Report);
 
+public enum DeviceSortField
+{
+    Name = 1,
+    OperatingSystem = 2,
+    LastSeen = 3,
+    EnrolledAt = 4,
+}
+
+public enum SortDirection
+{
+    Asc = 1,
+    Desc = 2,
+}
+
+/// <param name="Attention">When true, only active devices whose agent reports a degraded or unhealthy state.</param>
 public sealed record DeviceListQuery(
     string? Search,
     DeviceStatus? Status,
@@ -109,7 +133,11 @@ public sealed record DeviceListQuery(
     string? AgentVersion,
     Guid? AssignedUserId,
     int Page = 1,
-    int PageSize = 25);
+    int PageSize = 25,
+    Guid? BranchId = null,
+    bool? Attention = null,
+    DeviceSortField SortBy = DeviceSortField.Name,
+    SortDirection SortDirection = SortDirection.Asc);
 
 public sealed record UpdateDeviceRequest(string? DisplayName, string? Notes);
 
@@ -125,6 +153,10 @@ public sealed record DeviceStatsDto(
     int Retired,
     int UpdateAvailable,
     string? LatestAgentVersion,
-    IReadOnlyList<AgentVersionCountDto> AgentVersions);
+    IReadOnlyList<AgentVersionCountDto> AgentVersions)
+{
+    /// <summary>Active devices whose agent reports a degraded or unhealthy state.</summary>
+    public int RequiringAttention { get; init; }
+}
 
 public sealed record AgentVersionCountDto(string Version, int DeviceCount, bool IsLatest, bool UpdateAvailable);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 import { segmentLabels } from "./nav-config";
-import { titleCase } from "@/lib/utils";
+import { cn, titleCase } from "@/lib/utils";
 
 export interface Crumb {
   label: string;
@@ -23,6 +23,7 @@ export function crumbsFromPathname(pathname: string): Crumb[] {
   });
 }
 
+/** Location trail in the header. On narrow screens only the current page is shown. */
 export function Breadcrumbs({ pathname: override }: { pathname?: string }) {
   const current = usePathname();
   const pathname = override ?? current;
@@ -31,20 +32,20 @@ export function Breadcrumbs({ pathname: override }: { pathname?: string }) {
   return (
     <nav aria-label="Breadcrumb" className="min-w-0">
       <ol className="flex items-center gap-1 text-sm text-muted-foreground">
-        <li>
-          <Link href="/dashboard" className="flex items-center rounded hover:text-foreground" aria-label="Home">
-            <Home className="h-4 w-4" />
+        <li className="hidden sm:block">
+          <Link href="/dashboard" className="flex size-7 items-center justify-center rounded-md hover:bg-muted hover:text-foreground" aria-label="Home">
+            <Home className="size-4" />
           </Link>
         </li>
         {crumbs.map((crumb, index) => (
-          <li key={`${crumb.label}-${index}`} className="flex min-w-0 items-center gap-1">
-            <ChevronRight className="h-4 w-4 shrink-0 opacity-60" aria-hidden />
+          <li key={`${crumb.label}-${index}`} className={cn("min-w-0 items-center gap-1", crumb.href ? "hidden sm:flex" : "flex")}>
+            <ChevronRight className="hidden size-3.5 shrink-0 opacity-60 sm:block" aria-hidden />
             {crumb.href ? (
-              <Link href={crumb.href} className="truncate rounded hover:text-foreground">
+              <Link href={crumb.href} className="truncate rounded px-1 py-0.5 hover:bg-muted hover:text-foreground">
                 {crumb.label}
               </Link>
             ) : (
-              <span className="truncate font-medium text-foreground" aria-current="page">
+              <span className="truncate px-1 font-medium text-foreground" aria-current="page">
                 {crumb.label}
               </span>
             )}

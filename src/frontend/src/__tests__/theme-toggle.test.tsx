@@ -13,9 +13,9 @@ describe("theme toggle", () => {
     const user = userEvent.setup();
     render(<ThemeToggle />);
     await user.click(screen.getByRole("button", { name: /select theme/i }));
-    expect(screen.getByRole("menuitem", { name: /light/i })).toBeInTheDocument();
-    expect(screen.getByRole("menuitem", { name: /system/i })).toHaveAttribute("aria-current", "true");
-    await user.click(screen.getByRole("menuitem", { name: /dark/i }));
+    expect(screen.getByRole("menuitemradio", { name: /light/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: /system/i })).toHaveAttribute("aria-checked", "true");
+    await user.click(screen.getByRole("menuitemradio", { name: /dark/i }));
     expect(setTheme).toHaveBeenCalledWith("dark");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });

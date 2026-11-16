@@ -178,6 +178,10 @@ export interface DeviceSummaryDto {
   healthStatus: AgentHealthStatus | null;
   ipAddresses: string[];
   assignedUserId: string | null;
+  /** Display name of the assigned member; null when unassigned or the user left the workspace. */
+  assignedUserName: string | null;
+  branchId: string | null;
+  branchName: string | null;
   lastSeenAtUtc: string | null;
   lastInventoryAtUtc: string | null;
   enrolledAtUtc: string;
@@ -300,9 +304,14 @@ export interface DeviceStatsDto {
   offline: number;
   retired: number;
   updateAvailable: number;
+  /** Active devices whose agent reports a degraded or unhealthy state. */
+  requiringAttention: number;
   latestAgentVersion: string | null;
   agentVersions: { version: string; deviceCount: number; isLatest: boolean; updateAvailable: boolean }[];
 }
+
+export type DeviceSortField = "Name" | "OperatingSystem" | "LastSeen" | "EnrolledAt";
+export type SortDirection = "Asc" | "Desc";
 
 export interface DeviceGroupDto {
   id: string;

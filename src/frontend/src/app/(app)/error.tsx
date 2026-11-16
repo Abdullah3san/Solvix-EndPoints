@@ -1,16 +1,19 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Alert } from "@/components/ui/alert";
+import { ErrorState } from "@/components/ui/empty-state";
 
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div className="mx-auto max-w-lg space-y-4 py-10">
-      <Alert tone="error" title="Something went wrong">
-        {error.message || "An unexpected error occurred."}
-        {error.digest ? <span className="block font-mono text-xs">ref: {error.digest}</span> : null}
-      </Alert>
-      <Button onClick={reset}>Try again</Button>
-    </div>
+    <ErrorState
+      className="mx-auto max-w-lg py-16"
+      title="Something went wrong"
+      description={
+        <>
+          {error.message || "An unexpected error occurred."}
+          {error.digest ? <span className="mt-1 block font-mono text-xs">Reference: {error.digest}</span> : null}
+        </>
+      }
+      onRetry={reset}
+    />
   );
 }
