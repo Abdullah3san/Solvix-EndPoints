@@ -29,6 +29,8 @@
     <ProjectReference Include="..\Modules\Solvix.Modules.Billing\Solvix.Modules.Billing.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Helpdesk\Solvix.Modules.Helpdesk.csproj" />
     <ProjectReference Include="..\Modules\Solvix.Modules.Reporting\Solvix.Modules.Reporting.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.Audit\Solvix.Modules.Audit.csproj" />
+    <ProjectReference Include="..\Modules\Solvix.Modules.EndpointManagement\Solvix.Modules.EndpointManagement.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Solvix.UnitTests" />

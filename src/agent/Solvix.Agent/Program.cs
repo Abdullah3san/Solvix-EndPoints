@@ -111,6 +111,12 @@ else
 
 if (command == "software-executor")
 {
+    if (OperatingSystem.IsWindows())
+    {
+        // Installs approved Windows updates and enforces configuration for verified signed commands (Phase 09).
+        builder.Services.AddSolvixEndpointManagementWindows(executor: true);
+    }
+
     // Runs installers only: no enrollment, heartbeat, inventory or command polling, no outbound network use.
     builder.Services.AddHostedService<Solvix.Agent.Core.Software.SoftwareExecutorHost>();
 }
@@ -119,6 +125,10 @@ if (command == "run")
 {
     builder.Services.AddHostedService<AgentWorker>();
     builder.Services.AddHostedService<Solvix.Agent.Core.RemoteManagement.CommandChannelWorker>();
+    if (OperatingSystem.IsWindows())
+    {
+        builder.Services.AddSolvixEndpointManagementWindows(executor: false);
+    }
 }
 
 try

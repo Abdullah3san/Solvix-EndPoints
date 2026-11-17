@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Wire contracts and policy rules shared by the Solvix server and the Windows
+    endpoint agent. No dependencies, so the agent can ship it unchanged and the
+    risk classification used to authorise a setting is identical on both sides.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Solvix.Endpoint.Contracts</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Solvix.UnitTests" />
+  </ItemGroup>
+</Project>

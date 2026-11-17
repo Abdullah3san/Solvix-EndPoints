@@ -31,6 +31,7 @@ public static class RowLevelSecurity
         .. BillingSecurityMigration.TenantTables,
         .. HelpdeskSecurityMigration.TenantTables,
         .. ReportingSecurityMigration.TenantTables,
+        .. EndpointManagementSecurityMigration.TenantTables,
     ];
 
     public static void CreateHelperFunctions(MigrationBuilder migrationBuilder)

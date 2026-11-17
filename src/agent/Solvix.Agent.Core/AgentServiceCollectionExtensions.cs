@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Solvix.Agent.Core.Communication;
 using Solvix.Agent.Core.Configuration;
+using Solvix.Agent.Core.Endpoints;
 using Solvix.Agent.Core.Enrollment;
 using Solvix.Agent.Core.Health;
 using Solvix.Agent.Core.Installation;
@@ -39,6 +40,7 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<IAgentApiClient>(sp => sp.GetRequiredService<AgentApiClient>());
         services.TryAddSingleton<IAgentCommandClient>(sp => sp.GetRequiredService<AgentApiClient>());
         services.TryAddSingleton<ISoftwarePackageClient>(sp => sp.GetRequiredService<AgentApiClient>());
+        services.TryAddSingleton<IEndpointManagementClient>(sp => sp.GetRequiredService<AgentApiClient>());
         services.TryAddSingleton<ConnectionMonitor>();
         services.TryAddSingleton<AgentHealthMonitor>();
         services.TryAddSingleton<ISystemHealthProbe, PortableSystemHealthProbe>();
@@ -80,6 +82,12 @@ public static class AgentServiceCollectionExtensions
         foreach (var type in SoftwareCommandHandler.Types)
         {
             services.AddSingleton<ICommandHandler>(sp => ActivatorUtilities.CreateInstance<SoftwareCommandHandler>(sp, type));
+        }
+
+        // Endpoint management (Phase 09): patch installs and configuration enforcement run in the executor service.
+        foreach (var type in EndpointCommandHandler.Types)
+        {
+            services.AddSingleton<ICommandHandler>(sp => ActivatorUtilities.CreateInstance<EndpointCommandHandler>(sp, type));
         }
 
         services.AddHttpClient(UpdateManager.DownloadClientName, c => c.Timeout = TimeSpan.FromMinutes(30))

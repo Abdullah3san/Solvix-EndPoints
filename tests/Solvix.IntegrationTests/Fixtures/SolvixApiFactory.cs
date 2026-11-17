@@ -90,6 +90,8 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__Assistant__UseDemoFleet"] = "false",
             ["Solvix__Assistant__ChatPermitsPerMinute"] = "10000",
             ["Solvix__Security__MinReportIntervalSeconds"] = "1",
+            ["Solvix__EndpointManagement__ConfigurationReapplyMinutes"] = "0",
+            ["Solvix__EndpointManagement__WorkerEnabled"] = "false",
             ["Serilog__MinimumLevel__Default"] = "Warning",
             ["Solvix__Devices__CertificateAuthority__AutoGenerate"] = "true",
             ["Solvix__Devices__ForwardedClientCertificateHeader"] = ForwardedCertificateHeader,

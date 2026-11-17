@@ -56,7 +56,7 @@ internal sealed class CommandBroker(
     public async Task<CommandExecutionDto> RequestAsync(Guid deviceId, string commandType, OperationRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (CommandTypes.Software.Contains(commandType))
+        if (CommandTypes.Software.Contains(commandType) || CommandTypes.EndpointManagement.Contains(commandType))
         {
             throw new ValidationException("commandType", "Software commands are only created by software deployments.");
         }

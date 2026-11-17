@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="System.Management" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Solvix.Agent.Tests" />

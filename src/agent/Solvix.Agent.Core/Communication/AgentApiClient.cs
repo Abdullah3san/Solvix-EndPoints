@@ -9,6 +9,8 @@ using Microsoft.Extensions.Options;
 using Solvix.Agent.Contracts;
 using Solvix.Agent.Contracts.RemoteManagement;
 using Solvix.Agent.Core.Configuration;
+using Solvix.Endpoint.Contracts;
+using Solvix.Endpoint.Contracts.Agent;
 
 public interface IAgentApiClient
 {
@@ -50,7 +52,20 @@ public interface ISoftwarePackageClient
 /// Typed client for the agent API. All traffic is outbound; responses are
 /// deserialized into fixed contracts only (source-generated, no polymorphism).
 /// </summary>
-public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, ISoftwarePackageClient, IDisposable
+/// <summary>Endpoint management (Phase 09): restart detection, Windows Update inventory and configuration checks.</summary>
+public interface IEndpointManagementClient
+{
+    Task<AgentWorkResponse> GetEndpointWorkAsync(AgentWorkRequest request, CancellationToken cancellationToken);
+
+    Task SubmitPatchInventoryAsync(PatchInventoryReport report, CancellationToken cancellationToken);
+
+    /// <summary>The desired configuration, or null when it still has <paramref name="knownRevision"/>.</summary>
+    Task<ConfigurationDocument?> GetConfigurationAsync(string? knownRevision, CancellationToken cancellationToken);
+
+    Task SubmitConfigurationReportAsync(ConfigurationReport report, CancellationToken cancellationToken);
+}
+
+public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, ISoftwarePackageClient, IEndpointManagementClient, IDisposable
 {
     private readonly Lock _gate = new();
     private readonly IAgentTransport? _transport;
@@ -127,6 +142,35 @@ public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, ISoft
         using var response = await SendRawAsync(request, cancellationToken);
     }
 
+    public Task<AgentWorkResponse> GetEndpointWorkAsync(AgentWorkRequest request, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, EndpointAgentRoutes.Work, request, EndpointJson<AgentWorkRequest>(), EndpointJson<AgentWorkResponse>(), cancellationToken);
+
+    public async Task SubmitPatchInventoryAsync(PatchInventoryReport report, CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(report, EndpointJson<PatchInventoryReport>());
+        using var request = new HttpRequestMessage(HttpMethod.Post, EndpointAgentRoutes.PatchInventory) { Content = content };
+        using var response = await SendRawAsync(request, cancellationToken);
+    }
+
+    public async Task<ConfigurationDocument?> GetConfigurationAsync(string? knownRevision, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, EndpointAgentRoutes.Configuration);
+        if (!string.IsNullOrEmpty(knownRevision))
+        {
+            request.Headers.TryAddWithoutValidation("If-None-Match", $"\"{knownRevision}\"");
+        }
+
+        using var response = await SendRawAsync(request, cancellationToken);
+        return response.StatusCode == HttpStatusCode.NotModified ? null : await ReadAsync(response, EndpointJson<ConfigurationDocument>(), cancellationToken);
+    }
+
+    public async Task SubmitConfigurationReportAsync(ConfigurationReport report, CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(report, EndpointJson<ConfigurationReport>());
+        using var request = new HttpRequestMessage(HttpMethod.Post, EndpointAgentRoutes.ConfigurationReport) { Content = content };
+        using var response = await SendRawAsync(request, cancellationToken);
+    }
+
     public async Task<CommandKeySet> GetCommandKeysAsync(CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, AgentRoutes.CommandKeys);
@@ -199,6 +243,8 @@ public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, ISoft
         }
     }
 
+    private static JsonTypeInfo<T> EndpointJson<T>() => (JsonTypeInfo<T>)ContractJson.Options.GetTypeInfo(typeof(T));
+
     private async Task<TResponse> SendAsync<TRequest, TResponse>(
         HttpMethod method,
         string route,
@@ -229,7 +275,7 @@ public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, ISoft
             throw new AgentApiException(AgentApiFailure.Transient, HttpStatusCode.RequestTimeout, null, "The request timed out.", ex);
         }
 
-        if (response.IsSuccessStatusCode)
+        if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotModified)
         {
             return response;
         }

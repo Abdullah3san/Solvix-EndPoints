@@ -29,19 +29,37 @@ public static class CommandTypes
     /// <summary>Evaluates a package's detection rule on the device (read-only).</summary>
     public const string SoftwareDetect = "software.detect";
 
+    /// <summary>
+    /// Installs exactly the approved Windows Update revisions of one patch job (Phase 09). Parameter
+    /// <c>job</c> holds the job as JSON; it is executed by the privileged executor after verification.
+    /// </summary>
+    public const string PatchInstall = "patch.install";
+
+    /// <summary>
+    /// Applies (enforces, reverts) a configuration document (Phase 09). Parameter <c>document</c> holds the
+    /// document as JSON; the privileged executor re-classifies every setting before changing anything.
+    /// </summary>
+    public const string ConfigurationApply = "configuration.apply";
+
     /// <summary>Asks the agent to cancel a running execution (parameter <c>executionId</c>).</summary>
     public const string Cancel = "command.cancel";
 
     public static IReadOnlySet<string> All { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         SystemInfo, Processes, Services, Uptime, LoggedInUsers, Restart, Shutdown, Lock, Logoff, Cancel,
-        SoftwareInstall, SoftwareUninstall, SoftwareDetect,
+        SoftwareInstall, SoftwareUninstall, SoftwareDetect, PatchInstall, ConfigurationApply,
     };
 
     /// <summary>Software commands; only created by a software deployment, never requested ad hoc.</summary>
     public static IReadOnlySet<string> Software { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         SoftwareInstall, SoftwareUninstall, SoftwareDetect,
+    };
+
+    /// <summary>Endpoint management commands (Phase 09); only created by patch deployments and configuration policies.</summary>
+    public static IReadOnlySet<string> EndpointManagement { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        PatchInstall, ConfigurationApply,
     };
 }
 

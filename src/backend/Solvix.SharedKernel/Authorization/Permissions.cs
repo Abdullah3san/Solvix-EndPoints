@@ -78,6 +78,22 @@ public static class Permissions
     /// Endpoint security management (Phase 10): posture, findings, alerts, security policies,
     /// vulnerable-software advisories and approval-gated remediation.
     /// </summary>
+    /// <summary>
+    /// Endpoint management (Phase 09): Windows patching, maintenance windows, restarts and
+    /// configuration policies. Installing updates and enforcing settings run as signed commands.
+    /// </summary>
+    public static class Endpoints
+    {
+        /// <summary>Read patch compliance, deployments, maintenance windows and configuration policies.</summary>
+        public const string View = "endpoints.view";
+
+        /// <summary>Create and run patch deployments, maintenance windows, restarts and configuration policies.</summary>
+        public const string Manage = "endpoints.manage";
+
+        /// <summary>High-impact decisions: emergency patching outside windows, forced restarts, Destructive settings.</summary>
+        public const string ApproveHigh = "endpoints.approve_high";
+    }
+
     public static class EndpointSecurity
     {
         /// <summary>Read posture, findings, alerts, events, reports and the security audit trail.</summary>

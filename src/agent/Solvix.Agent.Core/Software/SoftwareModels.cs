@@ -58,6 +58,9 @@ public sealed record ExecutorResponse
     /// <summary>Tail of the installer log.</summary>
     public string? Log { get; init; }
 
+    /// <summary>JSON result of an endpoint management command (patch job result, configuration report).</summary>
+    public string? Output { get; init; }
+
     public static ExecutorResponse Refuse(string code, string message) => new() { RefusalCode = code, RefusalMessage = message };
 }
 

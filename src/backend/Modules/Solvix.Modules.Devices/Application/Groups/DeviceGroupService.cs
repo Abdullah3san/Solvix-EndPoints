@@ -2,6 +2,7 @@ namespace Solvix.Modules.Devices.Application.Groups;
 
 using Microsoft.EntityFrameworkCore;
 using Solvix.Modules.Devices.Domain;
+using Solvix.SharedKernel.Endpoints;
 using Solvix.SharedKernel.Exceptions;
 using Solvix.SharedKernel.Persistence;
 using Solvix.SharedKernel.Results;
@@ -24,7 +25,7 @@ public interface IDeviceGroupService
     Task<DeviceGroupDto> RemoveDeviceAsync(Guid id, Guid deviceId, CancellationToken cancellationToken);
 }
 
-internal sealed class DeviceGroupService(ISolvixDbContext db, ITenantContext tenantContext) : IDeviceGroupService
+internal sealed class DeviceGroupService(ISolvixDbContext db, ITenantContext tenantContext, IEnumerable<IDeviceGroupUsageCheck> usageChecks) : IDeviceGroupService
 {
     public async Task<PagedResult<DeviceGroupDto>> ListAsync(DeviceGroupListQuery query, CancellationToken cancellationToken)
     {
@@ -69,6 +70,14 @@ internal sealed class DeviceGroupService(ISolvixDbContext db, ITenantContext ten
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
         var group = await FindAsync(id, cancellationToken);
+        foreach (var check in usageChecks)
+        {
+            if (await check.DescribeUsageAsync(id, cancellationToken) is { } usage)
+            {
+                throw new ConflictException(usage, "device_group_in_use");
+            }
+        }
+
         var tokens = await db.Set<EnrollmentToken>().Where(t => t.DeviceGroupId == id).ToListAsync(cancellationToken);
         foreach (var token in tokens)
         {

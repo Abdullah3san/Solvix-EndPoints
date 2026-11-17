@@ -3,9 +3,13 @@ namespace Solvix.Agent.Windows;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using Solvix.Agent.Core.Configuration;
+using Solvix.Agent.Core.Endpoints;
 using Solvix.Agent.Core.Installation;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Monitoring;
+using Solvix.Agent.Core.Patching;
 using Solvix.Agent.Core.RemoteManagement;
 using Solvix.Agent.Core.RemoteManagement.Privileged;
 using Solvix.Agent.Core.Security;
@@ -13,6 +17,8 @@ using Solvix.Agent.Core.Software;
 using Solvix.Agent.Core.Updates;
 using Solvix.Agent.Windows.Inventory;
 using Solvix.Agent.Windows.Monitoring;
+using Solvix.Agent.Windows.Platform;
+using Solvix.Agent.Windows.Providers;
 using Solvix.Agent.Windows.Security;
 using Solvix.Agent.Windows.Software;
 using Solvix.Agent.Windows.Updates;
@@ -42,6 +48,42 @@ public static class WindowsAgentServiceCollectionExtensions
         services.AddSingleton<IInventoryCollector, MemoryCollector>();
         services.AddSingleton<IInventoryCollector, DiskCollector>();
         services.AddSingleton<IInventoryCollector, SoftwareCollector>();
+        return services;
+    }
+
+    /// <summary>
+    /// Endpoint management (Phase 09). In the agent: Windows Update scanning and read-only configuration checks.
+    /// In the software executor (LocalSystem): installing updates and enforcing settings for verified commands,
+    /// with snapshots and the install journal kept in the executor's private directory.
+    /// </summary>
+    [SupportedOSPlatform("windows")]
+    public static IServiceCollection AddSolvixEndpointManagementWindows(this IServiceCollection services, bool executor)
+    {
+        services.TryAddSingleton<RebootManager>();
+        services.TryAddSingleton<IRebootManager>(sp => sp.GetRequiredService<RebootManager>());
+        services.TryAddSingleton<IWindowsUpdateClient, WindowsUpdateClient>();
+        services.AddSingleton<ISettingProvider, ServiceSettingProvider>();
+        services.AddSingleton<ISettingProvider, RegistrySettingProvider>();
+        services.AddSingleton<ISettingProvider, StartupAppSettingProvider>();
+        services.AddSingleton<ISettingProvider, PowerSettingProvider>();
+        services.AddSingleton<ISettingProvider, ScreenLockSettingProvider>();
+        services.AddSingleton<ISettingProvider, UsbStorageSettingProvider>();
+        services.AddSingleton<ISettingProvider, FirewallProfileSettingProvider>();
+        services.AddSingleton<ISettingProvider, FirewallRuleSettingProvider>();
+        if (!executor)
+        {
+            services.AddHostedService<EndpointManagementWorker>();
+            return services;
+        }
+
+        static string Private(IServiceProvider sp, string name) =>
+            Path.Combine(sp.GetRequiredService<IOptions<AgentOptions>>().Value.Software.ResolveExecutorDirectory(), name);
+        services.TryAddSingleton<IPatchJobJournal>(sp => new FilePatchJobJournal(Private(sp, "patch-journal.json")));
+        services.TryAddSingleton<ISnapshotStore>(sp => new FileSnapshotStore(Private(sp, "configuration-snapshots")));
+        services.TryAddSingleton<IAppliedSettingsLedger, InMemoryAppliedSettingsLedger>();
+        services.TryAddSingleton<PatchJobRunner>();
+        services.TryAddSingleton<ConfigurationEvaluator>();
+        services.TryAddSingleton<IEndpointCommandExecutor, EndpointCommandExecutor>();
         return services;
     }
 

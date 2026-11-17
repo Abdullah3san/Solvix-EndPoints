@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using Solvix.Agent.Contracts.RemoteManagement;
 using Solvix.Agent.Contracts.Software;
 using Solvix.Agent.Core.Configuration;
+using Solvix.Agent.Core.Endpoints;
 using Solvix.Agent.Core.RemoteManagement;
 using Solvix.Agent.Core.State;
 using Solvix.Agent.Core.Updates;
@@ -152,14 +153,17 @@ public sealed partial class SoftwareExecutor
     private readonly IInstallerProcessRunner _runner;
     private readonly IOptions<AgentOptions> _agentOptions;
     private readonly ILogger<SoftwareExecutor> _logger;
+    private readonly IEndpointCommandExecutor? _endpoints;
 
     public SoftwareExecutor(
         IOptions<AgentOptions> agentOptions,
         IPackageSignatureVerifier signatures,
         IInstallerProcessRunner runner,
         TimeProvider time,
-        ILogger<SoftwareExecutor> logger)
+        ILogger<SoftwareExecutor> logger,
+        IEndpointCommandExecutor? endpoints = null)
     {
+        _endpoints = endpoints;
         ArgumentNullException.ThrowIfNull(agentOptions);
         _agentOptions = agentOptions;
         _directory = agentOptions.Value.Software.ResolveExecutorDirectory();
@@ -174,7 +178,11 @@ public sealed partial class SoftwareExecutor
         _keys = new CommandKeyStore(own);
         _identity = new PinnedIdentityStore(_directory);
         _replays = new CommandReplayStore(own, time);
-        var registry = new CommandHandlerRegistry([new Marker(CommandTypes.SoftwareInstall), new Marker(CommandTypes.SoftwareUninstall)]);
+        var registry = new CommandHandlerRegistry(
+        [
+            new Marker(CommandTypes.SoftwareInstall), new Marker(CommandTypes.SoftwareUninstall),
+            new Marker(CommandTypes.PatchInstall), new Marker(CommandTypes.ConfigurationApply),
+        ]);
         _verifier = new CommandVerifier(_keys, _replays, _identity, registry, own, time);
         _signatures = signatures;
         _runner = runner;
@@ -194,6 +202,11 @@ public sealed partial class SoftwareExecutor
         }
 
         var envelope = verification.Envelope!;
+        if (envelope.CommandType is CommandTypes.PatchInstall or CommandTypes.ConfigurationApply)
+        {
+            return await ExecuteEndpointCommandAsync(envelope, cancellationToken);
+        }
+
         if (envelope.CommandType is not (CommandTypes.SoftwareInstall or CommandTypes.SoftwareUninstall))
         {
             return ExecutorResponse.Refuse(CommandRejectionCodes.NotAllowed, "The executor only installs and removes software.");
@@ -256,6 +269,45 @@ public sealed partial class SoftwareExecutor
         {
             _single.Release();
             TryDelete(work);
+        }
+    }
+
+    /// <summary>Windows updates and configuration enforcement (Phase 09), already verified like any other command.</summary>
+    private async Task<ExecutorResponse> ExecuteEndpointCommandAsync(CommandEnvelope envelope, CancellationToken cancellationToken)
+    {
+        if (_endpoints is null)
+        {
+            return ExecutorResponse.Refuse(CommandRejectionCodes.NotAllowed, "Endpoint management is not supported on this platform.");
+        }
+
+        await _single.WaitAsync(cancellationToken);
+        try
+        {
+            if (!_replays.TryRecord(envelope))
+            {
+                return ExecutorResponse.Refuse(CommandRejectionCodes.Replayed, "This command was already executed.");
+            }
+
+            LogStarting(_logger, envelope.ExecutionId, envelope.CommandType, envelope.CommandType);
+            var output = await _endpoints.ExecuteAsync(envelope, cancellationToken);
+            LogFinished(_logger, envelope.ExecutionId, 0, false, false);
+            return new ExecutorResponse { Executed = true, ExitCode = 0, Output = output };
+        }
+        catch (FormatException ex)
+        {
+            return ExecutorResponse.Refuse(SoftwareErrorCodes.InvalidParameters, ex.Message);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return new ExecutorResponse { Executed = true, Cancelled = true };
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            return ExecutorResponse.Refuse("execution_failed", ex.Message);
+        }
+        finally
+        {
+            _single.Release();
         }
     }
 

@@ -6,6 +6,8 @@ using Solvix.Modules.Devices;
 using Solvix.Modules.Assistant;
 using Solvix.Modules.Billing;
 using Solvix.Modules.Helpdesk;
+using Solvix.Modules.Audit;
+using Solvix.Modules.EndpointManagement;
 using Solvix.Modules.Identity;
 using Solvix.Modules.Mdm;
 using Solvix.Modules.Organization;
@@ -34,6 +36,8 @@ public static class SolvixModules
         new BillingModule(),
         new HelpdeskModule(),
         new ReportingModule(),
+        new AuditModule(),
+        new EndpointManagementModule(),
     ];
 
     public static IReadOnlyList<Assembly> ConfigurationAssemblies { get; } =

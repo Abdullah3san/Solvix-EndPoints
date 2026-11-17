@@ -30,6 +30,9 @@
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Billing\Solvix.Modules.Billing.csproj" />
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Helpdesk\Solvix.Modules.Helpdesk.csproj" />
     <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.Reporting\Solvix.Modules.Reporting.csproj" />
+    <ProjectReference Include="..\..\src\backend\Modules\Solvix.Modules.EndpointManagement\Solvix.Modules.EndpointManagement.csproj" />
+    <ProjectReference Include="..\..\src\shared\Solvix.Endpoint.Contracts\Solvix.Endpoint.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\agent\Solvix.Agent.Core\Solvix.Agent.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

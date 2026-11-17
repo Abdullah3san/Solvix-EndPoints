@@ -2,6 +2,7 @@
 
 > The original target architecture (system-wide design, ADR links) is kept in
 > [ARCHITECTURE-TARGET.md](ARCHITECTURE-TARGET.md); this document describes what is built.
+# Architecture (Phases 01 and 09)
 
 ## Modular monolith
 
@@ -560,3 +561,30 @@ Platform scope is used only to *list* tenants; all work for a tenant runs in a s
 
 OpenTelemetry metrics (ASP.NET Core, HTTP client, runtime, `Solvix` meter) and traces, exported over OTLP when
 `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Business counters never carry tenant or user data as tags.
+## Endpoint management (Phase 09)
+
+```
+Solvix.Api ──► Solvix.Infrastructure ──► Modules.EndpointManagement ──► Modules.Devices ──► Modules.Organization
+                                     └──► Modules.Audit                 └──► Solvix.Endpoint.Contracts ◄── Solvix.Agent.Core ◄── Solvix.Agent.Windows
+```
+
+* **Agents are tenant principals.** The default authentication scheme is a policy
+  scheme: `Authorization: Bearer` → JWT (people), `Authorization: Device` → device
+  credential (agents, claims `tid` + `act=agent`). Tenant resolution skips the
+  membership check for agents (the handler already verified an active device);
+  every other isolation layer applies unchanged. User policies reject agent
+  principals, the `Agent` policy rejects people.
+* **Shared contracts.** The setting model and `SettingRiskClassifier` live in
+  `Solvix.Endpoint.Contracts`, referenced by the server and the agent, so the risk
+  the approvers authorised and the risk the agent enforces are computed identically.
+* **Targeting.** `TargetingSnapshot` resolves all devices / branch / department
+  (with sub-departments) / device group / device, with exclusions, for both patch
+  deployments and configuration assignments. `EffectiveConfigurationResolver`
+  turns assignments into one desired-state document per device and detects conflicts.
+* **Scheduling.** `EndpointManagementWorker` (hosted service, `Solvix:EndpointManagement`)
+  ticks `IDeploymentOrchestrator` for each active tenant in a tenant-bound scope.
+  Agent work is handed out on heartbeat, so devices behind NAT need only outbound HTTPS.
+* **Audit.** `IAuditTrail.Record` stages an entry in the caller's unit of work; it
+  commits atomically with the audited change. `audit_entries` is append-only by trigger.
+
+Details, safety model and verification: `docs/PHASE-09-SUMMARY.md`.

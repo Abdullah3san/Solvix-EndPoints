@@ -121,6 +121,7 @@ public sealed class PrivilegeEscalationTests(ApiFixture fixture)
 
             var method = new HttpMethod(endpoint.Metadata.GetMetadata<HttpMethodMetadata>()!.HttpMethods[0]);
             var url = "/" + System.Text.RegularExpressions.Regex.Replace(endpoint.RoutePattern.RawText!, "\\{version[^}]*\\}", "1");
+            url = System.Text.RegularExpressions.Regex.Replace(url, "\\{[^}]+:int\\}", "1");
             url = System.Text.RegularExpressions.Regex.Replace(url, "\\{[^}]+\\}", Guid.NewGuid().ToString());
 
             HttpRequestMessage Request() => new(method, url)

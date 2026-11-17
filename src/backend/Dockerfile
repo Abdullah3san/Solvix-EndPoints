@@ -25,6 +25,9 @@ COPY src/backend/Modules/Solvix.Modules.Mdm/Solvix.Modules.Mdm.csproj src/backen
 COPY src/backend/Modules/Solvix.Modules.Billing/Solvix.Modules.Billing.csproj src/backend/Modules/Solvix.Modules.Billing/
 COPY src/backend/Modules/Solvix.Modules.Helpdesk/Solvix.Modules.Helpdesk.csproj src/backend/Modules/Solvix.Modules.Helpdesk/
 COPY src/backend/Modules/Solvix.Modules.Reporting/Solvix.Modules.Reporting.csproj src/backend/Modules/Solvix.Modules.Reporting/
+COPY src/backend/Modules/Solvix.Modules.Audit/Solvix.Modules.Audit.csproj src/backend/Modules/Solvix.Modules.Audit/
+COPY src/backend/Modules/Solvix.Modules.EndpointManagement/Solvix.Modules.EndpointManagement.csproj src/backend/Modules/Solvix.Modules.EndpointManagement/
+COPY src/shared/Solvix.Endpoint.Contracts/Solvix.Endpoint.Contracts.csproj src/shared/Solvix.Endpoint.Contracts/
 COPY src/agent/Directory.Build.props src/agent/
 COPY src/agent/Solvix.Agent/Solvix.Agent.csproj src/agent/Solvix.Agent/
 COPY src/agent/Solvix.Agent.Core/Solvix.Agent.Core.csproj src/agent/Solvix.Agent.Core/
@@ -32,6 +35,7 @@ COPY src/agent/Solvix.Agent.Windows/Solvix.Agent.Windows.csproj src/agent/Solvix
 RUN dotnet restore src/backend/Solvix.Api/Solvix.Api.csproj && dotnet restore src/backend/Solvix.Migrator/Solvix.Migrator.csproj \
  && dotnet restore src/agent/Solvix.Agent/Solvix.Agent.csproj -r win-x64
 
+COPY src/shared/ src/shared/
 COPY src/backend/ src/backend/
 COPY src/shared/ src/shared/
 COPY src/agent/ src/agent/

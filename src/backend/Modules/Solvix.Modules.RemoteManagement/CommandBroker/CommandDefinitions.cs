@@ -47,6 +47,9 @@ public static class CommandDefinitions
         new(CommandTypes.SoftwareInstall, Permissions.Software.Deploy, TimeSpan.FromHours(1), false, true, NoParameters),
         new(CommandTypes.SoftwareUninstall, Permissions.Software.Deploy, TimeSpan.FromHours(1), false, true, NoParameters),
         new(CommandTypes.SoftwareDetect, Permissions.Software.Deploy, TimeSpan.FromMinutes(5), false, false, NoParameters),
+        new(CommandTypes.PatchInstall, Permissions.Endpoints.Manage, TimeSpan.FromHours(4), false, true, NoParameters),
+        new(CommandTypes.ConfigurationApply, Permissions.Endpoints.Manage, TimeSpan.FromMinutes(15), false, true, NoParameters),
+        new(CommandTypes.Restart, Permissions.Endpoints.Manage, TimeSpan.FromMinutes(15), false, true, PowerParameters),
     }.ToDictionary(d => d.Type, StringComparer.Ordinal);
 
     public static CommandDefinition? FindDelegated(string type) => Delegated.GetValueOrDefault(type);

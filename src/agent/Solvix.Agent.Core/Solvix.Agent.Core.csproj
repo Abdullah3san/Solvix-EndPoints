@@ -5,6 +5,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\shared\Solvix.Agent.Contracts\Solvix.Agent.Contracts.csproj" />
+    <ProjectReference Include="..\..\shared\Solvix.Endpoint.Contracts\Solvix.Endpoint.Contracts.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Solvix.Agent.Tests" />

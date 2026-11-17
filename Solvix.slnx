@@ -12,6 +12,8 @@
     <Project Path="src/backend/Modules/Solvix.Modules.Assistant/Solvix.Modules.Assistant.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Billing/Solvix.Modules.Billing.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Helpdesk/Solvix.Modules.Helpdesk.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.Audit/Solvix.Modules.Audit.csproj" />
+    <Project Path="src/backend/Modules/Solvix.Modules.EndpointManagement/Solvix.Modules.EndpointManagement.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Mdm/Solvix.Modules.Mdm.csproj" />
     <Project Path="src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj" />
@@ -28,6 +30,7 @@
   </Folder>
   <Folder Name="/src/shared/">
     <Project Path="src/shared/Solvix.Agent.Contracts/Solvix.Agent.Contracts.csproj" />
+    <Project Path="src/shared/Solvix.Endpoint.Contracts/Solvix.Endpoint.Contracts.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Solvix.Agent.Tests/Solvix.Agent.Tests.csproj" />

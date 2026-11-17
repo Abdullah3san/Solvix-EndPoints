@@ -9,6 +9,7 @@ import {
   Boxes,
   Bug,
   Building2,
+  CalendarClock,
   ClipboardCheck,
   CreditCard,
   FileCheck,
@@ -81,6 +82,15 @@ export const navigation: NavSection[] = [
       { label: "Devices", href: "/endpoints/devices", icon: Monitor, permission: "devices.view" },
       { label: "Device groups", href: "/endpoints/groups", icon: Boxes, permission: "devices.view" },
       { label: "Enrollment", href: "/endpoints/enrollment", icon: KeyRound, permission: "devices.enroll" },
+    ],
+  },
+  {
+    title: "Patching & configuration",
+    items: [
+      { label: "Patches", href: "/endpoints/patches", icon: ShieldCheck, permission: "endpoints.view" },
+      { label: "Patch deployments", href: "/endpoints/deployments", icon: Rocket, permission: "endpoints.view" },
+      { label: "Maintenance windows", href: "/endpoints/maintenance-windows", icon: CalendarClock, permission: "endpoints.view" },
+      { label: "Configuration", href: "/endpoints/configuration", icon: SlidersHorizontal, permission: "endpoints.view" },
     ],
   },
   {
@@ -208,6 +218,9 @@ export const segmentLabels: Record<string, string> = {
   rules: "Rules and scoring",
   helpdesk: "Helpdesk",
   billing: "Billing",
+  patches: "Patches",
+  "maintenance-windows": "Maintenance windows",
+  configuration: "Configuration",
 };
 
 /** Hrefs that are parents of other nav items must match exactly, or they would always look active. */
