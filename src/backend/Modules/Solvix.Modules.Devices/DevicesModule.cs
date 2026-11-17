@@ -43,6 +43,10 @@ public sealed class DevicesModule : IModule
         services.AddScoped<ICurrentDevice, HttpCurrentDevice>();
 
         services.AddScoped<IEnrollmentTokenService, EnrollmentTokenService>();
+        services.AddScoped<DeviceRegistrar>();
+        services.AddScoped<IPendingEnrollmentIntake, PendingEnrollmentIntakeService>();
+        services.AddScoped<IPendingEnrollmentService, PendingEnrollmentService>();
+        services.AddScoped<IDeploymentProfileService, DeploymentProfileService>();
         services.AddScoped<IAgentEnrollmentService, AgentEnrollmentService>();
         services.AddScoped<IAgentPackageService, AgentPackageService>();
         services.AddScoped<IAgentService, AgentService>();
@@ -69,6 +73,7 @@ public sealed class DevicesModule : IModule
 
         // Anonymous enrollment is the only unauthenticated device endpoint: throttle it per client address.
         var permits = section.GetSection(nameof(DevicesOptions.Enrollment)).GetValue<int?>(nameof(EnrollmentOptions.RateLimitPerMinute)) ?? 30;
+        var pollPermits = section.GetSection(nameof(DevicesOptions.Enrollment)).GetValue<int?>(nameof(EnrollmentOptions.PollRateLimitPerMinute)) ?? 600;
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -76,6 +81,10 @@ public sealed class DevicesModule : IModule
                 RateLimitPartition.GetFixedWindowLimiter(
                     context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
                     _ => new FixedWindowRateLimiterOptions { PermitLimit = permits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            options.AddPolicy(AgentController.EnrollmentPollRateLimitPolicy, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions { PermitLimit = pollPermits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
         });
     }
 

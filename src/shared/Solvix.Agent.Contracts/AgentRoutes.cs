@@ -11,6 +11,12 @@ public static class AgentRoutes
     /// <summary>Anonymous; authenticated by a short-lived enrollment token in the body.</summary>
     public const string Enroll = Base + "/enroll";
 
+    /// <summary>
+    /// Anonymous; authenticated by the one-time poll token returned when an enrollment is waiting for
+    /// administrator approval. Returns the device certificate once the request has been approved.
+    /// </summary>
+    public const string EnrollPoll = Base + "/enroll/poll";
+
     /// <summary>Device certificate (mutual TLS).</summary>
     public const string Heartbeat = Base + "/heartbeat";
 

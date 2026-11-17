@@ -62,6 +62,53 @@ public sealed record EnrollmentResponse
     public required AgentConfiguration Configuration { get; init; }
 }
 
+/// <summary>
+/// Answer to an enrollment made with a <em>deployment profile code</em> (a generic installer without a
+/// one-time token). No certificate is issued yet: an administrator has to approve the device first.
+/// The agent keeps the private key and polls <see cref="AgentRoutes.EnrollPoll"/> with the poll token.
+/// </summary>
+public sealed record EnrollmentPendingResponse
+{
+    public required Guid PendingEnrollmentId { get; init; }
+
+    /// <summary>Secret proving the poll comes from the agent that made the request. Shown once.</summary>
+    public required string PollToken { get; init; }
+
+    public int PollIntervalSeconds { get; init; } = 30;
+
+    public required DateTimeOffset ExpiresAtUtc { get; init; }
+}
+
+public sealed record EnrollmentPollRequest
+{
+    public required string PollToken { get; init; }
+}
+
+public enum EnrollmentPollStatus
+{
+    /// <summary>Still waiting for an administrator.</summary>
+    Pending = 1,
+
+    /// <summary>Approved: <see cref="EnrollmentPollResponse.Enrollment"/> holds the certificate (delivered once).</summary>
+    Approved = 2,
+
+    Rejected = 3,
+
+    /// <summary>Not decided within the allowed time, or already collected. Enroll again.</summary>
+    Expired = 4,
+}
+
+public sealed record EnrollmentPollResponse
+{
+    public required EnrollmentPollStatus Status { get; init; }
+
+    public int PollIntervalSeconds { get; init; } = 30;
+
+    public string? Message { get; init; }
+
+    public EnrollmentResponse? Enrollment { get; init; }
+}
+
 public sealed record CertificateRenewalRequest
 {
     public required string CertificateSigningRequestPem { get; init; }

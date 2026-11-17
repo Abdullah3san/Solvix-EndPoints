@@ -37,15 +37,11 @@ internal sealed partial class AgentEnrollmentService(
     ISolvixDbContext db,
     ITenantDirectory tenants,
     ITenantContextMutator tenantMutator,
+    DeviceRegistrar registrar,
     IDeviceCertificateAuthority certificateAuthority,
-    PresenceTracker presence,
-    PresenceBuffer presenceBuffer,
     MonitoringSettingsProvider monitoringSettings,
-    EndpointIdentityPublisher identityPublisher,
     IOptions<DevicesOptions> options,
     IClock clock,
-    IDeviceEntitlementProvider entitlements,
-    IDeviceUsageReader deviceUsage,
     ILogger<AgentEnrollmentService> logger) : IAgentEnrollmentService
 {
     private const string InvalidTokenCode = "enrollment_token_invalid";
@@ -111,70 +107,26 @@ internal sealed partial class AgentEnrollmentService(
                         throw Invalid("consumed concurrently");
                     }
 
-                    var device = fingerprint is null
-                        ? null
-                        : await db.Set<Device>().FirstOrDefaultAsync(d => d.HardwareFingerprint == fingerprint, ct);
-                    var reEnrolled = device is not null;
-                    if (device is null)
-                    {
-                        // Plan limits are enforced here, on the server, inside the enrollment transaction.
-                        await EnforceSubscriptionAsync(tenantId, ct);
-                        device = Device.Enroll(tenantId, DevicePlatform.Windows, request.Device, fingerprint, tokenId, now);
-                        device.AssignIfUnassigned(token.BranchId, token.DepartmentId);
-                        db.Set<Device>().Add(device);
-                        presence.Enroll(device, now);
-                        if (token.DeviceGroupId is { } groupId)
-                        {
-                            db.Set<DeviceGroupMembership>().Add(DeviceGroupMembership.Create(tenantId, groupId, device.Id));
-                        }
-                    }
-                    else
-                    {
-                        device.ReEnroll(request.Device, tokenId, now);
-
-                        // Re-enrolled hardware keeps its record and any existing assignment; a token's
-                        // placement only fills it in when the device has none.
-                        device.AssignIfUnassigned(token.BranchId, token.DepartmentId);
-                        var previous = await db.Set<DeviceCredential>()
-                            .Where(c => c.DeviceId == device.Id && c.RevokedAtUtc == null)
-                            .ToListAsync(ct);
-                        foreach (var credential in previous)
-                        {
-                            credential.Revoke(CredentialRevocationReason.ReEnrolled, now);
-                        }
-                    }
-
-                    var issued = certificateAuthority.Issue(
-                        publicKey, tenantId, device.Id, now.AddMinutes(-5), now.AddDays(settings.CertificateAuthority.DeviceCertificateLifetimeDays));
-                    db.Set<DeviceCredential>().Add(DeviceCredential.Create(
-                        tenantId, device.Id, issued.Thumbprint, issued.SerialNumber, issued.NotBeforeUtc, issued.NotAfterUtc));
-
+                    var registered = await registrar.RegisterAsync(
+                        new DeviceRegistration(tenantId, publicKey, request.Device, fingerprint, tokenId, token.BranchId, token.DepartmentId, token.DeviceGroupId),
+                        now,
+                        ct);
                     await db.SaveChangesAsync(ct);
                     await transaction.CommitAsync(ct);
-                    if (reEnrolled)
-                    {
-                        presenceBuffer.Record(tenantId, device.Id, now, successful: true, heartbeat: false);
-                    }
-
-                    LogEnrolled(logger, device.Id, tenantId, reEnrolled, issued.Thumbprint);
+                    await registrar.CompletedAsync(registered, now, ct);
                     return new EnrollmentResponse
                     {
-                        DeviceId = device.Id,
+                        DeviceId = registered.Device.Id,
                         TenantId = tenantId,
-                        CertificatePem = issued.Pem,
+                        CertificatePem = registered.Certificate.Pem,
                         CaCertificatesPem = [certificateAuthority.CertificatePem],
-                        CertificateNotAfterUtc = issued.NotAfterUtc,
-                        ReEnrolled = reEnrolled,
+                        CertificateNotAfterUtc = registered.Certificate.NotAfterUtc,
+                        ReEnrolled = registered.ReEnrolled,
                         Configuration = AgentConfigurationFactory.From(settings.Agent, monitoring.Thresholds.HeartbeatIntervalSeconds),
                     };
                 },
                 cancellationToken);
 
-            // Committed: let asset management relate the hardware to a physical asset (never fails enrollment).
-            await identityPublisher.PublishAsync(
-                response.DeviceId,
-                response.ReEnrolled ? EndpointIdentityChangeKind.ReEnrolled : EndpointIdentityChangeKind.Enrolled,
-                cancellationToken);
             return response;
         }
         finally
@@ -189,38 +141,8 @@ internal sealed partial class AgentEnrollmentService(
         }
     }
 
-    /// <summary>
-    /// A NEW device needs an entitled subscription and a free slot. A per-tenant advisory lock, held until the
-    /// enrollment transaction ends, serialises concurrent enrollments so two agents cannot both take the last slot.
-    /// Re-enrolling a device that already exists never consumes a slot.
-    /// </summary>
-    private async Task EnforceSubscriptionAsync(Guid tenantId, CancellationToken cancellationToken)
-    {
-        var lockKey = $"solvix:device-quota:{tenantId:N}";
-        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))", cancellationToken);
-
-        var entitlement = await entitlements.GetAsync(tenantId, cancellationToken);
-        if (!entitlement.IsEntitled)
-        {
-            SolvixMetrics.DeviceEnrollmentsDenied.Add(1, new KeyValuePair<string, object?>("reason", entitlement.DenyCode));
-            throw new PaymentRequiredException(entitlement.DenyMessage ?? "The subscription does not allow enrolling devices.", entitlement.DenyCode ?? "subscription_inactive");
-        }
-
-        var used = await deviceUsage.CountBillableDevicesAsync(cancellationToken);
-        if (used >= entitlement.DeviceLimit)
-        {
-            SolvixMetrics.DeviceEnrollmentsDenied.Add(1, new KeyValuePair<string, object?>("reason", "device_limit_reached"));
-            throw new PaymentRequiredException(
-                $"The device limit of the current plan has been reached ({used} of {entitlement.DeviceLimit}). Upgrade the plan or retire unused devices.",
-                "device_limit_reached");
-        }
-    }
-
     [LoggerMessage(Level = LogLevel.Warning, Message = "Enrollment rejected for token {TokenId}: {Reason}")]
     private static partial void LogRejected(ILogger logger, Guid tokenId, string reason);
-
-    [LoggerMessage(Level = LogLevel.Information, Message = "Device {DeviceId} enrolled in tenant {TenantId} (re-enrolled: {ReEnrolled}, certificate sha256 {Thumbprint})")]
-    private static partial void LogEnrolled(ILogger logger, Guid deviceId, Guid tenantId, bool reEnrolled, string thumbprint);
 }
 
 internal static class AgentConfigurationFactory

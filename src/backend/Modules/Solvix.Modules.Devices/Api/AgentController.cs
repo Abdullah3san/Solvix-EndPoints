@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Application.Agent;
 using Solvix.Modules.Devices.Application.Enrollment;
+using Solvix.Modules.Devices.Security;
 using Solvix.Modules.Devices.Monitoring;
 using Solvix.SharedKernel.Authorization;
 using Solvix.SharedKernel.Web;
@@ -24,22 +25,51 @@ using Solvix.SharedKernel.Web;
 public sealed class AgentController(IAgentService agent) : ControllerBase
 {
     public const string EnrollmentRateLimitPolicy = "agent-enrollment";
+    public const string EnrollmentPollRateLimitPolicy = "agent-enrollment-poll";
 
-    /// <summary>Enrolls a device with a short-lived enrollment token and a CSR; returns its device certificate.</summary>
+    /// <summary>
+    /// Enrolls a device. With a short-lived enrollment token and a CSR it returns the device certificate (200).
+    /// With a deployment profile code (a generic installer) the request is held for administrator approval (202):
+    /// the agent then polls <c>enroll/poll</c>.
+    /// </summary>
     [HttpPost("enroll")]
     [AllowAnonymous]
     [EnableRateLimiting(EnrollmentRateLimitPolicy)]
     [RequestSizeLimit(64 * 1024)]
     [ProducesResponseType<EnrollmentResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<EnrollmentPendingResponse>(StatusCodes.Status202Accepted)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<EnrollmentResponse>> Enroll(
+    public async Task<IActionResult> Enroll(
         [FromBody] EnrollmentRequest request,
         [FromServices] IAgentEnrollmentService enrollment,
+        [FromServices] IPendingEnrollmentIntake intake,
         CancellationToken cancellationToken)
     {
         Response.Headers.CacheControl = "no-store";
+        if (DeploymentTokens.IsProfileCode(request.EnrollmentToken))
+        {
+            var pending = await intake.SubmitAsync(request, HttpContext.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+            return StatusCode(StatusCodes.Status202Accepted, pending);
+        }
+
         return Ok(await enrollment.EnrollAsync(request, cancellationToken));
+    }
+
+    /// <summary>A waiting agent asks whether an administrator approved it; the certificate is returned once approved.</summary>
+    [HttpPost("enroll/poll")]
+    [AllowAnonymous]
+    [EnableRateLimiting(EnrollmentPollRateLimitPolicy)]
+    [RequestSizeLimit(4 * 1024)]
+    [ProducesResponseType<EnrollmentPollResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<EnrollmentPollResponse>> EnrollPoll(
+        [FromBody] EnrollmentPollRequest request,
+        [FromServices] IPendingEnrollmentIntake intake,
+        CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store";
+        return Ok(await intake.PollAsync(request, cancellationToken));
     }
 
     [HttpPost("heartbeat")]

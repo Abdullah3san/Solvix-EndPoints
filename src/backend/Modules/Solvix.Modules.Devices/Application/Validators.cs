@@ -173,3 +173,37 @@ public sealed class AgentPackageRequestValidator : AbstractValidator<AgentPackag
         RuleFor(x => x.Token).NotEmpty().MaximumLength(256);
     }
 }
+
+public sealed class SaveDeploymentProfileRequestValidator : AbstractValidator<SaveDeploymentProfileRequest>
+{
+    public SaveDeploymentProfileRequestValidator()
+    {
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(DeploymentProfile.NameMaxLength);
+        RuleFor(x => x.Description).MaximumLength(DeploymentProfile.DescriptionMaxLength);
+    }
+}
+
+public sealed class DecideEnrollmentRequestValidator : AbstractValidator<DecideEnrollmentRequest>
+{
+    public DecideEnrollmentRequestValidator()
+    {
+        RuleFor(x => x.Note).MaximumLength(PendingEnrollment.NoteMaxLength);
+    }
+}
+
+public sealed class BulkDecideEnrollmentsRequestValidator : AbstractValidator<BulkDecideEnrollmentsRequest>
+{
+    public BulkDecideEnrollmentsRequestValidator()
+    {
+        RuleFor(x => x.Ids).NotEmpty().Must(ids => ids.Count <= 200).WithMessage("At most 200 requests per call.");
+        RuleFor(x => x.Note).MaximumLength(PendingEnrollment.NoteMaxLength);
+    }
+}
+
+public sealed class EnrollmentPollRequestValidator : AbstractValidator<EnrollmentPollRequest>
+{
+    public EnrollmentPollRequestValidator()
+    {
+        RuleFor(x => x.PollToken).NotEmpty().MaximumLength(256);
+    }
+}

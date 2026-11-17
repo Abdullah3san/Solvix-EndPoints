@@ -80,6 +80,22 @@ public sealed class EnrollmentOptions
     /// <summary>Enrollment attempts per client IP and minute.</summary>
     [Range(1, 100_000)]
     public int RateLimitPerMinute { get; set; } = 30;
+
+    /// <summary>How long a computer waits for approval before its request expires.</summary>
+    [Range(1, 90)]
+    public int PendingLifetimeDays { get; set; } = 14;
+
+    /// <summary>Open approval requests per tenant. A leaked profile code cannot fill the queue beyond this.</summary>
+    [Range(1, 100_000)]
+    public int MaxPendingPerTenant { get; set; } = 500;
+
+    /// <summary>How often a waiting agent asks whether it has been approved.</summary>
+    [Range(10, 3600)]
+    public int PollIntervalSeconds { get; set; } = 30;
+
+    /// <summary>Polls per client IP and minute. Higher than enrollment: a whole office may share one address.</summary>
+    [Range(1, 1_000_000)]
+    public int PollRateLimitPerMinute { get; set; } = 600;
 }
 
 public sealed class AgentPolicyOptions

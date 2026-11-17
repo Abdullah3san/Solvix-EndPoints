@@ -2620,6 +2620,88 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("billing_webhook_events", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Devices.Domain.DeploymentProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<byte[]>("CodeSecret")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("bytea")
+                        .HasColumnName("code_secret");
+
+                    b.Property<int>("CodeVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("code_version");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("DeviceGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_group_id");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<DateTimeOffset?>("LastRequestAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_request_at_utc");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_deployment_profiles");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_deployment_profiles_tenant_id_id");
+
+                    b.HasIndex("TenantId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_deployment_profiles_tenant_id_normalized_name");
+
+                    b.ToTable("deployment_profiles", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Devices.Domain.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3140,6 +3222,110 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_enrollment_tokens_tenant_id_expires_at_utc");
 
                     b.ToTable("enrollment_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Domain.PendingEnrollment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CertificatePem")
+                        .HasColumnType("text")
+                        .HasColumnName("certificate_pem");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset?>("DecidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at_utc");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("decision_note");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<Guid?>("ExistingDeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("existing_device_id");
+
+                    b.Property<DateTimeOffset>("ExpiresAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at_utc");
+
+                    b.Property<string>("HardwareFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("hardware_fingerprint");
+
+                    b.Property<string>("Hostname")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("hostname");
+
+                    b.Property<string>("IdentityJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("identity_json");
+
+                    b.Property<byte[]>("PollSecretHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("bytea")
+                        .HasColumnName("poll_secret_hash");
+
+                    b.Property<Guid>("ProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile_id");
+
+                    b.Property<byte[]>("PublicKeySpki")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("public_key_spki");
+
+                    b.Property<string>("SourceAddress")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("source_address");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pending_enrollments");
+
+                    b.HasIndex("TenantId", "HardwareFingerprint")
+                        .HasDatabaseName("ix_pending_enrollments_tenant_id_hardware_fingerprint");
+
+                    b.HasIndex("TenantId", "ProfileId")
+                        .HasDatabaseName("ix_pending_enrollments_tenant_id_profile_id");
+
+                    b.HasIndex("TenantId", "Status", "CreatedAtUtc")
+                        .HasDatabaseName("ix_pending_enrollments_tenant_id_status_created_at_utc");
+
+                    b.ToTable("pending_enrollments", (string)null);
                 });
 
             modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DeviceAvailabilityDay", b =>
@@ -10382,6 +10568,16 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_usage_snapshots_tenants_tenant_id");
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Devices.Domain.DeploymentProfile", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_deployment_profiles_tenants_tenant_id");
+                });
+
             modelBuilder.Entity("Solvix.Modules.Devices.Domain.Device", b =>
                 {
                     b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
@@ -10479,6 +10675,24 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_enrollment_tokens_device_groups_tenant_id_device_group_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Domain.PendingEnrollment", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_pending_enrollments_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Devices.Domain.DeploymentProfile", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "ProfileId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_pending_enrollments_deployment_profiles_tenant_id_profile_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Devices.Monitoring.DeviceAvailabilityDay", b =>

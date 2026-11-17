@@ -52,6 +52,13 @@ public interface IAgentPackageService
     /// time against the hash, inside the caller's tenant.
     /// </summary>
     Task<AgentPackage> BuildAsync(AgentPackageRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Builds the single-file installer of a deployment profile: the agent exe with the profile's enrollment
+    /// code appended (see <see cref="EnrollmentTrailer"/>). The code is not a secret, so this can be downloaded
+    /// at any time; the devices it enrolls still need an administrator's approval.
+    /// </summary>
+    Task<AgentPackage> BuildInstallerAsync(Guid profileId, CancellationToken cancellationToken);
 }
 
 internal sealed class AgentPackageService(
@@ -153,15 +160,83 @@ internal sealed class AgentPackageService(
         }
     }
 
-    private async Task<string?> PlacementAsync(EnrollmentToken token, CancellationToken cancellationToken)
+    public async Task<AgentPackage> BuildInstallerAsync(Guid profileId, CancellationToken cancellationToken)
+    {
+        var tenantId = tenantContext.RequireTenantId();
+        var profile = await db.Set<DeploymentProfile>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == profileId, cancellationToken)
+            ?? throw new NotFoundException("Deployment profile", profileId);
+        if (!profile.IsEnabled)
+        {
+            throw new ConflictException("This deployment profile is disabled. Enable it to download the installer.", "deployment_profile_disabled");
+        }
+
+        var package = options.Value.AgentPackage;
+        var exe = package.Directory is { Length: > 0 } directory ? Path.Combine(directory, ExeName) : null;
+        if (exe is null || !File.Exists(exe) || package.PublicServerUrl is not { } serverUrl)
+        {
+            throw new ConflictException(
+                "The agent package is not configured on this server (AgentPackage:Directory and AgentPackage:PublicServerUrl).",
+                UnavailableCode);
+        }
+
+        var tenant = await tenants.FindByIdAsync(tenantId, cancellationToken);
+        var (code, secret) = TenantScopedToken.Create(DeploymentTokens.ProfilePrefix, tenantId, profile.Id, profile.CodeSecret);
+        CryptographicOperations.ZeroMemory(secret);
+        var file = new AgentEnrollmentFile
+        {
+            ServerUrl = serverUrl.AbsoluteUri,
+            EnrollmentToken = code,
+            ServerCertificateSha256 = ResolvePin(package),
+            WorkspaceName = tenant?.Name,
+            Placement = await PlacementAsync(profile.BranchId, profile.DepartmentId, cancellationToken),
+        };
+
+        var tempPath = Path.Combine(Path.GetTempPath(), $"solvix-agent-{Guid.NewGuid():N}.exe");
+        try
+        {
+            // If the base exe already carries enrollment data, copy only the program part.
+            var programLength = EnrollmentTrailer.TryRead(exe, out _, out var clean) ? clean : new FileInfo(exe).Length;
+            await using (var source = new FileStream(exe, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, FileOptions.Asynchronous | FileOptions.SequentialScan))
+            await using (var target = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+            {
+                var buffer = new byte[81920];
+                long remaining = programLength;
+                while (remaining > 0)
+                {
+                    var read = await source.ReadAsync(buffer.AsMemory(0, (int)Math.Min(buffer.Length, remaining)), cancellationToken);
+                    if (read == 0)
+                    {
+                        break;
+                    }
+
+                    await target.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+                    remaining -= read;
+                }
+
+                await target.WriteAsync(EnrollmentTrailer.Build(file), cancellationToken);
+            }
+
+            return new AgentPackage(PackageFileName(tenant?.Slug, profile.Name, ".exe"), tempPath);
+        }
+        catch
+        {
+            File.Delete(tempPath);
+            throw;
+        }
+    }
+
+    private async Task<string?> PlacementAsync(EnrollmentToken token, CancellationToken cancellationToken) =>
+        await PlacementAsync(token.BranchId, token.DepartmentId, cancellationToken);
+
+    private async Task<string?> PlacementAsync(Guid? tokenBranchId, Guid? tokenDepartmentId, CancellationToken cancellationToken)
     {
         var parts = new List<string>();
-        if (token.BranchId is { } branchId && (await organization.FindBranchesAsync([branchId], cancellationToken)).TryGetValue(branchId, out var branch))
+        if (tokenBranchId is { } branchId && (await organization.FindBranchesAsync([branchId], cancellationToken)).TryGetValue(branchId, out var branch))
         {
             parts.Add(branch.Name);
         }
 
-        if (token.DepartmentId is { } departmentId && (await organization.FindDepartmentsAsync([departmentId], cancellationToken)).TryGetValue(departmentId, out var department))
+        if (tokenDepartmentId is { } departmentId && (await organization.FindDepartmentsAsync([departmentId], cancellationToken)).TryGetValue(departmentId, out var department))
         {
             parts.Add(department.Name);
         }
@@ -198,11 +273,11 @@ internal sealed class AgentPackageService(
         await source.CopyToAsync(target, cancellationToken);
     }
 
-    private static string PackageFileName(string? slug, string tokenName)
+    private static string PackageFileName(string? slug, string tokenName, string extension = ".zip")
     {
         static string Clean(string value) => new(value.Where(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_').ToArray());
         var name = Clean(tokenName.Replace(' ', '-'));
-        return $"SolvixAgent-{Clean(slug ?? "workspace")}{(name.Length > 0 ? "-" + name : string.Empty)}.zip";
+        return $"SolvixAgent-{Clean(slug ?? "workspace")}{(name.Length > 0 ? "-" + name : string.Empty)}{extension}";
     }
 
     private static string Readme(AgentEnrollmentFile file) =>
