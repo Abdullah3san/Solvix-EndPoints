@@ -174,3 +174,130 @@ public sealed class AgentRemoteController(IAgentRemoteService service) : Control
     public async Task<ActionResult<RemoteInputResponse>> Input(Guid id, [FromQuery] long after, [FromQuery] int wait, CancellationToken cancellationToken) =>
         Ok(await service.InputAsync(id, after, wait, cancellationToken));
 }
+
+/// <summary>Screen viewer and file transfer for technicians (inside a screen / files session).</summary>
+[ApiVersion(1.0)]
+[Authorize(Policy = Policies.TenantAdmin)]
+public sealed class RemoteMediaController(IRemoteScreenService screen, IRemoteFileService files) : ApiControllerBase
+{
+    /// <summary>200 with the newest JPEG frame, or 204 when nothing newer arrived. Both carry the session state.</summary>
+    [HttpGet("~/api/v{version:apiVersion}/remote-sessions/{id:guid}/screen/frame")]
+    public async Task<IActionResult> Frame(Guid id, [FromQuery] long after, [FromQuery] int wait, CancellationToken cancellationToken)
+    {
+        var result = await screen.GetFrameAsync(id, after, wait, cancellationToken);
+        Response.Headers["X-Session-Status"] = result.Status.ToString();
+        Response.Headers.CacheControl = "no-store";
+        if (result.Jpeg is null)
+        {
+            return NoContent();
+        }
+
+        Response.Headers["X-Frame-Sequence"] = result.Sequence.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Response.Headers["X-Frame-Width"] = result.Width.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        Response.Headers["X-Frame-Height"] = result.Height.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return File(result.Jpeg, "image/jpeg");
+    }
+
+    [HttpPost("~/api/v{version:apiVersion}/remote-sessions/{id:guid}/files/list")]
+    public async Task<ActionResult<RemoteFileOperationDto>> List(Guid id, [FromBody] ListRemoteFilesRequest request, CancellationToken cancellationToken) =>
+        Ok(await files.ListAsync(id, request.Path, 20, cancellationToken));
+
+    [HttpGet("~/api/v{version:apiVersion}/remote-sessions/{id:guid}/files/download")]
+    public async Task Download(Guid id, [FromQuery] string? path, CancellationToken cancellationToken)
+    {
+        var download = await files.DownloadAsync(id, path, cancellationToken);
+        Response.ContentType = "application/octet-stream";
+        Response.ContentLength = download.SizeBytes;
+        Response.Headers.ContentDisposition = new System.Net.Mime.ContentDisposition { FileName = download.FileName, DispositionType = "attachment" }.ToString();
+        Response.Headers.CacheControl = "no-store";
+        await foreach (var chunk in download.Chunks.WithCancellation(cancellationToken))
+        {
+            await Response.Body.WriteAsync(chunk, cancellationToken);
+        }
+    }
+
+    [HttpPost("~/api/v{version:apiVersion}/remote-sessions/{id:guid}/files/upload")]
+    [RequestSizeLimit(FileLimits.MaxFileBytes + 1024 * 1024)]
+    [DisableRequestSizeLimit]
+    [ProducesResponseType<RemoteFileOperationDto>(StatusCodes.Status202Accepted)]
+    public async Task<ActionResult<RemoteFileOperationDto>> Upload(Guid id, [FromQuery] string? path, [FromQuery] bool overwrite, CancellationToken cancellationToken) =>
+        StatusCode(StatusCodes.Status202Accepted, await files.UploadAsync(id, path, overwrite, Request.Body, cancellationToken));
+
+    [HttpGet("~/api/v{version:apiVersion}/remote-sessions/{id:guid}/files/operations")]
+    public async Task<ActionResult<IReadOnlyList<RemoteFileOperationDto>>> Operations(Guid id, CancellationToken cancellationToken) =>
+        Ok(await files.ListOperationsAsync(id, cancellationToken));
+
+    [HttpGet("~/api/v{version:apiVersion}/remote-sessions/{id:guid}/files/operations/{operationId:guid}")]
+    public async Task<ActionResult<RemoteFileOperationDto>> Operation(Guid id, Guid operationId, [FromQuery] int wait, CancellationToken cancellationToken) =>
+        Ok(await files.GetAsync(id, operationId, wait, cancellationToken));
+}
+
+/// <summary>Agent side of screen frames and file operations (device certificate).</summary>
+[ApiController]
+[ApiVersion(1.0)]
+[Produces("application/json")]
+[Route("api/v{version:apiVersion}/agent/remote/{sessionId:guid}")]
+[Authorize(Policy = Policies.Device)]
+public sealed class AgentRemoteMediaController(IAgentScreenService screen, IAgentRemoteFileService files) : ControllerBase
+{
+    [HttpPost("frame")]
+    [RequestSizeLimit(ScreenLimits.MaxFrameBytes + 1024)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Frame(Guid sessionId, [FromQuery] int width, [FromQuery] int height, CancellationToken cancellationToken)
+    {
+        await screen.PostFrameAsync(sessionId, width, height, await ReadBodyAsync(ScreenLimits.MaxFrameBytes, cancellationToken), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("files/next")]
+    public async Task<ActionResult<PendingFileOperationResponse>> Next(Guid sessionId, [FromQuery] int wait, CancellationToken cancellationToken) =>
+        Ok(await files.NextAsync(sessionId, wait, cancellationToken));
+
+    [HttpPost("files/{operationId:guid}/begin")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Begin(Guid sessionId, Guid operationId, [FromBody] BeginFileDownloadRequest request, CancellationToken cancellationToken)
+    {
+        await files.BeginDownloadAsync(sessionId, operationId, request.SizeBytes, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("files/{operationId:guid}/chunk")]
+    [RequestSizeLimit(FileLimits.ChunkBytes + 1024)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> PostChunk(Guid sessionId, Guid operationId, [FromQuery] int index, CancellationToken cancellationToken)
+    {
+        await files.PostChunkAsync(sessionId, operationId, index, await ReadBodyAsync(FileLimits.ChunkBytes, cancellationToken), cancellationToken);
+        return NoContent();
+    }
+
+    [HttpGet("files/{operationId:guid}/chunk/{index:int}")]
+    public async Task<IActionResult> GetChunk(Guid sessionId, Guid operationId, int index, CancellationToken cancellationToken) =>
+        File(await files.GetUploadChunkAsync(sessionId, operationId, index, cancellationToken), "application/octet-stream");
+
+    [HttpPost("files/{operationId:guid}/result")]
+    [RequestSizeLimit(4 * 1024 * 1024)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Result(Guid sessionId, Guid operationId, [FromBody] FileOperationResult result, CancellationToken cancellationToken)
+    {
+        await files.CompleteAsync(sessionId, operationId, result, cancellationToken);
+        return NoContent();
+    }
+
+    private async Task<byte[]> ReadBodyAsync(int max, CancellationToken cancellationToken)
+    {
+        using var buffer = new MemoryStream();
+        var chunk = new byte[16 * 1024];
+        int read;
+        while ((read = await Request.Body.ReadAsync(chunk, cancellationToken)) > 0)
+        {
+            if (buffer.Length + read > max)
+            {
+                throw new Solvix.SharedKernel.Exceptions.ValidationException("body", "The request body is too large.");
+            }
+
+            buffer.Write(chunk, 0, read);
+        }
+
+        return buffer.ToArray();
+    }
+}

@@ -16,6 +16,8 @@ public sealed class AgentHealthMonitor(TimeProvider time, ConnectionMonitor conn
     /// <summary>The computer's local remote-session policy, reported to the console with each heartbeat.</summary>
     public RemoteAccessMode RemoteAccess { get; set; } = RemoteAccessMode.Disabled;
 
+    public RemoteFeatures RemoteFeatures { get; set; } = RemoteFeatures.None;
+
     public void Report(string component, HealthIssueSeverity severity, string message) =>
         _issues[component] = new HealthIssue { Component = component, Severity = severity, Message = message.Length > 1000 ? message[..1000] : message };
 
@@ -42,6 +44,7 @@ public sealed class AgentHealthMonitor(TimeProvider time, ConnectionMonitor conn
             CertificateNotAfterUtc = certificateNotAfterUtc,
             OsBuild = osBuild,
             RemoteAccess = RemoteAccess,
+            RemoteFeatures = RemoteFeatures,
             Issues = issues,
         };
     }

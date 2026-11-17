@@ -51,6 +51,12 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<LocalApiServer>();
         services.TryAddSingleton<IRemoteShellFactory, ProcessShellFactory>();
         services.TryAddSingleton<IConsentPrompter, DenyingConsentPrompter>();
+        services.TryAddSingleton<ScreenHelperBroker>();
+        services.TryAddSingleton<IRemoteDesktop>(sp => sp.GetRequiredService<ScreenHelperBroker>());
+        services.TryAddSingleton<IHelperAuthorizer, AllowAnyHelper>();
+        services.TryAddSingleton<ScreenHelperServer>();
+        services.TryAddSingleton<ScreenSessionRunner>();
+        services.TryAddSingleton<FileSessionRunner>();
         services.TryAddSingleton<RemoteAccessWorker>();
         services.AddHttpClient(UpdateManager.DownloadClientName, c => c.Timeout = TimeSpan.FromMinutes(30))
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler

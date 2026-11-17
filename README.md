@@ -14,8 +14,8 @@ Multi-tenant SaaS platform for endpoint management.
 * **Help desk** – tickets and live chat for people using enrolled laptops. A person raises a ticket or chats
   with a technician from the laptop through the agent (`Solvix.Agent.exe ticket | tickets | chat`, no administrator
   rights needed); technicians handle them in the web console under *Help desk* and in a device's *Chat* tab.
-  Remote command sessions (off by default, enabled per computer at install time, consent and audit) are described in
-  [`docs/PHASE-04-SUPPORT.md`](docs/PHASE-04-SUPPORT.md); remote screen sharing is not implemented.
+  Remote sessions - command shell, screen sharing with optional control, file transfer - (all off by default, enabled per
+  computer at install time, with consent and audit) are described in [`docs/PHASE-04-SUPPORT.md`](docs/PHASE-04-SUPPORT.md).
 
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|

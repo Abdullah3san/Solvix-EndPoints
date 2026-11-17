@@ -971,6 +971,133 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("remote_session_chunks", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Support.Domain.RemoteFileChunk", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("data");
+
+                    b.Property<int>("Index")
+                        .HasColumnType("integer")
+                        .HasColumnName("index");
+
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operation_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_file_chunks");
+
+                    b.HasIndex("OperationId", "Index")
+                        .IsUnique()
+                        .HasDatabaseName("ix_remote_file_chunks_operation_id_index");
+
+                    b.HasIndex("TenantId", "OperationId")
+                        .HasDatabaseName("ix_remote_file_chunks_tenant_id_operation_id");
+
+                    b.ToTable("remote_file_chunks", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Support.Domain.RemoteFileOperation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("CompletedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("EntriesJson")
+                        .HasColumnType("text")
+                        .HasColumnName("entries_json");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<bool>("Overwrite")
+                        .HasColumnType("boolean")
+                        .HasColumnName("overwrite");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("path");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("sha256");
+
+                    b.Property<long?>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_remote_file_operations");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_remote_file_operations_tenant_id_id");
+
+                    b.HasIndex("TenantId", "SessionId")
+                        .HasDatabaseName("ix_remote_file_operations_tenant_id_session_id");
+
+                    b.HasIndex("SessionId", "Status", "CreatedAtUtc")
+                        .HasDatabaseName("ix_remote_file_operations_session_id_status_created_at_utc");
+
+                    b.ToTable("remote_file_operations", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Support.Domain.RemoteSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -982,6 +1109,14 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("consent");
+
+                    b.Property<bool>("ControlGranted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("control_granted");
+
+                    b.Property<bool>("ControlRequested")
+                        .HasColumnType("boolean")
+                        .HasColumnName("control_requested");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -999,6 +1134,12 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("EndedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ended_at_utc");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
 
                     b.Property<DateTimeOffset>("LastActivityAtUtc")
                         .HasColumnType("timestamp with time zone")
@@ -1043,9 +1184,9 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.HasAlternateKey("TenantId", "Id")
                         .HasName("ak_remote_sessions_tenant_id_id");
 
-                    b.HasIndex("DeviceId")
+                    b.HasIndex("DeviceId", "Kind")
                         .IsUnique()
-                        .HasDatabaseName("ux_remote_sessions_open_per_device")
+                        .HasDatabaseName("ux_remote_sessions_open_per_device_kind")
                         .HasFilter("status IN ('Pending', 'Active')");
 
                     b.HasIndex("TenantId", "DeviceId", "CreatedAtUtc")
@@ -1555,6 +1696,42 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_remote_session_chunks_remote_sessions_tenant_id_session_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Support.Domain.RemoteFileChunk", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_file_chunks_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Support.Domain.RemoteFileOperation", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "OperationId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_file_chunks_remote_file_operations_tenant_id_operati~");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Support.Domain.RemoteFileOperation", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_file_operations_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Support.Domain.RemoteSession", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "SessionId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_remote_file_operations_remote_sessions_tenant_id_session_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Support.Domain.RemoteSession", b =>

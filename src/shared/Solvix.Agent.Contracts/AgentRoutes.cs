@@ -37,6 +37,12 @@ public static class AgentRoutes
     /// <c>GET /pending?wait=S</c>, <c>POST /{id}/accept|deny|end|output</c>, <c>GET /{id}/input?after=N&amp;wait=S</c>.
     /// </summary>
     public const string Remote = Base + "/remote";
+
+    // Remote sessions also use, under <c>/remote/{sessionId}</c>:
+    //   POST frame?width=&height=      screen frame (image/jpeg)
+    //   GET  files/next?wait=S         claim the next file operation
+    //   POST files/{op}/begin|chunk?index=N|result      download/upload progress
+    //   GET  files/{op}/chunk/{index}  upload data
 }
 
 /// <summary>Well-known identifiers embedded in device certificates.</summary>

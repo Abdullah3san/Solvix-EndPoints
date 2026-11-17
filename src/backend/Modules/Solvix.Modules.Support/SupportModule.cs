@@ -21,6 +21,11 @@ public sealed class SupportModule : IModule
         services.AddScoped<IAgentSupportService, AgentSupportService>();
         services.AddScoped<IRemoteSessionService, RemoteSessionService>();
         services.AddScoped<IAgentRemoteService, AgentRemoteService>();
+        services.AddSingleton<IScreenFrameStore, DistributedScreenFrameStore>();
+        services.AddScoped<IRemoteScreenService, RemoteScreenService>();
+        services.AddScoped<IAgentScreenService, AgentScreenService>();
+        services.AddScoped<IRemoteFileService, RemoteFileService>();
+        services.AddScoped<IAgentRemoteFileService, AgentRemoteFileService>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
     }
 }

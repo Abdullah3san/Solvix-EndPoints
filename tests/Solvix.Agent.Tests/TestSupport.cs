@@ -192,9 +192,12 @@ public sealed class FakeAgentApi : IAgentApiClient, IDisposable
         return new PendingRemoteResponse();
     }
 
+    public List<bool> RemoteControlGranted { get; } = [];
+
     public Task AcceptRemoteAsync(Guid sessionId, AcceptRemoteRequest request, CancellationToken cancellationToken)
     {
         RemoteAccepted.Add((sessionId, request.Consent));
+        RemoteControlGranted.Add(request.ControlGranted);
         return Task.CompletedTask;
     }
 
@@ -217,6 +220,55 @@ public sealed class FakeAgentApi : IAgentApiClient, IDisposable
             RemoteOutput.Add(request.Text);
         }
 
+        return Task.CompletedTask;
+    }
+
+    public List<(Guid Op, long Size)> FileBegun { get; } = [];
+
+    public List<(Guid Op, int Index, byte[] Data)> FileChunks { get; } = [];
+
+    public List<(Guid Op, FileOperationResult Result)> FileResults { get; } = [];
+
+    public Dictionary<(Guid Op, int Index), byte[]> UploadData { get; } = [];
+
+    public Queue<PendingFileOperationResponse> FileOperations { get; } = [];
+
+    public List<ScreenFrame> ScreenFrames { get; } = [];
+
+    public Task PostScreenFrameAsync(Guid sessionId, ScreenFrame frame, CancellationToken cancellationToken)
+    {
+        lock (ScreenFrames)
+        {
+            ScreenFrames.Add(frame);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public async Task<PendingFileOperationResponse> ClaimFileOperationAsync(Guid sessionId, int waitSeconds, CancellationToken cancellationToken)
+    {
+        await Task.Delay(10, cancellationToken);
+        return FileOperations.TryDequeue(out var next) ? next : new PendingFileOperationResponse { Ended = true };
+    }
+
+    public Task BeginFileDownloadAsync(Guid sessionId, Guid operationId, long sizeBytes, CancellationToken cancellationToken)
+    {
+        FileBegun.Add((operationId, sizeBytes));
+        return Task.CompletedTask;
+    }
+
+    public Task PostFileChunkAsync(Guid sessionId, Guid operationId, int index, byte[] data, CancellationToken cancellationToken)
+    {
+        FileChunks.Add((operationId, index, data));
+        return Task.CompletedTask;
+    }
+
+    public Task<byte[]> GetUploadChunkAsync(Guid sessionId, Guid operationId, int index, CancellationToken cancellationToken) =>
+        UploadData.TryGetValue((operationId, index), out var data) ? Task.FromResult(data) : throw new AgentApiException(AgentApiFailure.Rejected, System.Net.HttpStatusCode.NotFound, null, "no chunk");
+
+    public Task CompleteFileOperationAsync(Guid sessionId, Guid operationId, FileOperationResult result, CancellationToken cancellationToken)
+    {
+        FileResults.Add((operationId, result));
         return Task.CompletedTask;
     }
 

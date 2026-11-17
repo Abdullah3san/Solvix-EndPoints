@@ -86,6 +86,21 @@ public sealed class RemoteAccessOptions
 {
     public RemoteAccessMode Mode { get; set; } = RemoteAccessMode.Disabled;
 
+    /// <summary>Which kinds of remote session this computer allows (only effective when <see cref="Mode"/> is not Disabled).</summary>
+    public RemoteFeatures Features { get; set; } = RemoteFeatures.Shell;
+
+    /// <summary>
+    /// Folders a technician may list, download from and upload to (in addition to the agent's own
+    /// <c>transfer</c> folder). Nothing outside these folders is reachable, whatever the server asks for.
+    /// </summary>
+    public List<string> FileFolders { get; set; } = [];
+
+    /// <summary>Largest file this computer will send or receive in one transfer.</summary>
+    public int MaxFileMegabytes { get; set; } = 100;
+
+    /// <summary>Pipe on which the per-user screen helper connects to the service.</summary>
+    public string ScreenHelperPipeName { get; set; } = "solvix-agent-screen-helper";
+
     /// <summary>Program that provides the command shell. Defaults to PowerShell on Windows and <c>/bin/sh</c> elsewhere.</summary>
     public string? Shell { get; set; }
 

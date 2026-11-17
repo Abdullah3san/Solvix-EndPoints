@@ -2,6 +2,7 @@ namespace Solvix.Modules.Support.Persistence;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Solvix.Agent.Contracts;
 using Solvix.Modules.Devices.Domain;
 using Solvix.Modules.Support.Domain;
 
@@ -81,6 +82,7 @@ internal sealed class RemoteSessionConfiguration : IEntityTypeConfiguration<Remo
         builder.Property(s => s.RequestedByName).HasMaxLength(RemoteSession.NameMaxLength).IsRequired();
         builder.Property(s => s.Reason).HasMaxLength(RemoteSession.ReasonMaxLength);
         builder.Property(s => s.EndReason).HasMaxLength(RemoteSession.ReasonMaxLength);
+        builder.Property(s => s.Kind).HasConversion<string>().HasMaxLength(20);
         builder.Property(s => s.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(s => s.Consent).HasConversion<string>().HasMaxLength(20);
         builder.Ignore(s => s.IsOpen);
@@ -88,8 +90,8 @@ internal sealed class RemoteSessionConfiguration : IEntityTypeConfiguration<Remo
         builder.HasAlternateKey(s => new { s.TenantId, s.Id });
         builder.HasIndex(s => new { s.TenantId, s.DeviceId, s.CreatedAtUtc });
 
-        // At most one open session per device (also enforced when two technicians race).
-        builder.HasIndex(s => s.DeviceId).IsUnique().HasFilter("status IN ('Pending', 'Active')").HasDatabaseName("ux_remote_sessions_open_per_device");
+        // At most one open session of each kind per device (also enforced when two technicians race).
+        builder.HasIndex(s => new { s.DeviceId, s.Kind }).IsUnique().HasFilter("status IN ('Pending', 'Active')").HasDatabaseName("ux_remote_sessions_open_per_device_kind");
 
         // DeviceId / RequestedByUserId keep their audit rows when the device or user is deleted:
         // plain columns, no foreign keys (the audit trail must outlive them).
@@ -114,5 +116,44 @@ internal sealed class RemoteChunkConfiguration : IEntityTypeConfiguration<Remote
 
         builder.HasIndex(c => c.Sequence).IsUnique();
         builder.HasIndex(c => new { c.SessionId, c.Direction, c.Sequence });
+    }
+}
+
+internal sealed class RemoteFileOperationConfiguration : IEntityTypeConfiguration<RemoteFileOperation>
+{
+    public void Configure(EntityTypeBuilder<RemoteFileOperation> builder)
+    {
+        builder.ToTable("remote_file_operations");
+        builder.HasKey(o => o.Id);
+        builder.Property(o => o.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.Status).HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.Path).HasMaxLength(FileLimits.MaxPathLength).IsRequired();
+        builder.Property(o => o.Error).HasMaxLength(500);
+        builder.Property(o => o.Sha256).HasMaxLength(64);
+
+        builder.HasAlternateKey(o => new { o.TenantId, o.Id });
+        builder.HasOne<RemoteSession>()
+            .WithMany()
+            .HasForeignKey(o => new { o.TenantId, o.SessionId })
+            .HasPrincipalKey(s => new { s.TenantId, s.Id })
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(o => new { o.SessionId, o.Status, o.CreatedAtUtc });
+    }
+}
+
+internal sealed class RemoteFileChunkConfiguration : IEntityTypeConfiguration<RemoteFileChunk>
+{
+    public void Configure(EntityTypeBuilder<RemoteFileChunk> builder)
+    {
+        builder.ToTable("remote_file_chunks");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Data).IsRequired();
+
+        builder.HasOne<RemoteFileOperation>()
+            .WithMany()
+            .HasForeignKey(c => new { c.TenantId, c.OperationId })
+            .HasPrincipalKey(o => new { o.TenantId, o.Id })
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(c => new { c.OperationId, c.Index }).IsUnique();
     }
 }

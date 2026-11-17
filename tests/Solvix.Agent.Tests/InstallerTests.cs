@@ -74,6 +74,47 @@ public sealed class InstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task The_screen_helper_is_registered_for_sign_in_only_when_screen_sharing_was_chosen()
+    {
+        var plain = await Installer().InstallAsync(_options, Windows11, () => { }, CancellationToken.None);
+        Assert.True(plain.Success, plain.Message);
+        Assert.DoesNotContain(_runner.Calls, c => c.StartsWith("reg.exe", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Choosing_screen_sharing_registers_a_per_user_helper_that_uninstall_removes()
+    {
+        var result = await Installer().InstallAsync(_options with { ScreenHelper = true }, Windows11, () => { }, CancellationToken.None);
+        Assert.True(result.Success, result.Message);
+        var add = Assert.Single(_runner.Calls, c => c.StartsWith("reg.exe add", StringComparison.Ordinal));
+        Assert.Contains(InstallOptions.ScreenHelperRunKey, add, StringComparison.Ordinal); // runs in each user's own session at sign-in
+        Assert.Contains($"\\\"{_options.ExePath}\\\" screen-helper", add, StringComparison.Ordinal);
+        Assert.Equal("sc.exe start SolvixAgent", _runner.Calls[^1]); // still ends with the service start
+
+        _runner.Calls.Clear();
+        await Installer().UninstallAsync(_options, CancellationToken.None);
+        Assert.Contains(_runner.Calls, c => c.StartsWith("reg.exe delete", StringComparison.Ordinal) && c.Contains(InstallOptions.ScreenHelperRunValue, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Remote_features_and_folders_are_only_written_when_remote_access_is_on()
+    {
+        using var agent = new AgentHarness();
+        var settings = EnrollmentRequestSettings.Validate("https://agents.example.com/", "svxe_token", null, out _)!;
+        var folder = Path.Combine(Path.GetTempPath(), "solvix-drop");
+        agent.Get<EnrollmentSetup>().Apply(settings with { RemoteAccess = RemoteAccessMode.ConsentRequired, RemoteFeatures = RemoteFeatures.Shell | RemoteFeatures.Screen | RemoteFeatures.Files, FileFolders = [folder] });
+
+        using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(agent.DataDirectory, "agent.json")));
+        var remote = json.RootElement.GetProperty("SolvixAgent").GetProperty("RemoteAccess");
+        Assert.Equal("ConsentRequired", remote.GetProperty("Mode").GetString());
+        Assert.Equal("Shell, Screen, Files", remote.GetProperty("Features").GetString());
+        Assert.Equal(folder, remote.GetProperty("FileFolders")[0].GetString());
+
+        agent.Get<EnrollmentSetup>().Apply(settings with { RemoteFeatures = RemoteFeatures.Shell | RemoteFeatures.Screen, FileFolders = [folder] }); // access not switched on
+        Assert.DoesNotContain("RemoteAccess", File.ReadAllText(Path.Combine(agent.DataDirectory, "agent.json")), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Reinstall_stops_the_running_service_replaces_the_binary_and_reconfigures_instead_of_creating()
     {
         Directory.CreateDirectory(_options.InstallDirectory);

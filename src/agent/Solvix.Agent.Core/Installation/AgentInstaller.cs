@@ -50,6 +50,16 @@ public sealed record InstallOptions
 
     public string TaskFolder { get; init; } = @"\Solvix\";
 
+    /// <summary>
+    /// Start the per-user screen helper when someone signs in (needed for screen sharing: the service
+    /// itself cannot see a user's desktop). It runs as that user, with no extra rights.
+    /// </summary>
+    public bool ScreenHelper { get; init; }
+
+    public const string ScreenHelperRunKey = @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+
+    public const string ScreenHelperRunValue = "SolvixScreenHelper";
+
     public string ExePath => Path.Combine(InstallDirectory, "Solvix.Agent.exe");
 }
 
@@ -201,6 +211,17 @@ public sealed class AgentInstaller(ICommandRunner runner, Action<string>? progre
             }
         }
 
+        // 6b. Screen sharing: the helper runs in each user's session from their next sign-in.
+        if (options.ScreenHelper)
+        {
+            _progress("Registering the screen helper");
+            step = await RunAsync("reg.exe", $"add \"{InstallOptions.ScreenHelperRunKey}\" /v {InstallOptions.ScreenHelperRunValue} /t REG_SZ /d \"\\\"{exe}\\\" screen-helper\" /f", "registering the screen helper", cancellationToken);
+            if (step is not null)
+            {
+                return step;
+            }
+        }
+
         // 7. Enrollment settings + one-time token, then start.
         _progress("Storing the enrollment settings");
         configureEnrollment();
@@ -237,6 +258,9 @@ public sealed class AgentInstaller(ICommandRunner runner, Action<string>? progre
         {
             await runner.RunAsync("schtasks.exe", $"/Delete /F /TN \"{options.TaskFolder}{name}\"", cancellationToken);
         }
+
+        _progress("Removing the screen helper");
+        await runner.RunAsync("reg.exe", $"delete \"{InstallOptions.ScreenHelperRunKey}\" /v {InstallOptions.ScreenHelperRunValue} /f", cancellationToken);
 
         return InstallResult.Ok("Solvix Agent service removed.");
     }

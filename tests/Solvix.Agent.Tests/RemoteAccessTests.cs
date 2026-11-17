@@ -15,13 +15,25 @@ public sealed class RemoteAccessTests : IDisposable
     private readonly FakeAgentApi _api = new();
     private readonly FakePrompter _prompter = new();
     private readonly FakeShells _shells = new();
+    private readonly FakeDesktop _desktop = new();
     private readonly AgentHealthMonitor _health = new(TimeProvider.System, new ConnectionMonitor(TimeProvider.System));
 
     public void Dispose() => _api.Dispose();
 
-    private RemoteAccessWorker Worker(RemoteAccessMode mode) =>
-        new(_api, Options.Create(new AgentOptions { RemoteAccess = new RemoteAccessOptions { Mode = mode } }), _prompter, _shells, _health, NullLogger<RemoteAccessWorker>.Instance)
+    private RemoteAccessWorker Worker(RemoteAccessMode mode, RemoteFeatures features = RemoteFeatures.Shell)
+    {
+        var options = Options.Create(new AgentOptions
+        {
+            DataDirectory = Path.Combine(Path.GetTempPath(), "solvix-remote-test-" + Guid.NewGuid().ToString("N")),
+            RemoteAccess = new RemoteAccessOptions { Mode = mode, Features = features },
+        });
+        return new RemoteAccessWorker(
+            _api, options, _prompter, _shells, _desktop,
+            new ScreenSessionRunner(_api, _desktop, NullLogger<ScreenSessionRunner>.Instance) { FrameInterval = TimeSpan.FromMilliseconds(10), KeepAlive = TimeSpan.FromMilliseconds(50) },
+            new FileSessionRunner(_api, options, NullLogger<FileSessionRunner>.Instance),
+            _health, NullLogger<RemoteAccessWorker>.Instance)
         { ErrorDelay = TimeSpan.FromMilliseconds(10) };
+    }
 
     private static AgentRemoteRequest Request() => new()
     {
@@ -130,10 +142,98 @@ public sealed class RemoteAccessTests : IDisposable
         Assert.Empty(_api.RemoteAccepted);
     }
 
+    private async Task<AgentRemoteRequest> HandleKindAsync(RemoteSessionKind kind, bool control, RemoteFeatures features, bool desktopAvailable = true, RemoteAccessMode mode = RemoteAccessMode.ConsentRequired)
+    {
+        _desktop.IsAvailable = desktopAvailable;
+        var request = Request() with { Kind = kind, ControlRequested = control };
+        _api.RemoteInputEndsWhenEmpty = true;
+        await Worker(mode, features).HandleAsync(request, mode, CancellationToken.None);
+        return request;
+    }
+
+    [Theory]
+    [InlineData(RemoteSessionKind.Screen)]
+    [InlineData(RemoteSessionKind.Files)]
+    public async Task A_kind_the_computer_does_not_allow_is_refused_without_asking_the_person(RemoteSessionKind kind)
+    {
+        _prompter.Answer = true;
+        var request = await HandleKindAsync(kind, false, RemoteFeatures.Shell);
+        Assert.Equal(0, _prompter.Asked);
+        Assert.Equal(request.SessionId, Assert.Single(_api.RemoteDenied).Id);
+        Assert.Contains("not enabled", _api.RemoteDenied[0].Reason, StringComparison.Ordinal);
+        Assert.Empty(_api.RemoteAccepted);
+    }
+
+    [Fact]
+    public async Task Screen_sharing_is_refused_when_nobodys_desktop_is_available()
+    {
+        _prompter.Answer = true;
+        await HandleKindAsync(RemoteSessionKind.Screen, false, RemoteFeatures.Shell | RemoteFeatures.Screen, desktopAvailable: false);
+        Assert.Equal(0, _prompter.Asked); // never ask for something that cannot be done
+        Assert.Contains("desktop", _api.RemoteDenied.Single().Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(RemoteFeatures.Shell | RemoteFeatures.Screen | RemoteFeatures.Control, true, true)]
+    [InlineData(RemoteFeatures.Shell | RemoteFeatures.Screen, true, false)]
+    [InlineData(RemoteFeatures.Shell | RemoteFeatures.Screen | RemoteFeatures.Control, false, false)]
+    public async Task Control_is_granted_only_when_asked_for_allowed_locally_and_approved(RemoteFeatures features, bool asked, bool expectedGranted)
+    {
+        _prompter.Answer = true;
+        var request = await HandleKindAsync(RemoteSessionKind.Screen, asked, features);
+        Assert.Equal(RemoteSessionKind.Screen, _prompter.LastRequest!.Kind);
+        Assert.Equal(expectedGranted, _prompter.LastRequest.ControlRequested); // the person is told exactly what they approve
+        var accepted = Assert.Single(_api.RemoteAccepted);
+        Assert.Equal(request.SessionId, accepted.Id);
+        Assert.Equal(RemoteConsent.User, accepted.Consent);
+        Assert.Equal(expectedGranted, _api.RemoteControlGranted.Single());
+    }
+
+    [Fact]
+    public async Task A_declined_screen_request_shows_nothing()
+    {
+        _prompter.Answer = false;
+        await HandleKindAsync(RemoteSessionKind.Screen, true, RemoteFeatures.Shell | RemoteFeatures.Screen | RemoteFeatures.Control);
+        Assert.Empty(_api.ScreenFrames);
+        Assert.Single(_api.RemoteDenied);
+    }
+
+    [Fact]
+    public async Task An_approved_screen_session_streams_frames_and_ends()
+    {
+        _prompter.Answer = true;
+        _api.RemoteInputEndsWhenEmpty = false;
+        var request = Request() with { Kind = RemoteSessionKind.Screen };
+        var handling = Worker(RemoteAccessMode.ConsentRequired, RemoteFeatures.Shell | RemoteFeatures.Screen).HandleAsync(request, RemoteAccessMode.ConsentRequired, CancellationToken.None);
+        await Task.Delay(300);
+        _api.RemoteInput.Enqueue(new RemoteInputResponse { Ended = true });
+        await handling.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.NotEmpty(_api.ScreenFrames);
+        Assert.Equal(request.SessionId, Assert.Single(_api.RemoteEnded));
+    }
+
+    [Fact]
+    public async Task An_approved_file_session_serves_operations_then_ends_with_the_session()
+    {
+        _prompter.Answer = true;
+        var request = await HandleKindAsync(RemoteSessionKind.Files, false, RemoteFeatures.Shell | RemoteFeatures.Files);
+        Assert.Equal(request.SessionId, Assert.Single(_api.RemoteEnded));
+        Assert.Equal(0, _shells.Started); // no shell for a file session
+    }
+
     [Fact]
     public async Task The_default_prompter_says_no()
     {
-        Assert.False(await new DenyingConsentPrompter().AskAsync("x", null, TimeSpan.FromSeconds(1), CancellationToken.None));
+        Assert.False(await new DenyingConsentPrompter().AskAsync(new RemoteConsentRequest("x", null, RemoteSessionKind.Shell, false), TimeSpan.FromSeconds(1), CancellationToken.None));
+    }
+
+    private sealed class FakeDesktop : IRemoteDesktop
+    {
+        public bool IsAvailable { get; set; } = true;
+
+        public Task<ScreenFrame?> CaptureAsync(CancellationToken cancellationToken) => Task.FromResult<ScreenFrame?>(new ScreenFrame([0xFF, 0xD8, 0xFF, 1], 10, 10));
+
+        public Task InjectAsync(ScreenInputEvent input, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
     private sealed class FakePrompter : IConsentPrompter
@@ -144,10 +244,13 @@ public sealed class RemoteAccessTests : IDisposable
 
         public string? LastRequestedBy { get; private set; }
 
-        public Task<bool> AskAsync(string requestedBy, string? reason, TimeSpan timeout, CancellationToken cancellationToken)
+        public RemoteConsentRequest? LastRequest { get; private set; }
+
+        public Task<bool> AskAsync(RemoteConsentRequest request, TimeSpan timeout, CancellationToken cancellationToken)
         {
             Asked++;
-            LastRequestedBy = requestedBy;
+            LastRequestedBy = request.RequestedBy;
+            LastRequest = request;
             return Task.FromResult(Answer);
         }
     }

@@ -8,6 +8,9 @@
 //   Solvix.Agent.exe run                     run in the console
 //   Solvix.Agent.exe install --remote-access consent|unattended   also allow remote command sessions (off by default;
 //                                            "consent" asks the person at the computer each time)
+//   Solvix.Agent.exe install --remote-features screen,files,control --files-folder <path>
+//                                            also allow screen sharing / control and file transfer (each off by default)
+//   Solvix.Agent.exe screen-helper           (started at sign-in, as the user) lets the service share the user's screen
 //   Solvix.Agent.exe enroll [--server <url> --token <token> [--pin <sha256>]]
 //                                            store server URL + protected one-time token
 //                                            (no arguments: read enrollment.json next to the exe)
@@ -56,18 +59,26 @@ var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 var bootstrapOptions = builder.Configuration.GetSection(AgentOptions.SectionName).Get<AgentOptions>() ?? new AgentOptions();
 var dataDirectory = bootstrapOptions.ResolveDataDirectory();
 var machineSettings = Path.Combine(dataDirectory, "agent.json");
-builder.Configuration.AddJsonFile(machineSettings, optional: true, reloadOnChange: false);
+if (command != "screen-helper")
+{
+    // The per-user screen helper runs as a normal user, who cannot (and need not) read the machine settings.
+    builder.Configuration.AddJsonFile(machineSettings, optional: true, reloadOnChange: false);
+}
 builder.Configuration.AddEnvironmentVariables("SOLVIX_AGENT_");
 
 // Local diagnostic logging: rolling files in the data directory + Windows Event Log for warnings.
 var logging = builder.Configuration.GetSection("Logging");
+var helperProcess = command == "screen-helper";
 var logConfiguration = new LoggerConfiguration()
     .MinimumLevel.Is(Enum.TryParse<LogEventLevel>(logging["MinimumLevel"], true, out var level) ? level : LogEventLevel.Information)
     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
     .MinimumLevel.Override("System.Net.Http", LogEventLevel.Warning)
     .Enrich.FromLogContext()
-    .Enrich.WithProperty("AgentVersion", AgentInfo.Version)
-    .WriteTo.File(
+    .Enrich.WithProperty("AgentVersion", AgentInfo.Version);
+if (!helperProcess)
+{
+    // The helper runs as the signed-in user, who has no access to the agent's data directory.
+    logConfiguration.WriteTo.File(
         new CompactJsonFormatter(),
         Path.Combine(dataDirectory, "logs", "agent-.log"),
         rollingInterval: RollingInterval.Day,
@@ -75,12 +86,13 @@ var logConfiguration = new LoggerConfiguration()
         fileSizeLimitBytes: logging.GetValue("FileSizeLimitBytes", 10L * 1024 * 1024),
         rollOnFileSizeLimit: true,
         shared: true);
+}
 if (Environment.UserInteractive)
 {
     logConfiguration.WriteTo.Console(restrictedToMinimumLevel: command == "run" ? LogEventLevel.Information : LogEventLevel.Warning);
 }
 
-if (OperatingSystem.IsWindows())
+if (OperatingSystem.IsWindows() && !helperProcess)
 {
     // The event source is registered by the installer (needs administrative rights).
     logConfiguration.WriteTo.EventLog("Solvix Agent", manageEventSource: false, restrictedToMinimumLevel: LogEventLevel.Warning);
@@ -107,6 +119,7 @@ if (command == "run")
 {
     builder.Services.AddHostedService<AgentWorker>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<Solvix.Agent.Core.LocalApi.LocalApiServer>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<Solvix.Agent.Core.Remote.ScreenHelperServer>());
     builder.Services.AddHostedService(sp => sp.GetRequiredService<Solvix.Agent.Core.Remote.RemoteAccessWorker>());
 }
 
@@ -122,6 +135,7 @@ try
         "enroll" => Commands.Enroll(host, args),
         "status" => Commands.Status(host),
         "inventory" => await Commands.InventoryAsync(host),
+        "screen-helper" => await SupportCommands.ScreenHelperAsync(args),
         "ticket" => await SupportCommands.TicketAsync(args, bootstrapOptions.LocalPipeName),
         "tickets" => await SupportCommands.TicketsAsync(bootstrapOptions.LocalPipeName),
         "chat" => await SupportCommands.ChatAsync(bootstrapOptions.LocalPipeName),
@@ -172,13 +186,12 @@ namespace Solvix.Agent
 
             if (settings is not null)
             {
-                if (!RemoteAccessChoice.TryParse(Option(args, "--remote-access"), out var remoteMode))
+                settings = RemoteAccessCommandLine.Apply(settings, args, out var remoteError);
+                if (settings is null)
                 {
-                    Console.Error.WriteLine($"Unknown remote access choice. Use {RemoteAccessChoice.Usage} (or leave it out to keep remote access off).");
+                    Console.Error.WriteLine(remoteError);
                     return 2;
                 }
-
-                settings = settings with { RemoteAccess = remoteMode };
             }
 
             if (settings is null)

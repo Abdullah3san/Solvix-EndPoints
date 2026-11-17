@@ -1,7 +1,7 @@
 # Help desk: tickets and chat through the agent
 
 People using enrolled laptops can report a problem and talk to a technician without opening a browser;
-technicians work from the web console. Remote command sessions are described at the end; screen sharing is not built.
+technicians work from the web console. Remote sessions (command shell, screen sharing with optional control, file transfer) are described at the end.
 
 ## For the person at the laptop
 
@@ -114,6 +114,84 @@ installer flag parsing, and that the package cannot enable remote access. Fronte
   compiled, not executed.
 * **Not a privileged shell**: it runs with the service account's rights. Running as SYSTEM or an admin would need a
   deliberate, separate design (like the updater task) and is not done.
-* No screen sharing or file transfer. No keystroke/command transcript is kept (a tenant-level "record sessions" option
+* Screen sharing and file transfer are covered in the next section. No keystroke/command transcript is kept (a tenant-level "record sessions" option
   would be the next audit step). No tenant-wide kill switch yet beyond not enabling it on computers.
 * Latency is ~0.3 s per round trip (polling relay); WebSockets would remove it.
+
+
+---
+
+# Screen sharing and file transfer
+
+Both are *sessions* like the shell: the same request, consent, audit, limits and isolation (a computer can have one
+open session of each kind). Each kind is switched on separately, on the computer.
+
+```
+Solvix.Agent.exe install --remote-access consent --remote-features screen,control,files --files-folder "C:\Users\Public\Solvix"
+```
+
+* `--remote-features`: any of `screen`, `files`, `control` (`control` implies `screen`). Shell is always included when
+  remote access is on. Default: shell only.
+* `--files-folder <path>` (repeatable): folders a technician may use, in addition to the agent's own `transfer` folder.
+  A whole drive or the Windows folder is refused.
+* Nothing here can be enabled by the server or the downloadable package. The console only shows what the computer reported.
+
+## Screen sharing
+
+A Windows service runs in session 0 and cannot see a user's desktop, so screen sharing uses a **per-user helper**:
+`Solvix.Agent.exe screen-helper`, registered by the installer to start at each sign-in *as that user, with no extra rights*.
+The helper holds no credentials and talks only to the service over a local pipe (denied to the network; the service only
+accepts a helper running in the active console session). The service captures frames through it and uploads them over the
+agent's mTLS channel.
+
+* The technician sees about 5 frames per second of changed screen (JPEG, at most 1920 px wide); only the newest frame is kept,
+  in the cache for ≤ 30 s, never in the database.
+* **View only by default.** The technician must *ask* to control; control is granted only if the technician asked, the computer
+  allows `control` locally, **and** the person approved a dialog that says "see your screen and control your mouse and keyboard".
+  Otherwise input is refused by the server and ignored by the agent. Input events are small, validated JSON (mouse position as
+  fractions of the screen, keys, typed text) applied with `SendInput`.
+* The consent dialog names exactly what is requested (view only / view and control). Without a signed-in person or a running
+  helper the agent declines *before* asking anyone.
+* Limits: the secure desktop (UAC prompts, lock screen, Ctrl+Alt+Del) cannot be captured or controlled from a user session.
+  Primary monitor only. The helper starts at the *next* sign-in after installation.
+
+## File transfer
+
+List, download and upload inside folders the computer allows, nowhere else.
+
+* **The computer is the authority.** Every path from the server is checked by the agent against its allowed folders: it must be
+  absolute, inside a folder (after normalisation, so `..` fails), not through a link/junction/reparse point, not an alternate
+  data stream, not a device name. A listing with no path shows only the allowed folders.
+* Size limit 100 MB per file (configurable lower with `MaxFileMegabytes`). Uploads never replace an existing file unless the
+  technician ticks *Replace if it exists*; they are received into a temporary file, **verified against the SHA-256 the console
+  computed**, and only then moved into place, so a damaged transfer never overwrites anything.
+* Downloads are announced with their size, streamed chunk by chunk, and the agent reports the SHA-256; an incomplete transfer
+  is recorded as failed and the stream is cut.
+* Audit: each operation (kind, path, size, SHA-256, outcome, error) is stored in `remote_file_operations` (kept); file data in
+  flight (`remote_file_chunks`) is deleted when delivered and shortly after a session ends. Every step is also logged as a
+  warning on the computer.
+* The default folder `<data directory>\transfer` is only writable by the agent and administrators. To exchange files with the
+  person using the laptop, add a folder they can reach with `--files-folder`.
+
+## Verification
+
+* Integration (real PostgreSQL/Redis): feature gating per kind, shell and screen open together but not two of a kind, frames
+  (headers, newer-frame long poll, validation, isolation, wrong kind, ended session), control rules (not asked / asked but not
+  allowed / granted, invalid or oversized events), file list/download/upload round trips with checksums, refusal and incomplete
+  transfers, input limits, tenant and computer isolation, audit.
+* End to end with the real agent worker: a real file uploaded to and downloaded from a real folder, traversal / outside-folder
+  list, download and upload all refused; a screen session streaming frames from a synthetic desktop with view-only and control.
+* Agent: sandbox (traversal, siblings with the same prefix, links, streams, device names), file runner (chunking, hashing,
+  damaged/oversized/overwrite cases), screen runner (changed frames only, control gating, malformed input), helper bridge over
+  real pipes (capture, input, lost helper, unauthorised helper, closed unless enabled), per-kind policy and consent text,
+  installer (helper registration/removal, feature and folder flags).
+* Frontend: helpers and the panels' enabled/disabled states.
+
+## Not verified here
+
+* On a real Windows laptop: the GDI capture, `SendInput`, the per-user helper start at sign-in (registry Run key), the
+  session check that only accepts the console user's helper, the Windows consent dialog, DPI behaviour, multiple monitors.
+  These were compiled, not executed. Expect a first-contact fix cycle when you try it on a laptop.
+* Screen sharing needs Redis (frames travel through the shared cache); if it is down, no picture appears.
+* Not built: audio, clipboard sync, multi-monitor selection, drag-and-drop folders, deleting or renaming remote files,
+  recording sessions, and file access to user profile folders (the service account cannot read them; use a shared folder).

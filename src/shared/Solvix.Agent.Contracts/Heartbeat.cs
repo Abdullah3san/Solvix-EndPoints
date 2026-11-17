@@ -46,6 +46,9 @@ public sealed record AgentHealthReport
     /// <summary>The computer's local remote-session policy (informational for the console).</summary>
     public RemoteAccessMode RemoteAccess { get; init; } = RemoteAccessMode.Disabled;
 
+    /// <summary>Which remote features the computer allows. Agents that predate this field only offered a shell.</summary>
+    public RemoteFeatures RemoteFeatures { get; init; } = RemoteFeatures.Shell;
+
     public IReadOnlyList<HealthIssue> Issues { get; init; } = [];
 }
 

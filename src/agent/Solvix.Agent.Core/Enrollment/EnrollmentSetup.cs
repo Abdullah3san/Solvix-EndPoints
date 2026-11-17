@@ -9,7 +9,13 @@ using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
 
 /// <summary>A validated enrollment request: where to enroll, with which one-time token.</summary>
-public sealed record EnrollmentRequestSettings(Uri ServerUrl, string Token, string? ServerCertificateSha256, RemoteAccessMode? RemoteAccess = null)
+public sealed record EnrollmentRequestSettings(
+    Uri ServerUrl,
+    string Token,
+    string? ServerCertificateSha256,
+    RemoteAccessMode? RemoteAccess = null,
+    RemoteFeatures RemoteFeatures = RemoteFeatures.Shell,
+    IReadOnlyList<string>? FileFolders = null)
 {
     /// <summary>Reads and validates <c>enrollment.json</c>; returns an error message instead of throwing.</summary>
     public static EnrollmentRequestSettings? TryLoad(string path, DateTimeOffset now, out string? error)
@@ -88,7 +94,17 @@ public sealed class EnrollmentSetup(IOptions<AgentOptions> options, BootstrapTok
         if (settings.RemoteAccess is { } mode && mode != RemoteAccessMode.Disabled)
         {
             // A local decision taken by whoever installs the agent; it never comes from the server.
-            section[nameof(AgentOptions.RemoteAccess)] = new JsonObject { [nameof(RemoteAccessOptions.Mode)] = mode.ToString() };
+            var remote = new JsonObject
+            {
+                [nameof(RemoteAccessOptions.Mode)] = mode.ToString(),
+                [nameof(RemoteAccessOptions.Features)] = settings.RemoteFeatures.ToString(),
+            };
+            if (settings.FileFolders is { Count: > 0 })
+            {
+                remote[nameof(RemoteAccessOptions.FileFolders)] = new JsonArray(settings.FileFolders.Select(f => (JsonNode?)JsonValue.Create(f)).ToArray());
+            }
+
+            section[nameof(AgentOptions.RemoteAccess)] = remote;
         }
 
         var json = new JsonObject { [AgentOptions.SectionName] = section };
@@ -125,5 +141,72 @@ public static class RemoteAccessChoice
             default:
                 return false;
         }
+    }
+}
+
+
+/// <summary>Parses the installer's <c>--remote-features</c> and <c>--files-folder</c> choices.</summary>
+public static class RemoteFeatureChoice
+{
+    public const string Usage = "--remote-features screen,files,control   (a shell is always included when remote access is on)";
+
+    /// <summary>A comma-separated list of shell, screen, files, control. Empty keeps the default (shell only).</summary>
+    public static bool TryParse(string? value, out RemoteFeatures features, out string? error)
+    {
+        features = RemoteFeatures.Shell;
+        error = null;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        foreach (var part in value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            switch (part.ToLowerInvariant())
+            {
+                case "shell":
+                    features |= RemoteFeatures.Shell;
+                    break;
+                case "screen":
+                    features |= RemoteFeatures.Screen;
+                    break;
+                case "files":
+                    features |= RemoteFeatures.Files;
+                    break;
+                case "control":
+                    features |= RemoteFeatures.Screen | RemoteFeatures.Control;
+                    break;
+                default:
+                    error = $"Unknown remote feature '{part}'. Use {Usage}.";
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Folders must be absolute, existing-or-creatable paths; a drive root or the Windows folder is refused.</summary>
+    public static bool TryValidateFolder(string? folder, out string full, out string? error)
+    {
+        full = string.Empty;
+        error = null;
+        if (string.IsNullOrWhiteSpace(folder) || !Path.IsPathRooted(folder))
+        {
+            error = "A transfer folder must be a full path such as C:\\Users\\Public\\Solvix.";
+            return false;
+        }
+
+        var absolute = Path.GetFullPath(folder);
+        var root = Path.GetPathRoot(absolute) ?? string.Empty;
+        full = absolute.Length > root.Length ? absolute.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) : absolute;
+        var system = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+        if (absolute.Length <= root.Length
+            || (!string.IsNullOrEmpty(system) && full.StartsWith(system, StringComparison.OrdinalIgnoreCase)))
+        {
+            error = "A whole drive or the Windows folder cannot be offered for transfer.";
+            return false;
+        }
+
+        return true;
     }
 }

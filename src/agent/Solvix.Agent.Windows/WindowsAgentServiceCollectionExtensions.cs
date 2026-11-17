@@ -25,6 +25,7 @@ public static class WindowsAgentServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<IPackageInstaller>(_ => new MsiPackageInstaller(Path.Combine(dataDirectory, "logs"))));
         services.Replace(ServiceDescriptor.Singleton<IElevation, WindowsElevation>());
         services.Replace(ServiceDescriptor.Singleton<IConsentPrompter, WtsConsentPrompter>());
+        services.Replace(ServiceDescriptor.Singleton<IHelperAuthorizer, WindowsHelperAuthorizer>());
         services.AddSingleton<IInventoryCollector, SystemCollector>();
         services.AddSingleton<IInventoryCollector, BiosCollector>();
         services.AddSingleton<IInventoryCollector, OperatingSystemCollector>();

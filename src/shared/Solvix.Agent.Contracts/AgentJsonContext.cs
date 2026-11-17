@@ -31,6 +31,10 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(EndRemoteRequest))]
 [JsonSerializable(typeof(RemoteOutputRequest))]
 [JsonSerializable(typeof(RemoteInputResponse))]
+[JsonSerializable(typeof(ScreenInputEvent))]
+[JsonSerializable(typeof(PendingFileOperationResponse))]
+[JsonSerializable(typeof(BeginFileDownloadRequest))]
+[JsonSerializable(typeof(FileOperationResult))]
 [JsonSerializable(typeof(AgentProblem))]
 [JsonSerializable(typeof(AgentEnrollmentFile))]
 public sealed partial class AgentJsonContext : JsonSerializerContext

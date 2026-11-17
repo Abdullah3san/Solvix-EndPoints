@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading.Channels;
 using Microsoft.Extensions.Options;
+using Solvix.Agent.Contracts;
 using Solvix.Agent.Core.Configuration;
 
 /// <summary>A command shell attached to a remote session: text in, text out.</summary>
@@ -122,14 +123,17 @@ internal sealed class ProcessShell : IRemoteShell
     }
 }
 
+/// <summary>What the person at the computer is being asked to allow.</summary>
+public sealed record RemoteConsentRequest(string RequestedBy, string? Reason, RemoteSessionKind Kind, bool ControlRequested);
+
 /// <summary>Asks the person at the computer whether a technician may open a remote session.</summary>
 public interface IConsentPrompter
 {
-    Task<bool> AskAsync(string requestedBy, string? reason, TimeSpan timeout, CancellationToken cancellationToken);
+    Task<bool> AskAsync(RemoteConsentRequest request, TimeSpan timeout, CancellationToken cancellationToken);
 }
 
 /// <summary>Safe default: with no way to ask, the answer is no.</summary>
 public sealed class DenyingConsentPrompter : IConsentPrompter
 {
-    public Task<bool> AskAsync(string requestedBy, string? reason, TimeSpan timeout, CancellationToken cancellationToken) => Task.FromResult(false);
+    public Task<bool> AskAsync(RemoteConsentRequest request, TimeSpan timeout, CancellationToken cancellationToken) => Task.FromResult(false);
 }

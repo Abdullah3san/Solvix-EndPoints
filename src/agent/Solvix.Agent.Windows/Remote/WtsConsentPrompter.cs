@@ -2,6 +2,7 @@ namespace Solvix.Agent.Windows.Remote;
 
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
+using Solvix.Agent.Contracts;
 using Solvix.Agent.Core.Remote;
 
 /// <summary>
@@ -18,10 +19,18 @@ public sealed partial class WtsConsentPrompter : IConsentPrompter
     private const int IdYes = 6;
     private const uint NoSession = 0xFFFFFFFF;
 
-    public Task<bool> AskAsync(string requestedBy, string? reason, TimeSpan timeout, CancellationToken cancellationToken) =>
-        Task.Run(() => Ask(requestedBy, reason, timeout), cancellationToken);
+    public Task<bool> AskAsync(RemoteConsentRequest request, TimeSpan timeout, CancellationToken cancellationToken) =>
+        Task.Run(() => Ask(request, timeout), cancellationToken);
 
-    private static bool Ask(string requestedBy, string? reason, TimeSpan timeout)
+    private static string Describe(RemoteConsentRequest request) => request.Kind switch
+    {
+        RemoteSessionKind.Screen when request.ControlRequested => "see your screen and control your mouse and keyboard",
+        RemoteSessionKind.Screen => "see your screen (view only)",
+        RemoteSessionKind.Files => "browse and copy files in the folders set aside for IT",
+        _ => "open a remote command session on this computer",
+    };
+
+    private static bool Ask(RemoteConsentRequest request, TimeSpan timeout)
     {
         var session = WTSGetActiveConsoleSessionId();
         if (session == NoSession)
@@ -30,9 +39,10 @@ public sealed partial class WtsConsentPrompter : IConsentPrompter
         }
 
         var title = "Solvix IT support";
-        var message = string.IsNullOrWhiteSpace(reason)
-            ? $"{requestedBy} from IT would like to open a remote command session on this computer.\n\nAllow it?"
-            : $"{requestedBy} from IT would like to open a remote command session on this computer.\n\nReason: {reason}\n\nAllow it?";
+        var action = Describe(request);
+        var message = string.IsNullOrWhiteSpace(request.Reason)
+            ? $"{request.RequestedBy} from IT would like to {action}.\n\nAllow it?"
+            : $"{request.RequestedBy} from IT would like to {action}.\n\nReason: {request.Reason}\n\nAllow it?";
         var ok = WTSSendMessageW(
             IntPtr.Zero, session, title, title.Length * 2, message, message.Length * 2,
             MbYesNo | MbIconQuestion | MbSetForeground | MbTopMost, (int)timeout.TotalSeconds, out var response, true);

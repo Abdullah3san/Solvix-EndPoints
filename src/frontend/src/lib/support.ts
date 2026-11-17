@@ -1,4 +1,4 @@
-import type { RemoteAccessMode, RemoteSessionStatus, TicketPriority, TicketStatus } from "@/lib/api/types";
+import type { FileOperationStatus, RemoteAccessMode, RemoteSessionStatus, TicketPriority, TicketStatus } from "@/lib/api/types";
 
 type Tone = "neutral" | "brand" | "success" | "warning" | "danger";
 
@@ -77,4 +77,44 @@ export function remoteModeLabel(mode: RemoteAccessMode | undefined): string {
 export function appendTerminal(current: string, addition: string, max = 200_000): string {
   const next = current + addition;
   return next.length > max ? next.slice(next.length - max) : next;
+}
+
+/** Features the computer reported (e.g. "Shell, Screen, Files"); an agent that predates the field only offers a shell. */
+export function hasRemoteFeature(features: string | undefined, feature: "Shell" | "Screen" | "Files" | "Control"): boolean {
+  const reported = features ?? "Shell";
+  return reported.split(",").some((f) => f.trim() === feature);
+}
+
+/** Parent folder of a Windows or POSIX path; null when there is none. */
+export function parentPath(path: string): string | null {
+  const trimmed = path.replace(/[\\/]+$/, "");
+  const index = Math.max(trimmed.lastIndexOf("\\"), trimmed.lastIndexOf("/"));
+  if (index <= 0) return null;
+  const parent = trimmed.slice(0, index);
+  return /^[A-Za-z]:$/.test(parent) ? `${parent}\\` : parent;
+}
+
+export function joinPath(folder: string, name: string): string {
+  const separator = folder.includes("\\") ? "\\" : "/";
+  return folder.endsWith("\\") || folder.endsWith("/") ? `${folder}${name}` : `${folder}${separator}${name}`;
+}
+
+export function fileStatusTone(status: FileOperationStatus): Tone {
+  return status === "Completed" ? "success" : status === "Failed" ? "danger" : "warning";
+}
+
+/** Browser key events as the agent's input events (fractions of the shared screen, never pixels). */
+export function toKeyEvent(event: { key: string; ctrlKey: boolean; altKey: boolean; metaKey: boolean }, pressed: boolean):
+  | { type: "text"; characters: string }
+  | { type: "key"; name: string; pressed: boolean }
+  | null {
+  const printable = event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey;
+  if (printable) return pressed ? { type: "text", characters: event.key } : null; // typed once, on key down
+  if (event.key === "Unidentified" || event.key === "Dead") return null;
+  return { type: "key", name: event.key, pressed };
+}
+
+export function pointerFraction(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }): { x: number; y: number } {
+  const clamp = (v: number) => Math.min(1, Math.max(0, v));
+  return { x: clamp((clientX - rect.left) / (rect.width || 1)), y: clamp((clientY - rect.top) / (rect.height || 1)) };
 }

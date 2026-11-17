@@ -76,12 +76,14 @@ namespace Solvix.Agent
                     return Fail(error ?? "Invalid enrollment settings.", silent);
                 }
 
-                if (!RemoteAccessChoice.TryParse(Option(args, "--remote-access"), out var remoteMode))
+                var withRemote = RemoteAccessCommandLine.Apply(settings, args, out var remoteError);
+                if (withRemote is null)
                 {
-                    return Fail($"Unknown remote access choice. Use {RemoteAccessChoice.Usage} (or leave it out to keep remote access off).", silent);
+                    return Fail(remoteError ?? "Invalid remote access options.", silent);
                 }
 
-                settings = settings with { RemoteAccess = remoteMode };
+                settings = withRemote;
+                var remoteMode = settings.RemoteAccess ?? Solvix.Agent.Contracts.RemoteAccessMode.Disabled;
 
                 var elevation = host.Services.GetRequiredService<IElevation>();
                 if (!elevation.IsElevated)
@@ -105,11 +107,12 @@ namespace Solvix.Agent
                     SourceExePath = Environment.ProcessPath!,
                     InstallDirectory = Option(args, "--install-dir") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Solvix", "Agent"),
                     DataDirectory = dataDirectory,
+                    ScreenHelper = remoteMode != Solvix.Agent.Contracts.RemoteAccessMode.Disabled && settings.RemoteFeatures.HasFlag(Solvix.Agent.Contracts.RemoteFeatures.Screen),
                 };
 
                 Console.WriteLine("Installing the Solvix Agent");
                 Console.WriteLine($"  Server: {settings.ServerUrl}");
-                Console.WriteLine($"  Remote access: {(remoteMode == Solvix.Agent.Contracts.RemoteAccessMode.Disabled ? "off" : remoteMode)}");
+                Console.WriteLine($"  Remote access: {(remoteMode == Solvix.Agent.Contracts.RemoteAccessMode.Disabled ? "off" : $"{remoteMode} ({settings.RemoteFeatures})")}");
                 var enrollment = host.Services.GetRequiredService<EnrollmentSetup>();
                 var result = await installer.InstallAsync(options, environment, () => enrollment.Apply(settings), CancellationToken.None);
                 if (!result.Success)

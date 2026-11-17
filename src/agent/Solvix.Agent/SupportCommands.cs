@@ -2,14 +2,83 @@ namespace Solvix.Agent
 {
     using System.Globalization;
     using Solvix.Agent.Contracts;
+    using Solvix.Agent.Core.Enrollment;
     using Solvix.Agent.Core.LocalApi;
 
     /// <summary>
     /// What a person at the computer can do: report a problem and chat with a technician. These talk to
     /// the running agent service over a local pipe, so they work without administrator rights.
     /// </summary>
+    internal static class RemoteAccessCommandLine
+    {
+        /// <summary>Adds <c>--remote-access</c>, <c>--remote-features</c> and <c>--files-folder</c> (all local decisions) to the settings.</summary>
+        public static EnrollmentRequestSettings? Apply(EnrollmentRequestSettings settings, string[] args, out string? error)
+        {
+            error = null;
+            if (!RemoteAccessChoice.TryParse(ArgValue(args, "--remote-access"), out var mode))
+            {
+                error = $"Unknown remote access choice. Use {RemoteAccessChoice.Usage} (or leave it out to keep remote access off).";
+                return null;
+            }
+
+            if (!RemoteFeatureChoice.TryParse(ArgValue(args, "--remote-features"), out var features, out error))
+            {
+                return null;
+            }
+
+            var folders = new List<string>();
+            for (var i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], "--files-folder", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!RemoteFeatureChoice.TryValidateFolder(args[i + 1], out var full, out error))
+                    {
+                        return null;
+                    }
+
+                    folders.Add(full);
+                }
+            }
+
+            if (mode == Solvix.Agent.Contracts.RemoteAccessMode.Disabled && (features != Solvix.Agent.Contracts.RemoteFeatures.Shell || folders.Count > 0))
+            {
+                error = $"--remote-features and --files-folder need remote access to be switched on: add {RemoteAccessChoice.Usage}.";
+                return null;
+            }
+
+            return settings with { RemoteAccess = mode, RemoteFeatures = features, FileFolders = folders };
+        }
+
+        private static string? ArgValue(string[] args, string name)
+        {
+            var index = Array.FindIndex(args, a => string.Equals(a, name, StringComparison.OrdinalIgnoreCase));
+            return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+        }
+    }
+
     internal static class SupportCommands
     {
+        /// <summary>
+        /// Runs in the signed-in user's own session (started at sign-in) and lets the service capture
+        /// that user's screen. It holds no credential and talks only to the service's local pipe.
+        /// </summary>
+        public static async Task<int> ScreenHelperAsync(string[] args)
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                Console.Error.WriteLine("The screen helper is only available on Windows.");
+                return 2;
+            }
+
+            return await WindowsHelper.RunAsync(ArgumentAfter(args, "--pipe") ?? new Solvix.Agent.Core.Configuration.RemoteAccessOptions().ScreenHelperPipeName);
+        }
+
+        private static string? ArgumentAfter(string[] args, string name)
+        {
+            var index = Array.FindIndex(args, a => string.Equals(a, name, StringComparison.OrdinalIgnoreCase));
+            return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+        }
+
         public static async Task<int> TicketAsync(string[] args, string pipeName)
         {
             var subject = Option(args, "--subject") ?? Option(args, "-s");
@@ -173,6 +242,25 @@ namespace Solvix.Agent
         {
             var index = Array.FindIndex(args, a => string.Equals(a, name, StringComparison.OrdinalIgnoreCase));
             return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
+        }
+    }
+}
+
+namespace Solvix.Agent
+{
+    using System.Runtime.Versioning;
+    using Solvix.Agent.Core.Remote;
+    using Solvix.Agent.Windows.Remote;
+
+    [SupportedOSPlatform("windows")]
+    internal static class WindowsHelper
+    {
+        public static async Task<int> RunAsync(string pipeName)
+        {
+            GdiScreenCapture.PrepareHelperProcess(); // no console window on the user's screen; real pixel sizes
+            using var stop = new CancellationTokenSource();
+            await new ScreenHelperLoop(new GdiScreenCapture(), new SendInputInjector(), pipeName).RunAsync(stop.Token);
+            return 0;
         }
     }
 }

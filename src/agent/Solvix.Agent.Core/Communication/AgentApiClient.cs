@@ -43,6 +43,18 @@ public interface IAgentApiClient
     Task PostRemoteOutputAsync(Guid sessionId, RemoteOutputRequest request, CancellationToken cancellationToken);
 
     Task<RemoteInputResponse> PollRemoteInputAsync(Guid sessionId, long after, int waitSeconds, CancellationToken cancellationToken);
+
+    Task PostScreenFrameAsync(Guid sessionId, ScreenFrame frame, CancellationToken cancellationToken);
+
+    Task<PendingFileOperationResponse> ClaimFileOperationAsync(Guid sessionId, int waitSeconds, CancellationToken cancellationToken);
+
+    Task BeginFileDownloadAsync(Guid sessionId, Guid operationId, long sizeBytes, CancellationToken cancellationToken);
+
+    Task PostFileChunkAsync(Guid sessionId, Guid operationId, int index, byte[] data, CancellationToken cancellationToken);
+
+    Task<byte[]> GetUploadChunkAsync(Guid sessionId, Guid operationId, int index, CancellationToken cancellationToken);
+
+    Task CompleteFileOperationAsync(Guid sessionId, Guid operationId, FileOperationResult result, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -151,6 +163,45 @@ public sealed class AgentApiClient : IAgentApiClient, IDisposable
         using var request = new HttpRequestMessage(HttpMethod.Get, uri);
         using var response = await SendRawAsync(request, cancellationToken);
         return await ReadAsync(response, AgentJsonContext.Default.RemoteInputResponse, cancellationToken);
+    }
+
+    public async Task PostScreenFrameAsync(Guid sessionId, ScreenFrame frame, CancellationToken cancellationToken)
+    {
+        var uri = string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Remote}/{sessionId:D}/frame?width={frame.Width}&height={frame.Height}");
+        await PostBytesAsync(uri, frame.Jpeg, "image/jpeg", cancellationToken);
+    }
+
+    public async Task<PendingFileOperationResponse> ClaimFileOperationAsync(Guid sessionId, int waitSeconds, CancellationToken cancellationToken)
+    {
+        var uri = string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Remote}/{sessionId:D}/files/next?wait={waitSeconds}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await ReadAsync(response, AgentJsonContext.Default.PendingFileOperationResponse, cancellationToken);
+    }
+
+    public Task BeginFileDownloadAsync(Guid sessionId, Guid operationId, long sizeBytes, CancellationToken cancellationToken) =>
+        PostAsync($"{AgentRoutes.Remote}/{sessionId:D}/files/{operationId:D}/begin", new BeginFileDownloadRequest { SizeBytes = sizeBytes }, AgentJsonContext.Default.BeginFileDownloadRequest, cancellationToken);
+
+    public Task PostFileChunkAsync(Guid sessionId, Guid operationId, int index, byte[] data, CancellationToken cancellationToken) =>
+        PostBytesAsync(string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Remote}/{sessionId:D}/files/{operationId:D}/chunk?index={index}"), data, "application/octet-stream", cancellationToken);
+
+    public async Task<byte[]> GetUploadChunkAsync(Guid sessionId, Guid operationId, int index, CancellationToken cancellationToken)
+    {
+        var uri = string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Remote}/{sessionId:D}/files/{operationId:D}/chunk/{index}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await response.Content.ReadAsByteArrayAsync(cancellationToken);
+    }
+
+    public Task CompleteFileOperationAsync(Guid sessionId, Guid operationId, FileOperationResult result, CancellationToken cancellationToken) =>
+        PostAsync($"{AgentRoutes.Remote}/{sessionId:D}/files/{operationId:D}/result", result, AgentJsonContext.Default.FileOperationResult, cancellationToken);
+
+    private async Task PostBytesAsync(string route, byte[] data, string contentType, CancellationToken cancellationToken)
+    {
+        using var content = new ByteArrayContent(data);
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        using var request = new HttpRequestMessage(HttpMethod.Post, route) { Content = content };
+        using var response = await SendRawAsync(request, cancellationToken);
     }
 
     private async Task PostAsync<TRequest>(string route, TRequest body, JsonTypeInfo<TRequest> requestType, CancellationToken cancellationToken)

@@ -200,6 +200,7 @@ export interface AgentHealthReport {
   certificateNotAfterUtc: string | null;
   osBuild: string | null;
   remoteAccess?: RemoteAccessMode;
+  remoteFeatures?: string;
   issues: HealthIssue[];
 }
 
@@ -398,8 +399,13 @@ export interface ChatConversationDto {
 export type RemoteAccessMode = "Disabled" | "ConsentRequired" | "Unattended";
 export type RemoteSessionStatus = "Pending" | "Active" | "Ended" | "Denied" | "Expired";
 
+export type RemoteSessionKind = "Shell" | "Screen" | "Files";
+
 export interface RemoteSessionDto {
   id: string;
+  kind?: RemoteSessionKind;
+  controlRequested?: boolean;
+  controlGranted?: boolean;
   deviceId: string;
   deviceName: string | null;
   requestedByName: string;
@@ -416,4 +422,29 @@ export interface RemoteOutputDto {
   chunks: { sequence: number; text: string }[];
   status: RemoteSessionStatus;
   endReason: string | null;
+}
+
+export type FileOperationKind = "List" | "Download" | "Upload";
+export type FileOperationStatus = "Staging" | "Pending" | "Running" | "Completed" | "Failed";
+
+export interface RemoteFileEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  sizeBytes: number | null;
+  modifiedAtUtc: string | null;
+}
+
+export interface RemoteFileOperationDto {
+  id: string;
+  sessionId: string;
+  kind: FileOperationKind;
+  path: string;
+  status: FileOperationStatus;
+  error: string | null;
+  sizeBytes: number | null;
+  sha256: string | null;
+  entries: RemoteFileEntry[] | null;
+  createdAtUtc: string;
+  completedAtUtc: string | null;
 }

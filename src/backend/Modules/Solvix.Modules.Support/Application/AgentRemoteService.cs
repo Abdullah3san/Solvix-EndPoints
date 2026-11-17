@@ -58,6 +58,8 @@ internal sealed partial class AgentRemoteService(
                         RequestedBy = pending.RequestedByName,
                         Reason = pending.Reason,
                         RequestedAtUtc = pending.CreatedAtUtc,
+                        Kind = pending.Kind,
+                        ControlRequested = pending.ControlRequested,
                     },
                 };
             }
@@ -87,9 +89,9 @@ internal sealed partial class AgentRemoteService(
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        session.Accept(request.Consent, clock.UtcNow);
+        session.Accept(request.Consent, clock.UtcNow, request.ControlGranted);
         await db.SaveChangesAsync(cancellationToken);
-        LogAccepted(logger, id, session.DeviceId, request.Consent);
+        LogAccepted(logger, id, session.DeviceId, request.Consent, session.Kind, session.ControlGranted);
     }
 
     public async Task DenyAsync(Guid id, DenyRemoteRequest request, CancellationToken cancellationToken)
@@ -169,8 +171,8 @@ internal sealed partial class AgentRemoteService(
         await db.Set<RemoteSession>().FirstOrDefaultAsync(s => s.Id == id && s.DeviceId == currentDevice.DeviceId, cancellationToken)
         ?? throw new NotFoundException("Remote session", id);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Remote session {SessionId} on device {DeviceId} accepted ({Consent})")]
-    private static partial void LogAccepted(ILogger logger, Guid sessionId, Guid deviceId, RemoteConsent consent);
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Remote {Kind} session {SessionId} on device {DeviceId} accepted ({Consent}, control granted: {Control})")]
+    private static partial void LogAccepted(ILogger logger, Guid sessionId, Guid deviceId, RemoteConsent consent, RemoteSessionKind kind, bool control);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Remote session {SessionId} on device {DeviceId} denied by the computer")]
     private static partial void LogDenied(ILogger logger, Guid sessionId, Guid deviceId);
