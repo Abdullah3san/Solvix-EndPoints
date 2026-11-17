@@ -47,15 +47,22 @@ internal sealed partial class BillingWorker(IServiceScopeFactory scopes, IOption
         {
             await using var scope = scopes.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<ISolvixDbContext>();
-            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-            var locked = (await db.Database.SqlQuery<bool>($"SELECT pg_try_advisory_xact_lock({AdvisoryLockKey}) AS \"Value\"").ToListAsync(cancellationToken))[0];
-            if (!locked)
-            {
-                return;
-            }
+            // The retrying execution strategy requires user transactions to run inside it.
+            var strategy = db.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(
+                async ct =>
+                {
+                    await using var transaction = await db.Database.BeginTransactionAsync(ct);
+                    var locked = (await db.Database.SqlQuery<bool>($"SELECT pg_try_advisory_xact_lock({AdvisoryLockKey}) AS \"Value\"").ToListAsync(ct))[0];
+                    if (!locked)
+                    {
+                        return;
+                    }
 
-            await scope.ServiceProvider.GetRequiredService<IBillingJobRunner>().RunAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
+                    await scope.ServiceProvider.GetRequiredService<IBillingJobRunner>().RunAsync(ct);
+                    await transaction.CommitAsync(ct);
+                },
+                cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

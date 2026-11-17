@@ -9,13 +9,13 @@ export async function loadTargetOptions(): Promise<TargetOptions> {
   const [branches, departments, groups, devices] = await Promise.all([
     serverApi<PagedResult<BranchDto>>("branches?pageSize=200"),
     serverApi<PagedResult<DepartmentDto>>("departments?pageSize=200"),
-    serverApi<DeviceGroupDto[]>("device-groups"),
+    serverApi<PagedResult<DeviceGroupDto>>("device-groups?pageSize=200"),
     serverApi<PagedResult<DeviceDto>>("devices?pageSize=200"),
   ]);
   return {
     branches: branches.items.map((b) => ({ id: b.id, name: b.name })),
     departments: departments.items.map((d) => ({ id: d.id, name: `${d.branchName} / ${d.name}` })),
-    groups: groups.map((g) => ({ id: g.id, name: g.name })),
+    groups: groups.items.map((g) => ({ id: g.id, name: g.name })),
     devices: devices.items.map((d) => ({ id: d.id, hostname: d.hostname })),
   };
 }
