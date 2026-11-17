@@ -69,6 +69,12 @@ services:
       Solvix__Jwt__SigningKey: ${SOLVIX_JWT_SIGNING_KEY:?set SOLVIX_JWT_SIGNING_KEY in .env}
       Solvix__Jwt__Issuer: ${SOLVIX_JWT_ISSUER:-solvix-endpoints}
       Solvix__Jwt__Audience: ${SOLVIX_JWT_AUDIENCE:-solvix-endpoints-web}
+      # Provider console: only this account can create, suspend and reactivate companies.
+      # Public sign-up stays closed unless SOLVIX_ALLOW_PUBLIC_REGISTRATION=true.
+      Solvix__Platform__Operator__Email: ${SOLVIX_PLATFORM_OPERATOR_EMAIL:?set SOLVIX_PLATFORM_OPERATOR_EMAIL in .env}
+      Solvix__Platform__Operator__InitialPassword: ${SOLVIX_PLATFORM_OPERATOR_PASSWORD:-}
+      Solvix__Platform__Operator__DisplayName: ${SOLVIX_PLATFORM_OPERATOR_NAME:-Platform Operator}
+      Solvix__Platform__AllowPublicRegistration: ${SOLVIX_ALLOW_PUBLIC_REGISTRATION:-false}
       Solvix__Jwt__AccessTokenMinutes: ${SOLVIX_JWT_ACCESS_TOKEN_MINUTES:-60}
       Solvix__Cors__AllowedOrigins__0: ${SOLVIX_CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       Solvix__Logging__Format: json

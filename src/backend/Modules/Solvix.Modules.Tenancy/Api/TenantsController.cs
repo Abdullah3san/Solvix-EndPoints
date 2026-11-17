@@ -5,14 +5,26 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Solvix.Modules.Tenancy.Application.Management;
+using Solvix.Modules.Tenancy.Application.Platform;
 using Solvix.Modules.Tenancy.Application.Registration;
+using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Web;
 
 [ApiVersion(1.0)]
 [Route("api/v{version:apiVersion}/tenant")]
 public sealed class TenantController(ITenantRegistrationService registration, ITenantService tenants) : ApiControllerBase
 {
-    /// <summary>Self-service registration of a new workspace and its owner.</summary>
+    /// <summary>Whether public self-service registration is open (it is closed by default).</summary>
+    [HttpGet("registration")]
+    [AllowAnonymous]
+    [ProducesResponseType<RegistrationStatusDto>(StatusCodes.Status200OK)]
+    public ActionResult<RegistrationStatusDto> RegistrationStatus() => Ok(registration.GetStatus());
+
+    /// <summary>
+    /// Self-service registration of a new workspace and its owner. Refused with 403
+    /// unless the provider opened registration; companies are normally created by a
+    /// platform operator through <c>POST /platform/tenants</c>.
+    /// </summary>
     [HttpPost("register")]
     [AllowAnonymous]
     [ProducesResponseType<RegisterTenantResponse>(StatusCodes.Status201Created)]
@@ -27,7 +39,9 @@ public sealed class TenantController(ITenantRegistrationService registration, IT
     [AllowAnonymous]
     [ProducesResponseType<SlugAvailabilityResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<SlugAvailabilityResponse>> SlugAvailability([FromQuery] string slug, CancellationToken cancellationToken) =>
-        Ok(await registration.CheckSlugAsync(slug ?? string.Empty, cancellationToken));
+        registration.GetStatus().Open || User.HasClaim(SolvixClaimTypes.PlatformAdmin, "true")
+            ? Ok(await registration.CheckSlugAsync(slug ?? string.Empty, cancellationToken))
+            : Forbid();
 
     /// <summary>The tenant resolved from the caller's token.</summary>
     [HttpGet]

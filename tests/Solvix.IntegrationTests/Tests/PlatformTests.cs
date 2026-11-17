@@ -30,7 +30,7 @@ public sealed class PlatformTests(ApiFixture fixture)
         var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
         var paths = doc.GetProperty("paths");
         var pathNames = string.Join(", ", paths.EnumerateObject().Select(p => p.Name));
-        Assert.True(paths.TryGetProperty("/api/v1/tenant/register", out _), pathNames);
+        Assert.True(paths.TryGetProperty("/api/v1/platform/tenants", out _), pathNames);
         Assert.True(paths.TryGetProperty("/api/v1/branches", out _), pathNames);
         Assert.True(
             doc.TryGetProperty("components", out var components) && components.TryGetProperty("securitySchemes", out var schemes) && schemes.TryGetProperty("Bearer", out _),

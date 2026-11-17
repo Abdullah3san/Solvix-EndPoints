@@ -43,6 +43,7 @@ public sealed class DevicesModule : IModule
         services.AddScoped<IAgentPackageService, AgentPackageService>();
         services.AddScoped<IAgentService, AgentService>();
         services.AddScoped<IDeviceService, DeviceService>();
+        services.AddScoped<Solvix.SharedKernel.Directory.IDeviceCensus, DeviceCensus>();
         services.AddScoped<IDeviceGroupService, DeviceGroupService>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
 

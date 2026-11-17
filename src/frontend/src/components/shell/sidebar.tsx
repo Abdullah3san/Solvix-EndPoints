@@ -24,8 +24,8 @@ interface SidebarContentProps {
 export function SidebarContent({ collapsed = false, onNavigate, onToggleCollapsed }: SidebarContentProps) {
   const pathname = usePathname();
   const { tenant } = useSession();
-  const { isAdmin } = useCan();
-  const sections = visibleNavigation({ isAdmin, isDevelopment });
+  const { isAdmin, isPlatformAdmin } = useCan();
+  const sections = visibleNavigation({ isAdmin, isDevelopment, isPlatformAdmin });
 
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">

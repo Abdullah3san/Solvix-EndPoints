@@ -12,7 +12,7 @@
 # directory as Solvix.Agent.exe). The agent endpoint must be reachable at the URL configured as PublicServerUrl.
 #
 #   scripts/smoke-agent.sh <api-base>
-#   scripts/smoke-agent.sh http://localhost:8080
+#   SOLVIX_PLATFORM_OPERATOR_EMAIL=... SOLVIX_PLATFORM_OPERATOR_PASSWORD=... scripts/smoke-agent.sh http://localhost:8080
 set -euo pipefail
 API="${1:?api base url, e.g. http://localhost:8080}"
 WORK="$(mktemp -d)"
@@ -23,9 +23,15 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 field() { python3 -c "import sys,json;print(json.load(sys.stdin)$1)"; }
 
 slug="smoke-$RANDOM$RANDOM"
-echo "== registering workspace $slug"
-JWT="$(curl -fsS -X POST "$V1/tenant/register" -H "$JSON" \
-  -d "{\"companyName\":\"Smoke Retail\",\"slug\":\"$slug\",\"ownerEmail\":\"owner@$slug.test\",\"ownerDisplayName\":\"Owner\",\"ownerPassword\":\"Passw0rd!Secure\"}" | field '["auth"]["accessToken"]')"
+# Public sign-up is closed: companies are created by the platform operator (SOLVIX_PLATFORM_OPERATOR_* in .env).
+OP_EMAIL="${SOLVIX_PLATFORM_OPERATOR_EMAIL:?set SOLVIX_PLATFORM_OPERATOR_EMAIL}"
+OP_PASSWORD="${SOLVIX_PLATFORM_OPERATOR_PASSWORD:?set SOLVIX_PLATFORM_OPERATOR_PASSWORD}"
+echo "== signing in as the platform operator"
+OP_JWT="$(curl -fsS -X POST "$V1/auth/login" -H "$JSON" -d "{\"email\":\"$OP_EMAIL\",\"password\":\"$OP_PASSWORD\"}" | field '["accessToken"]')"
+echo "== creating workspace $slug"
+curl -fsS -X POST "$V1/platform/tenants" -H "Authorization: Bearer $OP_JWT" -H "$JSON" \
+  -d "{\"companyName\":\"Smoke Retail\",\"slug\":\"$slug\",\"ownerEmail\":\"owner@$slug.test\",\"ownerDisplayName\":\"Owner\",\"ownerPassword\":\"Passw0rd!Secure\"}" >/dev/null
+JWT="$(curl -fsS -X POST "$V1/auth/login" -H "$JSON" -d "{\"email\":\"owner@$slug.test\",\"password\":\"Passw0rd!Secure\",\"tenantSlug\":\"$slug\"}" | field '["accessToken"]')"
 post() { curl -fsS -X POST "$V1/$1" -H "Authorization: Bearer $JWT" -H "$JSON" -d "$2"; }
 get() { curl -fsS "$V1/$1" -H "Authorization: Bearer $JWT"; }
 

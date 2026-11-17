@@ -608,6 +608,12 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
 
+                    b.Property<bool>("IsPlatformAdmin")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_platform_admin");
+
                     b.Property<DateTimeOffset?>("LastLoginAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at_utc");

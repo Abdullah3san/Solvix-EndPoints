@@ -7,6 +7,8 @@ export interface UserDto {
   id: string;
   email: string;
   displayName: string;
+  /** Provider-level operator who manages every company. Only used to show the provider console. */
+  isPlatformAdmin?: boolean;
 }
 
 export interface AuthTenantDto {
@@ -29,11 +31,35 @@ export interface CurrentUserDto {
   tenant: AuthTenantDto;
 }
 
-export interface RegisterTenantResponse {
-  tenantId: string;
-  slug: string;
+// ---------------------------------------------------------------- provider console
+
+export interface PlatformTenantDto {
+  id: string;
   name: string;
-  auth: AuthResponse;
+  slug: string;
+  status: TenantStatus;
+  createdAtUtc: string;
+  suspendedAtUtc: string | null;
+  memberCount: number;
+  deviceCount: number;
+  ownerEmails: string[];
+  /** The operator's own workspace. It cannot be suspended. */
+  isCurrent: boolean;
+}
+
+export interface PlatformSummaryDto {
+  total: number;
+  active: number;
+  suspended: number;
+  publicRegistrationOpen: boolean;
+}
+
+export interface CreatePlatformTenantRequest {
+  companyName: string;
+  slug: string | null;
+  ownerEmail: string;
+  ownerDisplayName: string;
+  ownerPassword: string;
 }
 
 export interface TenantDto {

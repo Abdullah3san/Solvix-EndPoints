@@ -13,7 +13,11 @@ public sealed record AuthResponse(
     AuthTenantDto Tenant,
     IReadOnlyList<AuthTenantDto> AvailableTenants);
 
-public sealed record UserDto(Guid Id, string Email, string DisplayName);
+public sealed record UserDto(Guid Id, string Email, string DisplayName)
+{
+    /// <summary>True for provider-level platform operators (drives the provider console in the UI).</summary>
+    public bool IsPlatformAdmin { get; init; }
+}
 
 public sealed record AuthTenantDto(Guid Id, string Slug, string Name, TenantRole Role);
 

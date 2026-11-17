@@ -23,6 +23,10 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
 
     public static readonly string AgentPackageDirectory = CreateAgentPackageDirectory();
 
+    public const string OperatorEmail = "operator@platform.test";
+
+    public const string OperatorPassword = "Operat0r!Passw0rd";
+
     public const string JwtSigningKey = "integration-tests-signing-key-integration-tests-signing-key";
 
     public SolvixApiFactory(PostgresTestDatabase database, string redisConnection, string redisInstance, IReadOnlyDictionary<string, string>? extraSettings = null)
@@ -36,6 +40,9 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__Redis__InstanceName"] = redisInstance,
             ["Solvix__Database__MigrateOnStartup"] = "true",
             ["Solvix__Jwt__SigningKey"] = JwtSigningKey,
+            ["Solvix__Platform__AllowPublicRegistration"] = "false",
+            ["Solvix__Platform__Operator__Email"] = OperatorEmail,
+            ["Solvix__Platform__Operator__InitialPassword"] = OperatorPassword,
             ["Solvix__Jwt__AccessTokenMinutes"] = "30",
             ["Solvix__Logging__Format"] = "text",
             ["Solvix__Cors__AllowedOrigins__0"] = "http://localhost:3000",

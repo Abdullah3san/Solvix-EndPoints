@@ -38,7 +38,12 @@ docker compose up --build
 | Agents    | https://localhost:8443 (mutual TLS; development certificate generated on first start) |
 
 `migrator` applies EF Core migrations as the schema-owner role and exits; `api`
-only starts once it succeeded. Register a workspace at http://localhost:3000/register.
+only starts once it succeeded.
+
+**Sign-up is closed.** Only companies you create can sign in. Set `SOLVIX_PLATFORM_OPERATOR_EMAIL` and
+`SOLVIX_PLATFORM_OPERATOR_PASSWORD` in `.env`, start the stack, sign in at http://localhost:3000/login as that
+operator and create each subscribed company under **Platform → Companies**. See
+[`docs/PLATFORM-OPERATIONS.md`](docs/PLATFORM-OPERATIONS.md).
 
 To enroll a Windows device: under *Endpoints → Enrollment* create a token (optionally pre-assigning a group,
 branch and department, e.g. one token per store) and click **Download agent package**. Extract the zip on the
@@ -54,7 +59,9 @@ Prerequisites: .NET 10 SDK, Node 22, PostgreSQL 16, Redis 7.
 # 1. database + roles (needs a superuser connection)
 PGHOST=localhost PGUSER=postgres PGPASSWORD=postgres ./scripts/create-local-db.sh solvix
 
-# 2. API (applies migrations on startup in Development)
+# 2. API (applies migrations on startup in Development). The platform operator creates the companies:
+Solvix__Platform__Operator__Email=operator@example.com \
+Solvix__Platform__Operator__InitialPassword='change-me-Operator1' \
 dotnet run --project src/backend/Solvix.Api
 
 # 3. Web

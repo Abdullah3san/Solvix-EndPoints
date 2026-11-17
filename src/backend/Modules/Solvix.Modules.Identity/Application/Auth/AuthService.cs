@@ -100,7 +100,7 @@ internal sealed partial class AuthService(
 
         var user = membership.User!;
         return new CurrentUserDto(
-            new UserDto(user.Id, user.Email, user.DisplayName),
+            new UserDto(user.Id, user.Email, user.DisplayName) { IsPlatformAdmin = user.IsPlatformAdmin },
             new AuthTenantDto(tenant.Id, tenant.Slug, tenant.Name, membership.Role));
     }
 
@@ -145,7 +145,7 @@ internal sealed partial class AuthService(
         return new AuthResponse(
             token.AccessToken,
             token.ExpiresAtUtc,
-            new UserDto(user.Id, user.Email, user.DisplayName),
+            new UserDto(user.Id, user.Email, user.DisplayName) { IsPlatformAdmin = user.IsPlatformAdmin },
             ToDto(selected),
             all.Select(ToDto).ToList());
     }

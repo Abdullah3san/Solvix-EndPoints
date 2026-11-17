@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, isSessionValid } from "@/lib/auth/session";
 
-const PUBLIC_PATHS = new Set(["/login", "/register"]);
+const PUBLIC_PATHS = new Set(["/login"]);
 
 /**
  * Route gate: unauthenticated users are sent to /login, authenticated users

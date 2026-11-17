@@ -10,6 +10,9 @@ public static class SolvixClaimTypes
     public const string TenantSlug = "tslug";
     public const string Role = "role";
 
+    /// <summary>Present ("true") only on tokens of provider-level platform operators.</summary>
+    public const string PlatformAdmin = "padm";
+
     /// <summary>Id of the authenticated device (device certificates only).</summary>
     public const string DeviceId = "device_id";
 

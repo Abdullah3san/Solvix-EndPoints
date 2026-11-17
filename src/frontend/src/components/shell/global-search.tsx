@@ -32,12 +32,12 @@ export function matchPages(items: NavItem[], query: string): NavItem[] {
  */
 export function GlobalSearch() {
   const router = useRouter();
-  const { isAdmin } = useCan();
+  const { isAdmin, isPlatformAdmin } = useCan();
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [devices, setDevices] = React.useState<DeviceResults>({ status: "idle" });
 
-  const pages = React.useMemo(() => visibleNavigation({ isAdmin, isDevelopment }).flatMap((section) => section.items), [isAdmin]);
+  const pages = React.useMemo(() => visibleNavigation({ isAdmin, isDevelopment, isPlatformAdmin }).flatMap((section) => section.items), [isAdmin, isPlatformAdmin]);
   const matchedPages = matchPages(pages, query);
   const term = query.trim();
 

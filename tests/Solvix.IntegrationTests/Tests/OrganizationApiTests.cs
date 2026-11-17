@@ -149,12 +149,13 @@ public sealed class OrganizationApiTests(ApiFixture fixture)
     }
 
     [Fact]
-    public async Task Registration_validation_and_conflicts()
+    public async Task Tenant_creation_validation_and_conflicts()
     {
         var existing = await fixture.RegisterTenantAsync();
-        using var client = fixture.CreateClient();
+        var operatorSession = await fixture.LoginOperatorAsync();
+        using var client = fixture.CreateClient(operatorSession.AccessToken);
 
-        var weak = await client.PostAsJsonAsync("/api/v1/tenant/register",
+        var weak = await client.PostAsJsonAsync("/api/v1/platform/tenants",
             new { companyName = "X", slug = "bad slug", ownerEmail = "not-an-email", ownerDisplayName = "", ownerPassword = "short" }, ApiFixture.Json);
         var problem = await HttpAssert.ProblemAsync(weak, HttpStatusCode.BadRequest, "validation_failed");
         var errors = problem.GetProperty("errors");
@@ -163,16 +164,12 @@ public sealed class OrganizationApiTests(ApiFixture fixture)
             Assert.True(errors.TryGetProperty(field, out _), $"missing error for {field}: {problem}");
         }
 
-        var dupSlug = await client.PostAsJsonAsync("/api/v1/tenant/register",
+        var dupSlug = await client.PostAsJsonAsync("/api/v1/platform/tenants",
             new { companyName = "Y", slug = existing.Slug, ownerEmail = $"{Guid.NewGuid():N}@example.test", ownerDisplayName = "Y", ownerPassword = "Passw0rd!Secure" }, ApiFixture.Json);
         await HttpAssert.ProblemAsync(dupSlug, HttpStatusCode.Conflict, "conflict");
 
-        var dupEmail = await client.PostAsJsonAsync("/api/v1/tenant/register",
+        var dupEmail = await client.PostAsJsonAsync("/api/v1/platform/tenants",
             new { companyName = "Z", slug = (string?)null, ownerEmail = existing.OwnerEmail, ownerDisplayName = "Z", ownerPassword = "Passw0rd!Secure" }, ApiFixture.Json);
         await HttpAssert.ProblemAsync(dupEmail, HttpStatusCode.Conflict, "conflict");
-
-        var availability = await client.GetAsync($"/api/v1/tenant/slug-availability?slug={existing.Slug}");
-        var json = JsonDocument.Parse(await availability.Content.ReadAsStringAsync()).RootElement;
-        Assert.False(json.GetProperty("isAvailable").GetBoolean());
     }
 }

@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Boxes, Building2, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Palette, Settings2 } from "lucide-react";
+import { Boxes, Building2, Landmark, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Palette, Settings2 } from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -7,6 +7,8 @@ export interface NavItem {
   icon: LucideIcon;
   /** Restrict visibility to tenant admins/owners. */
   adminOnly?: boolean;
+  /** Only shown to the provider's platform operator. */
+  platformOnly?: boolean;
   /** Only shown under `next dev` (internal tooling such as the design system reference). */
   devOnly?: boolean;
   /** Extra words the global search matches on. */
@@ -40,6 +42,10 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Platform",
+    items: [{ label: "Companies", href: "/platform/companies", icon: Landmark, platformOnly: true, keywords: "customers tenants subscribers workspaces" }],
+  },
+  {
     title: "Settings",
     items: [
       { label: "Workspace", href: "/settings/workspace", icon: Settings2, keywords: "members roles" },
@@ -48,11 +54,13 @@ export const navigation: NavSection[] = [
   },
 ];
 
-export function visibleNavigation(options: { isAdmin: boolean; isDevelopment: boolean }): NavSection[] {
+export function visibleNavigation(options: { isAdmin: boolean; isDevelopment: boolean; isPlatformAdmin?: boolean }): NavSection[] {
   return navigation
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => (!item.adminOnly || options.isAdmin) && (!item.devOnly || options.isDevelopment)),
+      items: section.items.filter(
+        (item) => (!item.adminOnly || options.isAdmin) && (!item.devOnly || options.isDevelopment) && (!item.platformOnly || options.isPlatformAdmin === true),
+      ),
     }))
     .filter((section) => section.items.length > 0);
 }
@@ -70,6 +78,8 @@ export const segmentLabels: Record<string, string> = {
   devices: "Devices",
   groups: "Device groups",
   enrollment: "Enrollment",
+  platform: "Platform",
+  companies: "Companies",
   "design-system": "Design system",
 };
 

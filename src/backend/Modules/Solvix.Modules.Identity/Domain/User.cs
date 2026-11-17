@@ -38,6 +38,12 @@ public sealed class User : Entity
 
     public DateTimeOffset? LastLoginAtUtc { get; private set; }
 
+    /// <summary>
+    /// Provider-level operator who may manage every tenant. Only ever set by the
+    /// startup seeder from deployment configuration; no API can change it.
+    /// </summary>
+    public bool IsPlatformAdmin { get; private set; }
+
     public static User Create(string email, string displayName, string passwordHash)
     {
         var cleanEmail = Guard.NotNullOrWhiteSpace(email, "email", EmailMaxLength);
@@ -55,6 +61,8 @@ public sealed class User : Entity
 
     public void SetPasswordHash(string passwordHash) =>
         PasswordHash = Guard.NotNullOrWhiteSpace(passwordHash, "passwordHash");
+
+    public void SetPlatformAdmin(bool value) => IsPlatformAdmin = value;
 
     public void Deactivate() => IsActive = false;
 

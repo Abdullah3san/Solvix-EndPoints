@@ -22,6 +22,7 @@ using Solvix.Infrastructure.Tenancy;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Security;
 using Solvix.Modules.Identity.Configuration;
+using Solvix.Modules.Tenancy.Application.Platform;
 using Solvix.SharedKernel.Identity;
 using Solvix.SharedKernel.Tenancy;
 using Solvix.SharedKernel.Web;
@@ -172,6 +173,7 @@ try
         .AddPolicy(Policies.TenantMember, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId))
         .AddPolicy(Policies.TenantAdmin, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner), nameof(TenantRole.Admin)))
         .AddPolicy(Policies.TenantOwner, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.TenantId).RequireRole(nameof(TenantRole.Owner)))
+        .AddPolicy(Policies.PlatformOperator, p => p.RequireAuthenticatedUser().RequireClaim(SolvixClaimTypes.PlatformAdmin, "true"))
         .AddPolicy(Policies.Device, p => p
             .AddAuthenticationSchemes(DeviceAuthenticationDefaults.Scheme)
             .RequireAuthenticatedUser()
@@ -221,6 +223,12 @@ try
     if (databaseOptions.MigrateOnStartup)
     {
         await MigrateAsync(app);
+    }
+
+    // The platform operator comes from configuration; make the database agree with it.
+    await using (var seedScope = app.Services.CreateAsyncScope())
+    {
+        await seedScope.ServiceProvider.GetRequiredService<IPlatformOperatorSeeder>().RunAsync(CancellationToken.None);
     }
 
     // -------------------------------------------------------------- pipeline

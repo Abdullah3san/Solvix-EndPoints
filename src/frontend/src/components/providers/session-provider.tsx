@@ -24,5 +24,6 @@ export function useCan() {
   const { tenant } = useSession();
   const isOwner = tenant.role === "Owner";
   const isAdmin = isOwner || tenant.role === "Admin";
-  return { isOwner, isAdmin, role: tenant.role };
+  const { user } = useSession();
+  return { isOwner, isAdmin, isPlatformAdmin: user.isPlatformAdmin === true, role: tenant.role };
 }

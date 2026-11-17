@@ -179,12 +179,20 @@ Every data view implements four states: **loading** (route `loading.tsx` or skel
 |------|------|-----------|
 | `AppShell` | `app-shell.tsx` | Sidebar, sticky header, content column (`max-w-content`), skip link. |
 | `Sidebar` | `sidebar.tsx` | Navy rail with brand, workspace and sections. Collapses to icons (remembered per browser); a drawer below `lg`. Active item has `aria-current="page"`. |
-| Navigation config | `nav-config.ts` | Single source for sidebar, search and breadcrumbs. `adminOnly` and `devOnly` flags. Only real routes are listed. |
+| Navigation config | `nav-config.ts` | Single source for sidebar, search and breadcrumbs. `adminOnly`, `platformOnly` (provider console, operator only) and `devOnly` flags. Only real routes are listed. |
 | `Header` | `header.tsx` | Breadcrumbs, search, theme, notifications, account. |
 | `Breadcrumbs` | `breadcrumbs.tsx` | Derived from the URL; the current page only on small screens. |
 | `GlobalSearch` | `global-search.tsx` | ⌘K / Ctrl+K. Jumps to pages and searches devices through the API (name, serial, model, IP, MAC). |
 | `NotificationsMenu` | `notifications-menu.tsx` | Results of actions in this session; opening marks them read. |
 | `UserMenu`, `ThemeToggle` | | Account, workspace role, sign out; light, dark, system. |
+
+## Provider console
+
+`/platform/companies` (operator only, 404 for everyone else; see [PLATFORM-OPERATIONS.md](PLATFORM-OPERATIONS.md)):
+company list on the shared `DataTable` (search, status filter, pagination), summary metric cards, a
+"New company" dialog that generates the owner's initial password, a one-time hand-over dialog, and a
+confirmed suspend action. When the API refuses a session with 403 (suspended workspace or removed
+membership) the app shows `AccessBlocked` instead of redirecting, so there is no sign-in loop.
 
 ## Dashboard
 

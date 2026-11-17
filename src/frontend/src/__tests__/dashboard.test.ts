@@ -99,7 +99,16 @@ describe("navigation", () => {
     expect(member).toContain("Devices");
     expect(member).not.toContain("Enrollment");
     expect(member).not.toContain("Design system");
-    expect(visibleNavigation({ isAdmin: true, isDevelopment: true }).flatMap((s) => s.items)).toHaveLength(all.length);
+    expect(visibleNavigation({ isAdmin: true, isDevelopment: true, isPlatformAdmin: true }).flatMap((s) => s.items)).toHaveLength(all.length);
+  });
+
+  it("shows the provider console only to the platform operator", () => {
+    const labels = (options: { isAdmin: boolean; isPlatformAdmin?: boolean }) =>
+      visibleNavigation({ ...options, isDevelopment: false }).flatMap((s) => s.items.map((i) => i.label));
+    expect(labels({ isAdmin: true })).not.toContain("Companies");
+    expect(labels({ isAdmin: true, isPlatformAdmin: false })).not.toContain("Companies");
+    expect(labels({ isAdmin: false, isPlatformAdmin: true })).toContain("Companies");
+    expect(visibleNavigation({ isAdmin: true, isDevelopment: false }).some((s) => s.title === "Platform")).toBe(false);
   });
 
   it("matches pages by label and keyword in the global search", () => {

@@ -22,6 +22,20 @@ internal sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock
         var expires = now.AddMinutes(_options.AccessTokenMinutes);
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SigningKey));
 
+        var claims = new List<Claim>
+        {
+            new(SolvixClaimTypes.Subject, user.Id.ToString()),
+            new(SolvixClaimTypes.Email, user.Email),
+            new(SolvixClaimTypes.Name, user.DisplayName),
+            new(SolvixClaimTypes.TenantId, tenant.Id.ToString()),
+            new(SolvixClaimTypes.TenantSlug, tenant.Slug),
+            new(SolvixClaimTypes.Role, role.ToString()),
+        };
+        if (user.IsPlatformAdmin)
+        {
+            claims.Add(new Claim(SolvixClaimTypes.PlatformAdmin, "true"));
+        }
+
         var descriptor = new SecurityTokenDescriptor
         {
             Issuer = _options.Issuer,
@@ -30,15 +44,7 @@ internal sealed class JwtTokenService(IOptions<JwtOptions> options, IClock clock
             NotBefore = now.UtcDateTime,
             Expires = expires.UtcDateTime,
             SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256),
-            Subject = new ClaimsIdentity(
-            [
-                new Claim(SolvixClaimTypes.Subject, user.Id.ToString()),
-                new Claim(SolvixClaimTypes.Email, user.Email),
-                new Claim(SolvixClaimTypes.Name, user.DisplayName),
-                new Claim(SolvixClaimTypes.TenantId, tenant.Id.ToString()),
-                new Claim(SolvixClaimTypes.TenantSlug, tenant.Slug),
-                new Claim(SolvixClaimTypes.Role, role.ToString()),
-            ]),
+            Subject = new ClaimsIdentity(claims),
         };
 
         return new IssuedToken(_handler.CreateToken(descriptor), expires);

@@ -13,6 +13,12 @@ public static class Policies
     public const string TenantOwner = "TenantOwner";
 
     /// <summary>
+    /// Provider-level platform operator. The claim only opens the door: platform
+    /// services re-check the flag in the database on every call.
+    /// </summary>
+    public const string PlatformOperator = "PlatformOperator";
+
+    /// <summary>
     /// An enrolled device authenticated by its client certificate (mutual TLS).
     /// User tokens never satisfy this policy and device certificates never
     /// satisfy the user policies.
