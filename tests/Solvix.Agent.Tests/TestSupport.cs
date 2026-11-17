@@ -118,6 +118,52 @@ public sealed class FakeAgentApi : IAgentApiClient, IDisposable
         return Task.FromResult(UpdateResponse);
     }
 
+    public List<SubmitTicketRequest> Tickets { get; } = [];
+
+    public List<SendChatMessageRequest> ChatSent { get; } = [];
+
+    public List<(long After, int Wait)> ChatPolls { get; } = [];
+
+    public Task<AgentTicket> SubmitTicketAsync(SubmitTicketRequest request, CancellationToken cancellationToken)
+    {
+        Calls.Add("ticket");
+        ThrowIfFailing();
+        Tickets.Add(request);
+        return Task.FromResult(new AgentTicket
+        {
+            Id = Guid.NewGuid(),
+            Number = Tickets.Count,
+            Subject = request.Subject,
+            Status = TicketStatus.Open,
+            Priority = request.Priority,
+            CreatedAtUtc = DateTimeOffset.UtcNow,
+            UpdatedAtUtc = DateTimeOffset.UtcNow,
+        });
+    }
+
+    public Task<AgentTicketList> ListTicketsAsync(CancellationToken cancellationToken)
+    {
+        Calls.Add("tickets");
+        ThrowIfFailing();
+        return Task.FromResult(new AgentTicketList());
+    }
+
+    public Task<ChatMessageList> PollChatAsync(long after, int waitSeconds, CancellationToken cancellationToken)
+    {
+        Calls.Add("chat-poll");
+        ThrowIfFailing();
+        ChatPolls.Add((after, waitSeconds));
+        return Task.FromResult(new ChatMessageList());
+    }
+
+    public Task<ChatMessage> SendChatAsync(SendChatMessageRequest request, CancellationToken cancellationToken)
+    {
+        Calls.Add("chat-send");
+        ThrowIfFailing();
+        ChatSent.Add(request);
+        return Task.FromResult(new ChatMessage { Sequence = ChatSent.Count, Sender = ChatSender.User, Body = request.Body, SenderName = request.SenderName, SentAtUtc = DateTimeOffset.UtcNow });
+    }
+
     public void Dispose()
     {
         _ca.Dispose();

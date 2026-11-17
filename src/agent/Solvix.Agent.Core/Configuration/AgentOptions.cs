@@ -21,6 +21,12 @@ public sealed class AgentOptions
     /// </summary>
     public List<string> TrustedServerCertificateSha256 { get; set; } = [];
 
+    /// <summary>
+    /// Name of the local pipe through which people on this computer (tickets, chat) reach the service.
+    /// The service owns the device credential; users never touch it.
+    /// </summary>
+    public string LocalPipeName { get; set; } = "solvix-agent-local";
+
     public int RequestTimeoutSeconds { get; set; } = 60;
 
     public BackoffOptions Backoff { get; set; } = new();

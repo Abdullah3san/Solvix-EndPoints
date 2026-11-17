@@ -19,6 +19,12 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(HeartbeatResponse))]
 [JsonSerializable(typeof(InventoryReport))]
 [JsonSerializable(typeof(UpdateCheckResponse))]
+[JsonSerializable(typeof(SubmitTicketRequest))]
+[JsonSerializable(typeof(AgentTicket))]
+[JsonSerializable(typeof(AgentTicketList))]
+[JsonSerializable(typeof(SendChatMessageRequest))]
+[JsonSerializable(typeof(ChatMessage))]
+[JsonSerializable(typeof(ChatMessageList))]
 [JsonSerializable(typeof(AgentProblem))]
 [JsonSerializable(typeof(AgentEnrollmentFile))]
 public sealed partial class AgentJsonContext : JsonSerializerContext

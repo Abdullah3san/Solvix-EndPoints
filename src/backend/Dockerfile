@@ -15,6 +15,7 @@ COPY src/backend/Modules/Solvix.Modules.Tenancy/Solvix.Modules.Tenancy.csproj sr
 COPY src/backend/Modules/Solvix.Modules.Identity/Solvix.Modules.Identity.csproj src/backend/Modules/Solvix.Modules.Identity/
 COPY src/backend/Modules/Solvix.Modules.Organization/Solvix.Modules.Organization.csproj src/backend/Modules/Solvix.Modules.Organization/
 COPY src/backend/Modules/Solvix.Modules.Devices/Solvix.Modules.Devices.csproj src/backend/Modules/Solvix.Modules.Devices/
+COPY src/backend/Modules/Solvix.Modules.Support/Solvix.Modules.Support.csproj src/backend/Modules/Solvix.Modules.Support/
 COPY src/shared/Solvix.Agent.Contracts/Solvix.Agent.Contracts.csproj src/shared/Solvix.Agent.Contracts/
 COPY src/agent/Directory.Build.props src/agent/
 COPY src/agent/Solvix.Agent/Solvix.Agent.csproj src/agent/Solvix.Agent/

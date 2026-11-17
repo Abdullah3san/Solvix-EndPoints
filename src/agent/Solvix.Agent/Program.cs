@@ -11,6 +11,10 @@
 //                                            (no arguments: read enrollment.json next to the exe)
 //   Solvix.Agent.exe status                  print local enrollment / health state (diagnostics)
 //   Solvix.Agent.exe inventory               collect inventory locally and print it (no network)
+//   Solvix.Agent.exe ticket [--subject <text>] [--description <text>] [--priority low|normal|high|urgent]
+//                                            tell IT about a problem (prompts when no subject is given)
+//   Solvix.Agent.exe tickets                 show the tickets raised from this computer and their status
+//   Solvix.Agent.exe chat                    chat with the IT technician (type /quit to leave)
 //   Solvix.Agent.exe apply-update            privileged updater (scheduled task as SYSTEM)
 //   Solvix.Agent.exe reset                   delete the device key, certificate and state (uninstall)
 using System.Text.Json;
@@ -100,6 +104,7 @@ else
 if (command == "run")
 {
     builder.Services.AddHostedService<AgentWorker>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<Solvix.Agent.Core.LocalApi.LocalApiServer>());
 }
 
 try
@@ -114,6 +119,9 @@ try
         "enroll" => Commands.Enroll(host, args),
         "status" => Commands.Status(host),
         "inventory" => await Commands.InventoryAsync(host),
+        "ticket" => await SupportCommands.TicketAsync(args, bootstrapOptions.LocalPipeName),
+        "tickets" => await SupportCommands.TicketsAsync(bootstrapOptions.LocalPipeName),
+        "chat" => await SupportCommands.ChatAsync(bootstrapOptions.LocalPipeName),
         "apply-update" => await Commands.ApplyUpdateAsync(host),
         "reset" => Commands.Reset(host, dataDirectory),
         _ => Commands.Usage(),
@@ -228,7 +236,7 @@ namespace Solvix.Agent
 
         public static int Usage()
         {
-            Console.Error.WriteLine("Commands: install | uninstall | run | enroll | status | inventory | apply-update | reset");
+            Console.Error.WriteLine("Commands: install | uninstall | run | enroll | status | inventory | ticket | tickets | chat | apply-update | reset");
             return 2;
         }
 

@@ -1,6 +1,7 @@
 namespace Solvix.IntegrationTests.Tests;
 
 using System.Net;
+using System.Net.Http.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -9,6 +10,7 @@ using Solvix.Agent.Core;
 using Solvix.Agent.Core.Communication;
 using Solvix.Agent.Core.Health;
 using Solvix.Agent.Core.Inventory;
+using Solvix.Agent.Core.LocalApi;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
@@ -92,6 +94,56 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
         Assert.Equal(newState.DeviceId, Assert.Single(devices.Items).Id);
     }
 
+    [Fact]
+    public async Task Person_at_the_laptop_raises_a_ticket_and_chats_with_a_technician_through_the_agent()
+    {
+        var tenant = await fixture.RegisterTenantAsync();
+        using var admin = fixture.CreateClient(tenant.Token);
+        using var agent = new InProcessAgent(fixture);
+        agent.Services.GetRequiredService<BootstrapTokenStore>().Save(await fixture.CreateTokenAsync(tenant));
+        await agent.Services.GetRequiredService<AgentRuntime>().RunCycleAsync(CancellationToken.None);
+        var deviceId = agent.Services.GetRequiredService<IAgentStateStore>().Load().DeviceId!.Value;
+
+        var server = agent.Services.GetRequiredService<LocalApiServer>();
+        await server.StartAsync(CancellationToken.None);
+        try
+        {
+            var user = new LocalApiClient(agent.Services.GetRequiredService<Microsoft.Extensions.Options.IOptions<Solvix.Agent.Core.Configuration.AgentOptions>>().Value.LocalPipeName);
+
+            // Ticket from the laptop: lands in the console, tied to the device and to the OS user.
+            var ticket = await user.CallAsync(
+                new LocalRequest { Op = LocalOps.SubmitTicket, Ticket = new SubmitTicketRequest { Subject = "VPN will not connect", RequesterName = "spoofed", Priority = TicketPriority.High } },
+                CancellationToken.None);
+            Assert.True(ticket.Ok, ticket.Error);
+            var tickets = await HttpAssert.OkAsync<PagedResult<Solvix.Modules.Support.Application.TicketSummaryDto>>(await admin.GetAsync("/api/v1/tickets"));
+            var summary = Assert.Single(tickets.Items);
+            Assert.Equal("VPN will not connect", summary.Subject);
+            Assert.Equal(deviceId, summary.DeviceId);
+            Assert.Equal(Environment.UserName, summary.RequesterName);
+
+            // Technician answers in chat; the person's long poll receives it; their reply reaches the console.
+            var poll = user.CallAsync(new LocalRequest { Op = LocalOps.PollChat, After = 0, WaitSeconds = 15 }, CancellationToken.None);
+            await Task.Delay(1000);
+            await admin.PostAsJsonAsync($"/api/v1/devices/{deviceId}/chat", new Solvix.Modules.Support.Application.SendChatRequest("Which network are you on?"), ApiFixture.Json);
+            var received = await poll;
+            Assert.Equal("Which network are you on?", Assert.Single(received.Messages!).Body);
+
+            Assert.True((await user.CallAsync(new LocalRequest { Op = LocalOps.SendChat, Body = "Home wifi" }, CancellationToken.None)).Ok);
+            var thread = await HttpAssert.OkAsync<List<Solvix.Modules.Support.Application.ChatMessageDto>>(await admin.GetAsync($"/api/v1/devices/{deviceId}/chat"));
+            Assert.Equal(["Which network are you on?", "Home wifi"], thread.Select(m => m.Body));
+            Assert.Equal(Environment.UserName, thread[1].SenderName);
+
+            // The technician resolves the ticket; the person sees the new status.
+            await admin.PatchAsJsonAsync($"/api/v1/tickets/{summary.Id}", new Solvix.Modules.Support.Application.UpdateTicketRequest(TicketStatus.Resolved, null, null), ApiFixture.Json);
+            var mine = await user.CallAsync(new LocalRequest { Op = LocalOps.ListTickets }, CancellationToken.None);
+            Assert.Equal(TicketStatus.Resolved, Assert.Single(mine.Tickets!).Status);
+        }
+        finally
+        {
+            await server.StopAsync(CancellationToken.None);
+        }
+    }
+
     private sealed class InProcessAgent : IDisposable
     {
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "solvix-e2e-agent-" + Guid.NewGuid().ToString("N"));
@@ -103,6 +155,7 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
                 ["SolvixAgent:ServerUrl"] = "https://localhost/",
                 ["SolvixAgent:DataDirectory"] = _directory,
                 ["SolvixAgent:Backoff:JitterRatio"] = "0",
+                ["SolvixAgent:LocalPipeName"] = "solvix-e2e-" + Guid.NewGuid().ToString("N"),
             }).Build();
             var services = new ServiceCollection();
             services.AddLogging();

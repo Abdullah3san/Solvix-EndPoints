@@ -336,3 +336,58 @@ export interface CreatedEnrollmentTokenDto {
   enrollmentToken: EnrollmentTokenDto;
   token: string;
 }
+
+// ---- Help desk ----------------------------------------------------------
+
+export type TicketStatus = "Open" | "InProgress" | "Resolved" | "Closed";
+export type TicketPriority = "Low" | "Normal" | "High" | "Urgent";
+export type TicketSource = "Agent" | "Web";
+
+export interface TicketSummaryDto {
+  id: string;
+  number: number;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  source: TicketSource;
+  deviceId: string | null;
+  deviceName: string | null;
+  requesterName: string | null;
+  assignedUserId: string | null;
+  createdAtUtc: string;
+  updatedAtUtc: string;
+}
+
+export interface TicketCommentDto {
+  id: string;
+  author: "Requester" | "Technician";
+  authorName: string | null;
+  body: string;
+  isInternal: boolean;
+  createdAtUtc: string;
+}
+
+export interface TicketDetailsDto {
+  summary: TicketSummaryDto;
+  description: string | null;
+  requesterEmail: string | null;
+  resolvedAtUtc: string | null;
+  comments: TicketCommentDto[];
+}
+
+export interface ChatMessageDto {
+  sequence: number;
+  sender: "User" | "Technician";
+  senderName: string | null;
+  body: string;
+  sentAtUtc: string;
+}
+
+export interface ChatConversationDto {
+  deviceId: string;
+  deviceName: string;
+  lastMessage: string;
+  lastSender: "User" | "Technician";
+  lastMessageAtUtc: string;
+  lastSequence: number;
+}

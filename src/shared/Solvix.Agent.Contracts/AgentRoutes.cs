@@ -22,6 +22,15 @@ public static class AgentRoutes
 
     /// <summary>Device certificate (mutual TLS).</summary>
     public const string Updates = Base + "/updates";
+
+    /// <summary>Device certificate (mutual TLS). POST submits a ticket, GET lists this device's tickets.</summary>
+    public const string Tickets = Base + "/tickets";
+
+    /// <summary>
+    /// Device certificate (mutual TLS). GET long-polls for technician messages after a sequence number
+    /// (<c>?after=N&amp;wait=S</c>), POST sends a message from the user.
+    /// </summary>
+    public const string Chat = Base + "/chat";
 }
 
 /// <summary>Well-known identifiers embedded in device certificates.</summary>

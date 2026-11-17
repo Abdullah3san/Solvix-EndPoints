@@ -4,6 +4,7 @@ using System.Reflection;
 using Solvix.Modules.Devices;
 using Solvix.Modules.Identity;
 using Solvix.Modules.Organization;
+using Solvix.Modules.Support;
 using Solvix.Modules.Tenancy;
 using Solvix.SharedKernel.Modules;
 
@@ -16,6 +17,7 @@ public static class SolvixModules
         new IdentityModule(),
         new OrganizationModule(),
         new DevicesModule(),
+        new SupportModule(),
     ];
 
     public static IReadOnlyList<Assembly> ConfigurationAssemblies { get; } =

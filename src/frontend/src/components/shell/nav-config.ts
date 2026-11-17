@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Boxes, Building2, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Settings2 } from "lucide-react";
+import { Boxes, Building2, GitBranch, KeyRound, LayoutDashboard, LifeBuoy, MessageSquare, Monitor, Network, Settings2 } from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -35,6 +35,13 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Help desk",
+    items: [
+      { label: "Tickets", href: "/helpdesk/tickets", icon: LifeBuoy, adminOnly: true },
+      { label: "Chat", href: "/helpdesk/chat", icon: MessageSquare, adminOnly: true },
+    ],
+  },
+  {
     title: "Settings",
     items: [{ label: "Workspace", href: "/settings/workspace", icon: Settings2 }],
   },
@@ -53,6 +60,9 @@ export const segmentLabels: Record<string, string> = {
   devices: "Devices",
   groups: "Device groups",
   enrollment: "Enrollment",
+  helpdesk: "Help desk",
+  tickets: "Tickets",
+  chat: "Chat",
 };
 
 export function isActivePath(pathname: string, href: string): boolean {

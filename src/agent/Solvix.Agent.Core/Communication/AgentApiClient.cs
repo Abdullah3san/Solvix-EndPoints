@@ -20,6 +20,15 @@ public interface IAgentApiClient
     Task<CertificateRenewalResponse> RenewCertificateAsync(CertificateRenewalRequest request, CancellationToken cancellationToken);
 
     Task<UpdateCheckResponse> CheckForUpdateAsync(string channel, string currentVersion, CancellationToken cancellationToken);
+
+    Task<AgentTicket> SubmitTicketAsync(SubmitTicketRequest request, CancellationToken cancellationToken);
+
+    Task<AgentTicketList> ListTicketsAsync(CancellationToken cancellationToken);
+
+    /// <summary>Long-polls for chat messages after <paramref name="after"/> (0 = recent history).</summary>
+    Task<ChatMessageList> PollChatAsync(long after, int waitSeconds, CancellationToken cancellationToken);
+
+    Task<ChatMessage> SendChatAsync(SendChatMessageRequest request, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -80,6 +89,27 @@ public sealed class AgentApiClient : IAgentApiClient, IDisposable
         using var response = await SendRawAsync(request, cancellationToken);
         return await ReadAsync(response, AgentJsonContext.Default.UpdateCheckResponse, cancellationToken);
     }
+
+    public Task<AgentTicket> SubmitTicketAsync(SubmitTicketRequest request, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, AgentRoutes.Tickets, request, AgentJsonContext.Default.SubmitTicketRequest, AgentJsonContext.Default.AgentTicket, cancellationToken);
+
+    public async Task<AgentTicketList> ListTicketsAsync(CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, AgentRoutes.Tickets);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await ReadAsync(response, AgentJsonContext.Default.AgentTicketList, cancellationToken);
+    }
+
+    public async Task<ChatMessageList> PollChatAsync(long after, int waitSeconds, CancellationToken cancellationToken)
+    {
+        var uri = string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Chat}?after={after}&wait={waitSeconds}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await ReadAsync(response, AgentJsonContext.Default.ChatMessageList, cancellationToken);
+    }
+
+    public Task<ChatMessage> SendChatAsync(SendChatMessageRequest request, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, AgentRoutes.Chat, request, AgentJsonContext.Default.SendChatMessageRequest, AgentJsonContext.Default.ChatMessage, cancellationToken);
 
     public void Dispose() => _http.Dispose();
 

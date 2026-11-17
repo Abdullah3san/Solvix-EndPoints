@@ -11,6 +11,11 @@ Multi-tenant SaaS platform for endpoint management.
   device groups and assignment. See [`docs/PHASE-03-SUMMARY.md`](docs/PHASE-03-SUMMARY.md) and
   [`src/agent/README.md`](src/agent/README.md).
 
+* **Help desk** – tickets and live chat for people using enrolled laptops. A person raises a ticket or chats
+  with a technician from the laptop through the agent (`Solvix.Agent.exe ticket | tickets | chat`, no administrator
+  rights needed); technicians handle them in the web console under *Help desk* and in a device's *Chat* tab.
+  See [`docs/PHASE-04-SUPPORT.md`](docs/PHASE-04-SUPPORT.md). Remote access is **not** implemented yet.
+
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|
 | Frontend   | Next.js 16 (App Router, TypeScript, Tailwind CSS 4), Vitest           |
