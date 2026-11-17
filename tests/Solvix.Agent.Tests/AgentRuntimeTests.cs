@@ -86,6 +86,77 @@ public sealed class AgentRuntimeTests
         Assert.True(agent.Get<BootstrapTokenStore>().HasToken);
     }
 
+    private const string ProfileCode = "svxp_test-profile-code";
+
+    [Fact]
+    public async Task A_profile_code_waits_for_approval_then_enrolls_when_approved()
+    {
+        using var agent = new AgentHarness();
+        agent.Get<BootstrapTokenStore>().Save(ProfileCode);
+        var runtime = agent.Get<AgentRuntime>();
+
+        // Submitted, queued: no certificate, key kept, polling at the server's pace.
+        Assert.Equal(TimeSpan.FromSeconds(45), await runtime.RunCycleAsync(CancellationToken.None));
+        Assert.Equal(["enroll"], agent.Api.Calls);
+        Assert.True(agent.Get<PendingEnrollmentStore>().Exists);
+        Assert.False(agent.Get<Solvix.Agent.Core.State.IAgentStateStore>().Load().IsEnrolled);
+        Assert.Equal(1, agent.KeyFileCount);
+
+        // Still waiting: polls, never enrolls again, never sends a heartbeat.
+        Assert.Equal(TimeSpan.FromSeconds(45), await runtime.RunCycleAsync(CancellationToken.None));
+        Assert.Equal(["enroll", "poll"], agent.Api.Calls);
+
+        // Survives a restart: a fresh runtime resumes polling with the stored key and poll token.
+        agent.Api.Decision = EnrollmentPollStatus.Approved;
+        await agent.Get<AgentRuntime>().RunCycleAsync(CancellationToken.None);
+        Assert.Equal("poll", agent.Api.Calls[2]);
+        Assert.True(agent.Get<Solvix.Agent.Core.State.IAgentStateStore>().Load().IsEnrolled);
+        Assert.False(agent.Get<PendingEnrollmentStore>().Exists);
+        Assert.False(agent.Get<BootstrapTokenStore>().HasToken);
+        Assert.NotNull(agent.Get<DeviceCredentialStore>().GetClientCertificate());
+        Assert.Equal(1, agent.KeyFileCount);
+
+        await runtime.RunCycleAsync(CancellationToken.None);
+        Assert.Contains("heartbeat", agent.Api.Calls);
+    }
+
+    [Fact]
+    public async Task A_declined_computer_stops_asking()
+    {
+        using var agent = new AgentHarness();
+        agent.Get<BootstrapTokenStore>().Save(ProfileCode);
+        var runtime = agent.Get<AgentRuntime>();
+        await runtime.RunCycleAsync(CancellationToken.None);
+
+        agent.Api.Decision = EnrollmentPollStatus.Rejected;
+        Assert.Equal(TimeSpan.FromMinutes(5), await runtime.RunCycleAsync(CancellationToken.None));
+        Assert.True(agent.Get<BootstrapTokenStore>().HasRejectedToken);
+        Assert.False(agent.Get<PendingEnrollmentStore>().Exists);
+        Assert.Equal(0, agent.KeyFileCount);
+
+        await runtime.RunCycleAsync(CancellationToken.None);
+        Assert.Equal(["enroll", "poll"], agent.Api.Calls); // nothing more is sent
+    }
+
+    [Fact]
+    public async Task An_expired_request_is_submitted_again_with_a_fresh_key()
+    {
+        using var agent = new AgentHarness();
+        agent.Get<BootstrapTokenStore>().Save(ProfileCode);
+        var runtime = agent.Get<AgentRuntime>();
+        await runtime.RunCycleAsync(CancellationToken.None);
+
+        agent.Api.Decision = EnrollmentPollStatus.Expired;
+        await runtime.RunCycleAsync(CancellationToken.None);
+        Assert.False(agent.Get<PendingEnrollmentStore>().Exists);
+        Assert.Equal(0, agent.KeyFileCount);
+
+        agent.Api.Decision = EnrollmentPollStatus.Pending;
+        await agent.Get<Solvix.Agent.Core.Enrollment.EnrollmentCoordinator>().EnrollAsync(CancellationToken.None);
+        Assert.Equal(["enroll", "poll", "enroll"], agent.Api.Calls);
+        Assert.True(agent.Get<PendingEnrollmentStore>().Exists);
+    }
+
     [Fact]
     public async Task Transient_failures_back_off_exponentially_and_recovery_is_reported()
     {

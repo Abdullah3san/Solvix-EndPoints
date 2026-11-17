@@ -123,7 +123,7 @@ public sealed class CoreLogicTests
         {
             Content = new StringContent("""{"status":401,"title":"Unauthorized","code":"enrollment_token_expired"}""", Encoding.UTF8, "application/problem+json"),
         })) { BaseAddress = new Uri("https://agents.solvix.test/") });
-        var error = await Assert.ThrowsAsync<AgentApiException>(() => problemClient.EnrollAsync(
+        var error = await Assert.ThrowsAsync<AgentApiException>(() => problemClient.SubmitEnrollmentAsync(
             new EnrollmentRequest { EnrollmentToken = "t", CertificateSigningRequestPem = "x", Device = new DeviceIdentityInfo { Hostname = "h", AgentVersion = "1.0.0" } },
             CancellationToken.None));
         Assert.Equal(AgentApiFailure.Authentication, error.Failure);

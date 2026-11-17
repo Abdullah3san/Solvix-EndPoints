@@ -154,7 +154,7 @@ public sealed class AgentInstaller(ICommandRunner runner, Action<string>? progre
         Directory.CreateDirectory(options.InstallDirectory);
         if (!SamePath(options.SourceExePath, exe))
         {
-            File.Copy(options.SourceExePath, exe, overwrite: true);
+            CopyWithoutEnrollmentData(options.SourceExePath, exe);
             var settings = Path.Combine(Path.GetDirectoryName(options.SourceExePath)!, "appsettings.json");
             if (File.Exists(settings))
             {
@@ -398,4 +398,30 @@ public sealed class AgentInstaller(ICommandRunner runner, Action<string>? progre
 
     private static bool SamePath(string a, string b) =>
         string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+
+    /// <summary>The installed program never carries the (one installer's) enrollment data appended to a downloaded exe.</summary>
+    internal static void CopyWithoutEnrollmentData(string source, string destination)
+    {
+        if (!Solvix.Agent.Contracts.EnrollmentTrailer.TryRead(source, out _, out var cleanLength))
+        {
+            File.Copy(source, destination, overwrite: true);
+            return;
+        }
+
+        using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var output = new FileStream(destination, FileMode.Create, FileAccess.Write, FileShare.None);
+        var buffer = new byte[81920];
+        var remaining = cleanLength;
+        while (remaining > 0)
+        {
+            var read = input.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+            if (read <= 0)
+            {
+                break;
+            }
+
+            output.Write(buffer, 0, read);
+            remaining -= read;
+        }
+    }
 }

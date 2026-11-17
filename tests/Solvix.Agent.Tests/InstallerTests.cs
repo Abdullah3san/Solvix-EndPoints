@@ -18,6 +18,41 @@ public sealed class InstallerTests : IDisposable
     private readonly RecordingRunner _runner = new();
     private readonly InstallOptions _options;
 
+    [Fact]
+    public void A_downloaded_installer_carries_its_enrollment_data_but_the_installed_copy_does_not()
+    {
+        var dir = Path.Combine(_root, "embedded");
+        Directory.CreateDirectory(dir);
+        var program = new byte[2048];
+        Random.Shared.NextBytes(program);
+        var file = new AgentEnrollmentFile { ServerUrl = "https://agents.example.com/", EnrollmentToken = "svxp_abc", WorkspaceName = "Acme" };
+        var exe = Path.Combine(dir, "download.exe");
+        File.WriteAllBytes(exe, [.. program, .. EnrollmentTrailer.Build(file)]);
+
+        var settings = EnrollmentRequestSettings.TryLoadEmbedded(exe, DateTimeOffset.UtcNow, out var error);
+        Assert.Null(error);
+        Assert.Equal("svxp_abc", settings!.Token);
+        Assert.Equal(new Uri("https://agents.example.com/"), settings.ServerUrl);
+
+        var installed = Path.Combine(dir, "installed.exe");
+        AgentInstaller.CopyWithoutEnrollmentData(exe, installed);
+        Assert.Equal(program, File.ReadAllBytes(installed));
+        Assert.Null(EnrollmentRequestSettings.TryLoadEmbedded(installed, DateTimeOffset.UtcNow, out _)); // nothing embedded any more
+
+        // A plain exe is copied unchanged.
+        var plain = Path.Combine(dir, "plain.exe");
+        File.WriteAllBytes(plain, program);
+        var copy = Path.Combine(dir, "plain-copy.exe");
+        AgentInstaller.CopyWithoutEnrollmentData(plain, copy);
+        Assert.Equal(program, File.ReadAllBytes(copy));
+
+        // An expired installer says so.
+        var expired = Path.Combine(dir, "expired.exe");
+        File.WriteAllBytes(expired, [.. program, .. EnrollmentTrailer.Build(file with { TokenExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(-1) })]);
+        Assert.Null(EnrollmentRequestSettings.TryLoadEmbedded(expired, DateTimeOffset.UtcNow, out var expiredError));
+        Assert.Contains("expired", expiredError, StringComparison.Ordinal);
+    }
+
     public InstallerTests()
     {
         var source = Path.Combine(_root, "download");

@@ -21,7 +21,7 @@ namespace Solvix.Agent
         public static async Task<int> SetupAsync(IHost host, string dataDirectory)
         {
             var file = Path.Combine(AppContext.BaseDirectory, AgentEnrollmentFile.FileName);
-            if (File.Exists(file))
+            if (File.Exists(file) || HasEmbeddedEnrollment())
             {
                 return await InstallAsync(host, [], dataDirectory);
             }
@@ -35,9 +35,8 @@ namespace Solvix.Agent
             }
             else
             {
-                Console.WriteLine($"{AgentEnrollmentFile.FileName} was not found next to Solvix.Agent.exe.");
-                Console.WriteLine("Download the agent package from Solvix (Endpoints > Enrollment > New enrollment token), extract the");
-                Console.WriteLine("whole zip and run Solvix.Agent.exe from the extracted folder.");
+                Console.WriteLine("This copy of the agent carries no enrollment data.");
+                Console.WriteLine("Download the installer from Solvix (top bar > Download agent) and run that .exe.");
             }
 
             Pause(silent: false);
@@ -50,14 +49,20 @@ namespace Solvix.Agent
             try
             {
                 var file = Option(args, "--file") ?? Path.Combine(AppContext.BaseDirectory, AgentEnrollmentFile.FileName);
-                var fromFile = Option(args, "--server") is null && Option(args, "--token") is null;
+                var explicitSettings = Option(args, "--server") is not null || Option(args, "--token") is not null;
+                var embedded = !explicitSettings && !File.Exists(file) && HasEmbeddedEnrollment();
+                var fromFile = !explicitSettings && !embedded;
                 EnrollmentRequestSettings? settings;
                 string? error;
-                if (fromFile)
+                if (embedded)
+                {
+                    settings = EnrollmentRequestSettings.TryLoadEmbedded(Environment.ProcessPath!, DateTimeOffset.UtcNow, out error);
+                }
+                else if (fromFile)
                 {
                     if (!File.Exists(file))
                     {
-                        return Fail($"{AgentEnrollmentFile.FileName} was not found. Use the package downloaded from Solvix, or pass --server and --token.", silent);
+                        return Fail($"No enrollment data was found. Run the installer downloaded from Solvix, or pass --server and --token.", silent);
                     }
 
                     settings = EnrollmentRequestSettings.TryLoad(file, DateTimeOffset.UtcNow, out error);
@@ -80,7 +85,12 @@ namespace Solvix.Agent
                 if (!elevation.IsElevated)
                 {
                     Console.WriteLine("Installing the Solvix Agent needs administrator rights. Please approve the Windows prompt.");
-                    var forwarded = new List<string> { "install", "--file", Path.GetFullPath(file) };
+                    var forwarded = new List<string> { "install" };
+                    if (File.Exists(file))
+                    {
+                        forwarded.AddRange(["--file", Path.GetFullPath(file)]);
+                    }
+
                     forwarded.AddRange(args.Where(a => !string.Equals(a, "install", StringComparison.OrdinalIgnoreCase)));
                     var code = elevation.RelaunchElevated(forwarded);
                     return code == ErrorCancelled ? Fail("Installation cancelled: administrator approval is required.", silent) : code;
@@ -180,6 +190,9 @@ namespace Solvix.Agent
                 UseShellExecute = false,
             });
         }
+
+        private static bool HasEmbeddedEnrollment() =>
+            Environment.ProcessPath is { } path && EnrollmentTrailer.TryRead(path, out _, out _);
 
         private static int Fail(string message, bool silent)
         {

@@ -41,6 +41,30 @@ public sealed record EnrollmentRequestSettings(Uri ServerUrl, string Token, stri
         return Validate(file.ServerUrl, file.EnrollmentToken, file.ServerCertificateSha256, out error);
     }
 
+    /// <summary>Reads the enrollment data appended to a downloaded installer exe (see <see cref="EnrollmentTrailer"/>).</summary>
+    public static EnrollmentRequestSettings? TryLoadEmbedded(string exePath, DateTimeOffset now, out string? error)
+    {
+        error = null;
+        if (!EnrollmentTrailer.TryRead(exePath, out var file, out _) || file is null)
+        {
+            return null;
+        }
+
+        if (file.FormatVersion != AgentEnrollmentFile.CurrentFormatVersion)
+        {
+            error = "Unsupported enrollment data in this installer.";
+            return null;
+        }
+
+        if (file.TokenExpiresAtUtc is { } expires && expires <= now)
+        {
+            error = $"This installer expired on {expires:u}. Download a new one from Solvix.";
+            return null;
+        }
+
+        return Validate(file.ServerUrl, file.EnrollmentToken, file.ServerCertificateSha256, out error);
+    }
+
     public static EnrollmentRequestSettings? Validate(string? serverUrl, string? token, string? pin, out string? error)
     {
         error = null;
@@ -50,7 +74,7 @@ public sealed record EnrollmentRequestSettings(Uri ServerUrl, string Token, stri
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(token) || !token.Trim().StartsWith("svxe_", StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(token) || !(token.Trim().StartsWith("svxe_", StringComparison.Ordinal) || token.Trim().StartsWith("svxp_", StringComparison.Ordinal)))
         {
             error = "The enrollment token is missing or malformed.";
             return null;

@@ -21,6 +21,9 @@ public enum EnrollmentResult
 
     /// <summary>Server unreachable or temporarily failing: retry with backoff.</summary>
     Transient = 4,
+
+    /// <summary>The request is queued; an administrator has to approve this computer.</summary>
+    PendingApproval = 5,
 }
 
 /// <summary>
@@ -31,6 +34,7 @@ public enum EnrollmentResult
 public sealed partial class EnrollmentCoordinator(
     IAgentApiClient api,
     BootstrapTokenStore bootstrap,
+    PendingEnrollmentStore pending,
     DeviceCredentialStore credentials,
     IAgentStateStore stateStore,
     IDeviceIdentityProvider identityProvider,
@@ -38,8 +42,16 @@ public sealed partial class EnrollmentCoordinator(
     TimeProvider time,
     ILogger<EnrollmentCoordinator> logger)
 {
+    /// <summary>How long to wait before polling again while an administrator has not decided yet.</summary>
+    public TimeSpan PollInterval { get; private set; } = TimeSpan.FromSeconds(30);
+
     public async Task<EnrollmentResult> EnrollAsync(CancellationToken cancellationToken)
     {
+        if (pending.Load() is { } waiting)
+        {
+            return await PollAsync(waiting, cancellationToken);
+        }
+
         var token = bootstrap.Read();
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -48,17 +60,17 @@ public sealed partial class EnrollmentCoordinator(
 
         var identity = await identityProvider.GetAsync(cancellationToken);
         var (keyName, csr) = credentials.CreateSigningRequest(identity.Hostname);
-        EnrollmentResponse response;
+        EnrollmentSubmission submission;
         try
         {
-            response = await api.EnrollAsync(
+            submission = await api.SubmitEnrollmentAsync(
                 new EnrollmentRequest { EnrollmentToken = token, CertificateSigningRequestPem = csr, Device = identity },
                 cancellationToken);
         }
         catch (AgentApiException ex)
         {
             credentials.DeleteKey(keyName);
-            if (ex.Failure == AgentApiFailure.Transient)
+            if (ex.Failure == AgentApiFailure.Transient || ex.Code == "enrollment_queue_full")
             {
                 LogTransient(logger, ex.Message);
                 return EnrollmentResult.Transient;
@@ -75,6 +87,72 @@ public sealed partial class EnrollmentCoordinator(
             throw;
         }
 
+        if (submission.Enrolled is { } response)
+        {
+            Complete(keyName, response);
+            bootstrap.Delete();
+            return EnrollmentResult.Enrolled;
+        }
+
+        var waitingFor = submission.Pending!;
+        PollInterval = ClampInterval(waitingFor.PollIntervalSeconds);
+        pending.Save(new PendingEnrollmentState(keyName, waitingFor.PollToken, waitingFor.PollIntervalSeconds, waitingFor.ExpiresAtUtc));
+        LogPending(logger, waitingFor.PendingEnrollmentId);
+        return EnrollmentResult.PendingApproval;
+    }
+
+    private async Task<EnrollmentResult> PollAsync(PendingEnrollmentState waiting, CancellationToken cancellationToken)
+    {
+        EnrollmentPollResponse poll;
+        try
+        {
+            poll = await api.PollEnrollmentAsync(waiting.PollToken, cancellationToken);
+        }
+        catch (AgentApiException ex) when (ex.Failure == AgentApiFailure.Transient)
+        {
+            LogTransient(logger, ex.Message);
+            return EnrollmentResult.Transient;
+        }
+        catch (AgentApiException ex)
+        {
+            // The server does not know this request any more: start over with a new one.
+            LogRequestLost(logger, ex.Message);
+            Discard(waiting);
+            return EnrollmentResult.Transient;
+        }
+
+        PollInterval = ClampInterval(poll.PollIntervalSeconds);
+        switch (poll.Status)
+        {
+            case EnrollmentPollStatus.Approved when poll.Enrollment is { } enrollment:
+                Complete(waiting.KeyName, enrollment);
+                pending.Delete();
+                bootstrap.Delete();
+                return EnrollmentResult.Enrolled;
+            case EnrollmentPollStatus.Rejected:
+                Discard(waiting);
+                bootstrap.MarkRejected();
+                LogDeclined(logger, poll.Message ?? "no reason given");
+                return EnrollmentResult.TokenRejected;
+            case EnrollmentPollStatus.Pending:
+                return EnrollmentResult.PendingApproval;
+            default:
+                // Expired or already collected: the stored code is still valid, so ask again.
+                Discard(waiting);
+                return EnrollmentResult.Transient;
+        }
+    }
+
+    private void Discard(PendingEnrollmentState waiting)
+    {
+        credentials.DeleteKey(waiting.KeyName);
+        pending.Delete();
+    }
+
+    private static TimeSpan ClampInterval(int seconds) => TimeSpan.FromSeconds(Math.Clamp(seconds, 15, 600));
+
+    private void Complete(string keyName, EnrollmentResponse response)
+    {
         var previous = stateStore.Load();
         credentials.Install(keyName, response.CertificatePem, response.CaCertificatesPem);
         var now = time.GetUtcNow();
@@ -99,10 +177,17 @@ public sealed partial class EnrollmentCoordinator(
             credentials.DeleteKey(previous.KeyName);
         }
 
-        bootstrap.Delete();
         LogEnrolled(logger, response.DeviceId, response.TenantId, response.ReEnrolled, response.CertificateNotAfterUtc);
-        return EnrollmentResult.Enrolled;
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Enrollment request {RequestId} is waiting for an administrator to approve this computer.")]
+    private static partial void LogPending(ILogger logger, Guid requestId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "An administrator declined this computer: {Reason}")]
+    private static partial void LogDeclined(ILogger logger, string reason);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The pending enrollment request is no longer known to the server ({Message}); requesting again.")]
+    private static partial void LogRequestLost(ILogger logger, string message);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Enrolled as device {DeviceId} in tenant {TenantId} (re-enrolled: {ReEnrolled}); certificate valid until {NotAfter:O}")]
     private static partial void LogEnrolled(ILogger logger, Guid deviceId, Guid tenantId, bool reEnrolled, DateTimeOffset notAfter);

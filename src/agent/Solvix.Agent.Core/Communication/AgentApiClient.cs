@@ -12,9 +12,15 @@ using Solvix.Agent.Core.Configuration;
 using Solvix.Endpoint.Contracts;
 using Solvix.Endpoint.Contracts.Agent;
 
+/// <summary>Either the issued certificate or, for a deployment profile code, a request waiting for approval.</summary>
+public sealed record EnrollmentSubmission(EnrollmentResponse? Enrolled, EnrollmentPendingResponse? Pending);
+
 public interface IAgentApiClient
 {
-    Task<EnrollmentResponse> EnrollAsync(EnrollmentRequest request, CancellationToken cancellationToken);
+    /// <summary>Enrolls with a one-time token (certificate returned) or a deployment profile code (waiting for approval).</summary>
+    Task<EnrollmentSubmission> SubmitEnrollmentAsync(EnrollmentRequest request, CancellationToken cancellationToken);
+
+    Task<EnrollmentPollResponse> PollEnrollmentAsync(string pollToken, CancellationToken cancellationToken);
 
     Task<HeartbeatResponse> HeartbeatAsync(HeartbeatRequest request, CancellationToken cancellationToken);
 
@@ -94,8 +100,21 @@ public sealed class AgentApiClient : IAgentApiClient, IAgentCommandClient, ISoft
     /// <summary>Test hook: use a pre-built client (e.g. against an in-process server).</summary>
     internal AgentApiClient(HttpClient http) => _http = http;
 
-    public Task<EnrollmentResponse> EnrollAsync(EnrollmentRequest request, CancellationToken cancellationToken) =>
-        SendAsync(HttpMethod.Post, AgentRoutes.Enroll, request, AgentJsonContext.Default.EnrollmentRequest, AgentJsonContext.Default.EnrollmentResponse, cancellationToken);
+    public async Task<EnrollmentSubmission> SubmitEnrollmentAsync(EnrollmentRequest request, CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(request, AgentJsonContext.Default.EnrollmentRequest);
+        using var message = new HttpRequestMessage(HttpMethod.Post, AgentRoutes.Enroll) { Content = content };
+        using var response = await SendRawAsync(message, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Accepted)
+        {
+            return new EnrollmentSubmission(null, await ReadAsync(response, AgentJsonContext.Default.EnrollmentPendingResponse, cancellationToken));
+        }
+
+        return new EnrollmentSubmission(await ReadAsync(response, AgentJsonContext.Default.EnrollmentResponse, cancellationToken), null);
+    }
+
+    public Task<EnrollmentPollResponse> PollEnrollmentAsync(string pollToken, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, AgentRoutes.EnrollPoll, new EnrollmentPollRequest { PollToken = pollToken }, AgentJsonContext.Default.EnrollmentPollRequest, AgentJsonContext.Default.EnrollmentPollResponse, cancellationToken);
 
     public Task<HeartbeatResponse> HeartbeatAsync(HeartbeatRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, AgentRoutes.Heartbeat, request, AgentJsonContext.Default.HeartbeatRequest, AgentJsonContext.Default.HeartbeatResponse, cancellationToken);

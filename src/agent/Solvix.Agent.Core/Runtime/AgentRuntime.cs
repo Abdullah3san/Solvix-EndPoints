@@ -121,6 +121,10 @@ public sealed partial class AgentRuntime(
             case EnrollmentResult.TokenRejected:
                 health.Report(EnrollmentComponent, HealthIssueSeverity.Error, "Enrollment token rejected; a new token is required.");
                 return RejectedTokenPollInterval;
+            case EnrollmentResult.PendingApproval:
+                _enrollmentFailures = 0;
+                health.Report(EnrollmentComponent, HealthIssueSeverity.Warning, "Waiting for an administrator to approve this computer in Solvix.");
+                return enrollment.PollInterval;
             default:
                 return _backoff.Delay(++_enrollmentFailures);
         }

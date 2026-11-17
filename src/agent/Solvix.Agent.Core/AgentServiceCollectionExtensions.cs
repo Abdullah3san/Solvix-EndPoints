@@ -35,6 +35,7 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<IAgentStateStore, FileAgentStateStore>();
         services.TryAddSingleton<DeviceCredentialStore>();
         services.TryAddSingleton<BootstrapTokenStore>();
+        services.TryAddSingleton<PendingEnrollmentStore>();
         services.TryAddSingleton<IAgentTransport, MutualTlsTransport>();
         services.TryAddSingleton<AgentApiClient>();
         services.TryAddSingleton<IAgentApiClient>(sp => sp.GetRequiredService<AgentApiClient>());

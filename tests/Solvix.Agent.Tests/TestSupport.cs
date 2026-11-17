@@ -65,6 +65,60 @@ public sealed class FakeAgentApi : IAgentApiClient, IDisposable
 
     public static AgentApiException Unauthorized() => new(AgentApiFailure.Authentication, HttpStatusCode.Unauthorized, null, "401");
 
+    /// <summary>What the administrator has decided about requests made with a deployment profile code.</summary>
+    public EnrollmentPollStatus Decision { get; set; } = EnrollmentPollStatus.Pending;
+
+    private string? _pendingCsr;
+
+    public Task<EnrollmentSubmission> SubmitEnrollmentAsync(EnrollmentRequest request, CancellationToken cancellationToken)
+    {
+        if (!request.EnrollmentToken.StartsWith("svxp_", StringComparison.Ordinal))
+        {
+            return EnrollAsync(request, cancellationToken).ContinueWith(t => new EnrollmentSubmission(t.Result, null), cancellationToken);
+        }
+
+        Calls.Add("enroll");
+        ThrowIfFailing();
+        if (EnrollFailure is not null)
+        {
+            throw EnrollFailure;
+        }
+
+        _pendingCsr = request.CertificateSigningRequestPem;
+        return Task.FromResult(new EnrollmentSubmission(null, new EnrollmentPendingResponse
+        {
+            PendingEnrollmentId = Guid.NewGuid(),
+            PollToken = "svxw_test",
+            PollIntervalSeconds = 45,
+            ExpiresAtUtc = DateTimeOffset.UtcNow.AddDays(14),
+        }));
+    }
+
+    public Task<EnrollmentPollResponse> PollEnrollmentAsync(string pollToken, CancellationToken cancellationToken)
+    {
+        Calls.Add("poll");
+        ThrowIfFailing();
+        if (Decision != EnrollmentPollStatus.Approved)
+        {
+            return Task.FromResult(new EnrollmentPollResponse { Status = Decision, PollIntervalSeconds = 45, Message = Decision == EnrollmentPollStatus.Rejected ? "Not ours" : null });
+        }
+
+        var (pem, notAfter) = Sign(_pendingCsr!);
+        return Task.FromResult(new EnrollmentPollResponse
+        {
+            Status = EnrollmentPollStatus.Approved,
+            Enrollment = new EnrollmentResponse
+            {
+                DeviceId = DeviceId,
+                TenantId = TenantId,
+                CertificatePem = pem,
+                CaCertificatesPem = [_ca.ExportCertificatePem()],
+                CertificateNotAfterUtc = notAfter,
+                Configuration = new AgentConfiguration(),
+            },
+        });
+    }
+
     public Task<EnrollmentResponse> EnrollAsync(EnrollmentRequest request, CancellationToken cancellationToken)
     {
         Calls.Add("enroll");

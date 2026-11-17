@@ -176,11 +176,17 @@ namespace Solvix.Agent
             var file = Path.Combine(AppContext.BaseDirectory, AgentEnrollmentFile.FileName);
             var server = Option(args, "--server");
             var token = Option(args, "--token") ?? Environment.GetEnvironmentVariable("SOLVIX_ENROLLMENT_TOKEN");
-            var fromFile = server is null && token is null && File.Exists(file);
+            var explicitSettings = server is not null || token is not null;
+            var fromFile = !explicitSettings && File.Exists(file);
 
             EnrollmentRequestSettings? settings;
             string? error;
-            if (fromFile)
+            if (!explicitSettings && !fromFile && Environment.ProcessPath is { } self
+                && EnrollmentRequestSettings.TryLoadEmbedded(self, DateTimeOffset.UtcNow, out error) is { } embedded)
+            {
+                settings = embedded;
+            }
+            else if (fromFile)
             {
                 settings = EnrollmentRequestSettings.TryLoad(file, DateTimeOffset.UtcNow, out error);
             }
@@ -220,6 +226,12 @@ namespace Solvix.Agent
             Console.WriteLine($"Certificate expires:  {state.CertificateNotAfterUtc?.ToString("u") ?? "-"}");
             Console.WriteLine($"Last contact:         {state.LastSuccessfulContactAtUtc?.ToString("u") ?? "-"}");
             Console.WriteLine($"Last inventory:       {state.LastInventoryAtUtc?.ToString("u") ?? "-"}");
+            var waiting = host.Services.GetRequiredService<PendingEnrollmentStore>().Load();
+            if (waiting is not null)
+            {
+                Console.WriteLine($"Approval:             WAITING for an administrator (request expires {waiting.ExpiresAtUtc:u})");
+            }
+
             Console.WriteLine($"Enrollment token:     {(bootstrap.HasToken ? "pending" : bootstrap.HasRejectedToken ? "REJECTED by the server - run 'enroll' with a new token" : "none")}");
             return 0;
         }
