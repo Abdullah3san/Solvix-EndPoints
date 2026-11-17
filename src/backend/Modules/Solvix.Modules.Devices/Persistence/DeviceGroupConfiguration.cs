@@ -61,5 +61,8 @@ internal sealed class EnrollmentTokenConfiguration : IEntityTypeConfiguration<En
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(t => new { t.TenantId, t.ExpiresAtUtc });
+
+        // BranchId / DepartmentId reference the Organization module; their tenant-safe composite
+        // foreign keys (ON DELETE SET NULL) are declared in the DeviceEnrollmentPlacement migration.
     }
 }

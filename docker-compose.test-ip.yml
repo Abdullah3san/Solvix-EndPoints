@@ -35,6 +35,9 @@ services:
       Solvix__Email__Smtp__Host: ""
       # Mobile device providers need https; on a bare IP they stay unconfigured.
       Solvix__Mdm__PublicBaseUrl: http://${SOLVIX_PUBLIC_HOST}:${SOLVIX_HTTP_PORT:-8080}
+      # Agent packages point at the IP and pin the self-signed agent certificate.
+      Solvix__Devices__AgentPackage__PublicServerUrl: https://${SOLVIX_PUBLIC_HOST}:${SOLVIX_AGENT_PORT:-8443}/
+      Solvix__Devices__AgentPackage__ServerCertificateSha256: ${SOLVIX_AGENT_SERVER_CERT_SHA256:-}
 
   web:
     environment:

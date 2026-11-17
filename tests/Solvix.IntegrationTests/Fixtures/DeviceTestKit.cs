@@ -19,13 +19,13 @@ public static class DeviceTestKit
     /// <summary>Simulated agents of this test run all "started" once (a changing value would look like a restart).</summary>
     public static readonly DateTimeOffset AgentStartedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1);
 
-    public static async Task<string> CreateTokenAsync(this ApiFixture fixture, TenantSession tenant, int maxUses = 1, int? lifetimeHours = null, Guid? groupId = null)
+    public static async Task<string> CreateTokenAsync(this ApiFixture fixture, TenantSession tenant, int maxUses = 1, int? lifetimeHours = null, Guid? groupId = null, Guid? branchId = null, Guid? departmentId = null)
     {
         ArgumentNullException.ThrowIfNull(fixture);
         ArgumentNullException.ThrowIfNull(tenant);
         using var client = fixture.CreateClient(tenant.Token);
         var created = await HttpAssert.OkAsync<CreatedEnrollmentTokenDto>(
-            await client.PostAsJsonAsync("/api/v1/enrollment-tokens", new CreateEnrollmentTokenRequest("test", lifetimeHours, maxUses, groupId), ApiFixture.Json),
+            await client.PostAsJsonAsync("/api/v1/enrollment-tokens", new CreateEnrollmentTokenRequest("test", lifetimeHours, maxUses, groupId, branchId, departmentId), ApiFixture.Json),
             HttpStatusCode.Created);
         return created.Token;
     }

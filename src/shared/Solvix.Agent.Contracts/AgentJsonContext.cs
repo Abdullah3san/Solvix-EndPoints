@@ -30,6 +30,7 @@ using Solvix.Agent.Contracts.Software;
 [JsonSerializable(typeof(DetectionRule))]
 [JsonSerializable(typeof(SoftwareOperationResult))]
 [JsonSerializable(typeof(IReadOnlyList<string>))]
+[JsonSerializable(typeof(AgentEnrollmentFile))]
 public sealed partial class AgentJsonContext : JsonSerializerContext
 {
 }

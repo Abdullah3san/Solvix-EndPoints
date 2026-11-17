@@ -18,6 +18,7 @@ const FORWARDED_REQUEST_HEADERS = ["content-type", "accept", "x-correlation-id"]
 const FORWARDED_RESPONSE_HEADERS = [
   "content-type",
   "content-disposition",
+  "content-length",
   "content-security-policy",
   "x-content-type-options",
   "x-correlation-id",

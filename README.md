@@ -65,15 +65,11 @@ then open the confirmation e-mail in Mailpit before signing in.
 HTTPS); only ports 80/443 are exposed. Configuration template: `.env.production.example`;
 backups: `scripts/backup-db.sh`. Step-by-step guide: **`docs/DEPLOYMENT-VPS.md`**.
 
-To enroll a Windows device: create a token under *Endpoints → Enrollment*, build the agent
-package (`src/agent/installer/Build-AgentPackage.ps1`) and run on the device, as administrator:
-
-```powershell
-.\Install-SolvixAgent.ps1 -ServerUrl https://<api-host>:8443/ -EnrollmentToken svxe_... -ServerCertificateSha256 <thumbprint>
-```
-
-The development TLS certificate is self-signed, hence the pin; get its thumbprint with
-`openssl s_client -connect localhost:8443 </dev/null | openssl x509 -noout -fingerprint -sha256`.
+To enroll a Windows device: under *Endpoints → Enrollment* create a token (optionally pre-assigning a group,
+branch and department, e.g. one token per store) and click **Download agent package**. Extract the zip on the
+computer and double-click `Solvix.Agent.exe` (approve the administrator prompt): it installs itself and enrolls.
+No command line is needed; for deployment tools use `Solvix.Agent.exe install --silent`. The package works out of
+the box with the compose stack (development TLS certificate is pinned automatically); see `src/agent/README.md`.
 
 ## Running without Docker
 

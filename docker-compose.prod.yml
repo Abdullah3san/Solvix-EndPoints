@@ -141,6 +141,10 @@ services:
       Kestrel__Endpoints__Agents__Certificate__KeyPath: /run/secrets/agent_tls_key
       Solvix__Devices__GenerateDevelopmentTlsCertificate: "false"
       Solvix__Devices__ForwardedClientCertificateHeader: ""
+      # Downloadable agent package on the enrollment page (exe built into the image; mount a
+      # code-signed Solvix.Agent.exe over /opt/solvix/agent-package in production).
+      Solvix__Devices__AgentPackage__Directory: /opt/solvix/agent-package
+      Solvix__Devices__AgentPackage__PublicServerUrl: https://${SOLVIX_DOMAIN}:${SOLVIX_AGENT_PORT:-8443}/
       # Device CA (ECDSA P-384 PKCS#12) created once by scripts/init-agent-pki.sh. Never
       # auto-generated in production: losing it forces every device to re-enroll.
       Solvix__Devices__CertificateAuthority__AutoGenerate: "false"

@@ -30,6 +30,13 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
 
     public const string LatestAgentVersion = "1.2.0";
 
+    public const string AgentPublicUrl = "https://agents.solvix.test:8443/";
+
+    /// <summary>Stand-in for the published agent: the package must carry these exact bytes.</summary>
+    public static readonly byte[] FakeAgentExe = System.Security.Cryptography.RandomNumberGenerator.GetBytes(4096);
+
+    public static readonly string AgentPackageDirectory = CreateAgentPackageDirectory();
+
     public const string JwtSigningKey = "integration-tests-signing-key-integration-tests-signing-key";
     public const string JwtIssuer = "solvix-endpoints";
     public const string JwtAudience = "solvix-endpoints-web";
@@ -85,6 +92,9 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
             ["Solvix__Devices__CertificateAuthority__AutoGenerate"] = "true",
             ["Solvix__Devices__ForwardedClientCertificateHeader"] = ForwardedCertificateHeader,
             ["Solvix__Devices__Enrollment__RateLimitPerMinute"] = "100000",
+            ["Solvix__Devices__AgentPackage__Directory"] = AgentPackageDirectory,
+            ["Solvix__Devices__AgentPackage__PublicServerUrl"] = AgentPublicUrl,
+            ["Solvix__Devices__AgentPackage__ServerCertificateSha256"] = new string('d', 64),
             ["Solvix__Devices__Releases__0__Version"] = LatestAgentVersion,
             ["Solvix__Devices__Releases__0__Channel"] = "stable",
             ["Solvix__Devices__Releases__0__DownloadUrl"] = "https://downloads.solvix.test/agent/SolvixAgent-" + LatestAgentVersion + ".msi",
@@ -127,6 +137,14 @@ public class SolvixApiFactory : WebApplicationFactory<Program>
     public TestClock Clock { get; } = new();
 
     public CapturingEmailSender Emails { get; }
+    private static string CreateAgentPackageDirectory()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "solvix-test-agent-package-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        File.WriteAllBytes(Path.Combine(directory, "Solvix.Agent.exe"), FakeAgentExe);
+        File.WriteAllText(Path.Combine(directory, "appsettings.json"), "{ \"SolvixAgent\": {} }");
+        return directory;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {

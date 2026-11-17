@@ -28,6 +28,22 @@ public sealed class EnrollmentTokensController(IEnrollmentTokenService service) 
         return StatusCode(StatusCodes.Status201Created, created);
     }
 
+    /// <summary>
+    /// Downloads the agent package for a token the caller has just created: the unmodified agent exe plus an
+    /// enrollment.json holding that token, so the administrator never pastes a command line.
+    /// </summary>
+    [HttpPost("package")]
+    [RequirePermission(Permissions.Devices.Enroll)]
+    [Produces("application/zip")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Package([FromBody] AgentPackageRequest request, [FromServices] IAgentPackageService packages, CancellationToken cancellationToken)
+    {
+        var package = await packages.BuildAsync(request, cancellationToken);
+        Response.Headers.CacheControl = "no-store"; // the zip contains the token
+        Response.RegisterForDisposeAsync(package);
+        return File(package.OpenRead(), "application/zip", package.FileName);
+    }
+
     [HttpPost("{id:guid}/revoke")]
     [RequirePermission(Permissions.Devices.Enroll)]
     public async Task<ActionResult<EnrollmentTokenDto>> Revoke(Guid id, CancellationToken cancellationToken) =>

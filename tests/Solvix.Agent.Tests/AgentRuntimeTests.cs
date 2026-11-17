@@ -74,10 +74,16 @@ public sealed class AgentRuntimeTests
         Assert.Equal(TimeSpan.FromMinutes(5), await runtime.RunCycleAsync(CancellationToken.None));
         Assert.False(agent.Get<BootstrapTokenStore>().HasToken);
         Assert.True(File.Exists(Path.Combine(agent.DataDirectory, "enrollment.token.rejected")));
+        Assert.True(agent.Get<BootstrapTokenStore>().HasRejectedToken);
         Assert.Equal(0, agent.KeyFileCount); // the generated key was discarded
 
         await runtime.RunCycleAsync(CancellationToken.None);
         Assert.Single(agent.Api.Calls); // no second attempt without a new token
+
+        // Supplying a new token clears the rejected marker.
+        agent.Get<BootstrapTokenStore>().Save(Token + "-new");
+        Assert.False(agent.Get<BootstrapTokenStore>().HasRejectedToken);
+        Assert.True(agent.Get<BootstrapTokenStore>().HasToken);
     }
 
     [Fact]

@@ -19,7 +19,7 @@ public sealed class EnrollmentToken : TenantEntity
     {
     }
 
-    private EnrollmentToken(Guid tenantId, string name, byte[] secretHash, DateTimeOffset expiresAtUtc, int maxUses, Guid createdByUserId, Guid? deviceGroupId)
+    private EnrollmentToken(Guid tenantId, string name, byte[] secretHash, DateTimeOffset expiresAtUtc, int maxUses, Guid createdByUserId, Guid? deviceGroupId, Guid? branchId, Guid? departmentId)
         : base(tenantId)
     {
         Name = name;
@@ -28,6 +28,8 @@ public sealed class EnrollmentToken : TenantEntity
         MaxUses = maxUses;
         CreatedByUserId = createdByUserId;
         DeviceGroupId = deviceGroupId;
+        BranchId = branchId;
+        DepartmentId = departmentId;
     }
 
     public string Name { get; private set; } = string.Empty;
@@ -49,6 +51,12 @@ public sealed class EnrollmentToken : TenantEntity
     /// <summary>Optional group every device enrolled with this token joins.</summary>
     public Guid? DeviceGroupId { get; private set; }
 
+    /// <summary>Optional branch every device enrolled with this token is assigned to (e.g. one token per store).</summary>
+    public Guid? BranchId { get; private set; }
+
+    /// <summary>Optional department (implies its branch).</summary>
+    public Guid? DepartmentId { get; private set; }
+
     public static EnrollmentToken Create(
         Guid tenantId,
         Guid id,
@@ -57,7 +65,9 @@ public sealed class EnrollmentToken : TenantEntity
         DateTimeOffset expiresAtUtc,
         int maxUses,
         Guid createdByUserId,
-        Guid? deviceGroupId)
+        Guid? deviceGroupId,
+        Guid? branchId = null,
+        Guid? departmentId = null)
     {
         if (maxUses < 1)
         {
@@ -71,7 +81,9 @@ public sealed class EnrollmentToken : TenantEntity
             expiresAtUtc,
             maxUses,
             createdByUserId,
-            deviceGroupId)
+            deviceGroupId,
+            branchId,
+            departmentId)
         {
             Id = id,
         };

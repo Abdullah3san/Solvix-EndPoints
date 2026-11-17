@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Ban, Copy, Plus } from "lucide-react";
-import { api } from "@/lib/api/client";
-import type { CreatedEnrollmentTokenDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
-import { installCommand, tokenStateTone } from "@/lib/devices";
+import { Ban, Copy, Download, Plus } from "lucide-react";
+import { api, downloadFile } from "@/lib/api/client";
+import type { BranchDto, CreatedEnrollmentTokenDto, DepartmentDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
+import { tokenStateTone } from "@/lib/devices";
 import { fieldErrorsFrom, messageFrom } from "@/lib/forms";
 import { formatDate } from "@/lib/utils";
 import { Alert } from "@/components/ui/alert";
@@ -28,11 +28,11 @@ const lifetimes = [
 interface Props {
   initial: PagedResult<EnrollmentTokenDto>;
   groups: DeviceGroupDto[];
-  serverUrl: string;
-  serverPin: string | null;
+  branches: BranchDto[];
+  departments: DepartmentDto[];
 }
 
-export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props) {
+export function EnrollmentView({ initial, groups, branches, departments }: Props) {
   const { toast } = useToast();
   const [tokens, setTokens] = React.useState(initial.items);
   const [creating, setCreating] = React.useState(false);
@@ -62,13 +62,13 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
         <CardHeader>
           <CardTitle>How enrollment works</CardTitle>
           <CardDescription>
-            1. Create a token below. 2. Run the installer on the Windows device as administrator with that token. 3. The agent generates a
-            non-exportable key (TPM when available), receives a device certificate and deletes the token. All further communication is outbound
-            HTTPS with mutual TLS.
+            1. Create a token below and download the agent package. 2. Extract it on the Windows computer and run <span className="font-mono">Solvix.Agent.exe</span>{" "}
+            (approve the administrator prompt). 3. The agent installs itself, generates a non-exportable key (TPM when available), receives a device
+            certificate and deletes the token. All further communication is outbound HTTPS with mutual TLS.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Supported: Windows 10, Windows 11, Windows Server 2016, 2019, 2022 and 2025 (64-bit). Agent endpoint: <span className="font-mono">{serverUrl}</span>
+          Supported: Windows 10, Windows 11, Windows Server 2016, 2019, 2022 and 2025 (64-bit).
         </CardContent>
       </Card>
 
@@ -86,6 +86,7 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
               <TH>State</TH>
               <TH>Uses</TH>
               <TH>Group</TH>
+              <TH>Branch / department</TH>
               <TH>Expires</TH>
               <TH>Last used</TH>
               <TH className="text-right">Actions</TH>
@@ -93,7 +94,7 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
           </THead>
           <TBody>
             {tokens.length === 0 ? (
-              <EmptyRow colSpan={7}>No enrollment tokens yet.</EmptyRow>
+              <EmptyRow colSpan={8}>No enrollment tokens yet.</EmptyRow>
             ) : (
               tokens.map((t) => (
                 <TR key={t.id}>
@@ -105,6 +106,7 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
                     {t.useCount} / {t.maxUses}
                   </TD>
                   <TD className="text-muted-foreground">{t.deviceGroupName ?? "—"}</TD>
+                  <TD className="text-muted-foreground">{[t.branchName, t.departmentName].filter(Boolean).join(" / ") || "—"}</TD>
                   <TD className="text-muted-foreground">{formatDate(t.expiresAtUtc)}</TD>
                   <TD className="text-muted-foreground">{formatDate(t.lastUsedAtUtc)}</TD>
                   <TD className="text-right">
@@ -124,6 +126,8 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
       {creating ? (
         <CreateTokenDialog
           groups={groups}
+          branches={branches}
+          departments={departments}
           onClose={() => setCreating(false)}
           onCreated={async (result) => {
             setCreating(false);
@@ -134,18 +138,62 @@ export function EnrollmentView({ initial, groups, serverUrl, serverPin }: Props)
       ) : null}
 
       {created ? (
-        <Dialog open onClose={() => setCreated(null)} title="Enrollment token created" description="Copy it now: it is shown only once and cannot be retrieved later." className="max-w-2xl">
-          <div className="space-y-4">
-            <CopyField label="Token" value={created.token} />
-            <CopyField label="Install command (PowerShell, as administrator)" value={installCommand(serverUrl, created.token, serverPin)} />
-            <Alert>
-              Valid until {formatDate(created.enrollmentToken.expiresAtUtc)} for {created.enrollmentToken.maxUses} device(s). Treat it like a password and revoke it
-              when the rollout is complete.
-            </Alert>
-          </div>
-        </Dialog>
+        <CreatedDialog created={created} onClose={() => setCreated(null)} />
       ) : null}
     </>
+  );
+}
+
+function CreatedDialog({ created, onClose }: { created: CreatedEnrollmentTokenDto; onClose: () => void }) {
+  const { toast } = useToast();
+  const [downloading, setDownloading] = React.useState(false);
+  const [downloaded, setDownloaded] = React.useState<string | null>(null);
+  const token = created.enrollmentToken;
+  const placement = [token.branchName, token.departmentName].filter(Boolean).join(" / ");
+
+  async function download() {
+    setDownloading(true);
+    try {
+      setDownloaded(await downloadFile("enrollment-tokens/package", { token: created.token }, "SolvixAgent.zip"));
+    } catch (e) {
+      toast({ tone: "error", title: "Could not build the agent package", description: messageFrom(e) });
+    } finally {
+      setDownloading(false);
+    }
+  }
+
+  return (
+    <Dialog open onClose={onClose} title="Enrollment token created" description="The agent package is only available now: the token cannot be retrieved later." className="max-w-2xl">
+      <div className="space-y-4">
+        <Button onClick={download} loading={downloading} size="lg" className="w-full">
+          <Download className="h-4 w-4" /> Download agent package (.zip)
+        </Button>
+        {downloaded ? (
+          <Alert tone="success" title={`Downloaded ${downloaded}`}>
+            Extract the whole zip on the Windows computer, run <span className="font-mono">Solvix.Agent.exe</span> and approve the administrator prompt. The
+            device appears under Endpoints → Devices within a minute.
+          </Alert>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            The zip contains the agent and a short-lived <span className="font-mono">enrollment.json</span>. No command line or script is needed.
+          </p>
+        )}
+        <Alert>
+          Valid until {formatDate(token.expiresAtUtc)} for {token.maxUses} device(s){placement ? `, assigned to ${placement}` : ""}. Treat the package like a password and
+          revoke the token when the rollout is complete.
+        </Alert>
+        <details className="text-sm">
+          <summary className="cursor-pointer text-muted-foreground">Deployment tools (Intune, SCCM, GPO) and manual token</summary>
+          <div className="mt-3 space-y-3">
+            <p className="text-muted-foreground">
+              Distribute the extracted folder and run <span className="font-mono">Solvix.Agent.exe install --silent</span> as administrator. To enroll without the
+              file use <span className="font-mono">install --silent --server &lt;https url&gt; --token &lt;token&gt;</span>.
+            </p>
+            <CopyField label="Token" value={created.token} />
+          </div>
+        </details>
+      </div>
+    </Dialog>
   );
 }
 
@@ -172,11 +220,25 @@ function CopyField({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CreateTokenDialog({ groups, onClose, onCreated }: { groups: DeviceGroupDto[]; onClose: () => void; onCreated: (r: CreatedEnrollmentTokenDto) => Promise<void> }) {
+function CreateTokenDialog({
+  groups,
+  branches,
+  departments,
+  onClose,
+  onCreated,
+}: {
+  groups: DeviceGroupDto[];
+  branches: BranchDto[];
+  departments: DepartmentDto[];
+  onClose: () => void; onCreated: (r: CreatedEnrollmentTokenDto) => Promise<void>;
+}) {
   const [name, setName] = React.useState("");
   const [lifetimeHours, setLifetimeHours] = React.useState(24);
   const [maxUses, setMaxUses] = React.useState(1);
   const [groupId, setGroupId] = React.useState("");
+  const [branchId, setBranchId] = React.useState("");
+  const [departmentId, setDepartmentId] = React.useState("");
+  const branchDepartments = departments.filter((d) => d.branchId === branchId);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [error, setError] = React.useState<string | null>(null);
   const [pending, setPending] = React.useState(false);
@@ -186,7 +248,7 @@ function CreateTokenDialog({ groups, onClose, onCreated }: { groups: DeviceGroup
     setPending(true);
     setError(null);
     try {
-      await onCreated(await api.post<CreatedEnrollmentTokenDto>("enrollment-tokens", { name, lifetimeHours, maxUses, deviceGroupId: groupId || null }));
+      await onCreated(await api.post<CreatedEnrollmentTokenDto>("enrollment-tokens", { name, lifetimeHours, maxUses, deviceGroupId: groupId || null, branchId: branchId || null, departmentId: departmentId || null }));
     } catch (e) {
       setErrors(fieldErrorsFrom(e));
       setError(messageFrom(e));
@@ -240,6 +302,37 @@ function CreateTokenDialog({ groups, onClose, onCreated }: { groups: DeviceGroup
             ))}
           </Select>
         </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Assign to branch" htmlFor="token-branch" error={errors.branchId} hint="e.g. one token per store">
+            <Select
+              id="token-branch"
+              value={branchId}
+              onChange={(e) => {
+                setBranchId(e.target.value);
+                setDepartmentId("");
+              }}
+            >
+              <option value="">No branch</option>
+              {branches
+                .filter((b) => b.isActive)
+                .map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name} ({b.code})
+                  </option>
+                ))}
+            </Select>
+          </Field>
+          <Field label="Assign to department" htmlFor="token-department" error={errors.departmentId}>
+            <Select id="token-department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} disabled={!branchId}>
+              <option value="">{branchId ? "No department" : "Select a branch first"}</option>
+              {branchDepartments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
       </form>
     </Dialog>
   );

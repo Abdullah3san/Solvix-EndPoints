@@ -3,6 +3,7 @@ namespace Solvix.Agent.Windows;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Solvix.Agent.Core.Installation;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.Monitoring;
 using Solvix.Agent.Core.RemoteManagement;
@@ -33,6 +34,7 @@ public static class WindowsAgentServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<IPrivilegedOperationHost, PipePrivilegedOperationHost>());
         services.AddSingleton<ICommandHandler, Solvix.Agent.Windows.RemoteManagement.ServicesHandler>();
         services.AddSingleton<ICommandHandler, Solvix.Agent.Windows.RemoteManagement.LoggedInUsersHandler>();
+        services.Replace(ServiceDescriptor.Singleton<IElevation, WindowsElevation>());
         services.AddSingleton<IInventoryCollector, SystemCollector>();
         services.AddSingleton<IInventoryCollector, BiosCollector>();
         services.AddSingleton<IInventoryCollector, OperatingSystemCollector>();
