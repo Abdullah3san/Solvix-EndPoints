@@ -115,7 +115,7 @@ export async function downloadFile(path: string, body: unknown, fallbackName: st
   const response = await fetch(buildUrl(path), {
     method: "POST",
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...csrfHeader("POST") },
     body: JSON.stringify(body),
   });
   if (!response.ok) {

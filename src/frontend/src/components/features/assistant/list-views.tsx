@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { FileUp, RefreshCw, Search, Trash2 } from "lucide-react";
-import { api, PROXY_PREFIX } from "@/lib/api/client";
+import { api, csrfHeader, PROXY_PREFIX } from "@/lib/api/client";
 import { ApiError, problemFromResponse } from "@/lib/api/errors";
 import type {
   AuditEntryDto,
@@ -126,7 +126,7 @@ export function KnowledgeView() {
     try {
       const form = new FormData();
       form.append("file", file);
-      const response = await fetch(`${PROXY_PREFIX}/assistant/knowledge/documents`, { method: "POST", body: form, credentials: "same-origin" });
+      const response = await fetch(`${PROXY_PREFIX}/assistant/knowledge/documents`, { method: "POST", body: form, credentials: "same-origin", headers: csrfHeader("POST") });
       if (!response.ok) throw new ApiError(response.status, await problemFromResponse(response));
       const doc = (await response.json()) as KnowledgeDocumentDto;
       toast({ tone: doc.status === "Ready" ? "success" : "error", title: doc.status === "Ready" ? "Document indexed" : "Indexing failed", description: doc.failureReason ?? `${doc.chunkCount} sections` });

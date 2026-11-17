@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { api } from "@/lib/api/client";
+import { api, downloadFile } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 
 describe("browser api client", () => {
@@ -26,5 +26,18 @@ describe("browser api client", () => {
     expect(apiError.status).toBe(400);
     expect(apiError.code).toBe("validation_failed");
     expect(apiError.firstFieldError("code")).toBe("Code is required.");
+  });
+
+  it("sends the CSRF token with file downloads", async () => {
+    document.cookie = "solvix_csrf=0123456789abcdef0123456789abcdef0123; path=/";
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:agent");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("zip", { status: 200, headers: { "content-disposition": 'attachment; filename="SolvixAgent.zip"' } }),
+    );
+    const name = await downloadFile("enrollment-tokens/package", { token: "t" }, "fallback.zip");
+    expect(name).toBe("SolvixAgent.zip");
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect((init.headers as Record<string, string>)["x-csrf-token"]).toBe("0123456789abcdef0123456789abcdef0123");
   });
 });

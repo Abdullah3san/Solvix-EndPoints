@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Download, Lock, Paperclip, Sparkles } from "lucide-react";
-import { api, PROXY_PREFIX } from "@/lib/api/client";
+import { api, csrfHeader, PROXY_PREFIX } from "@/lib/api/client";
 import { ApiError, problemFromResponse } from "@/lib/api/errors";
 import type { TechnicianDto, TicketCategoryDto, TicketDetailsDto, TicketEventDto, TicketPriority, TicketStatus } from "@/lib/api/types";
 import { formatBytes, formatRelative } from "@/lib/devices";
@@ -59,7 +59,7 @@ export function TicketDetailsView({ initial, history: initialHistory, categories
     try {
       const form = new FormData();
       form.append("file", file);
-      const response = await fetch(`${PROXY_PREFIX}/helpdesk/tickets/${s.id}/attachments`, { method: "POST", body: form, credentials: "same-origin" });
+      const response = await fetch(`${PROXY_PREFIX}/helpdesk/tickets/${s.id}/attachments`, { method: "POST", body: form, credentials: "same-origin", headers: csrfHeader("POST") });
       if (!response.ok) throw new ApiError(response.status, await problemFromResponse(response));
       setTicket(await api.get<TicketDetailsDto>(`helpdesk/tickets/${s.id}`));
       toast({ tone: "success", title: "File attached" });
