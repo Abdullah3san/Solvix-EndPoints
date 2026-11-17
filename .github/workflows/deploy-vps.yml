@@ -1,0 +1,116 @@
+name: Deploy to VPS
+
+# Deploys the integration branch to the test VPS over SSH and prints the result
+# (deployed commit, container health, recent API and web logs).
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions):
+#   VPS_HOST     server address, e.g. 145.223.34.69
+#   VPS_SSH_KEY  private key (OpenSSH format) whose public key is in the server's
+#                ~/.ssh/authorized_keys for VPS_USER
+#   VPS_USER     optional, defaults to root
+# Optional repository variable:
+#   VPS_PATH     checkout on the server, defaults to /opt/solvix
+#
+# Without VPS_SSH_KEY the job only reports that deployment is not configured.
+
+on:
+  push:
+    branches: [claude/peaceful-noether-s165yt]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: deploy (pull + rebuild), status, or logs
+        type: choice
+        options: [deploy, status, logs]
+        default: deploy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ACTION: ${{ github.event.inputs.action || 'deploy' }}
+      BRANCH: claude/peaceful-noether-s165yt
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER || 'root' }}
+      VPS_PATH: ${{ vars.VPS_PATH || '/opt/solvix' }}
+      HAS_KEY: ${{ secrets.VPS_SSH_KEY != '' }}
+    steps:
+      - name: Check configuration
+        id: config
+        run: |
+          if [ "$HAS_KEY" != "true" ] || [ -z "$VPS_HOST" ]; then
+            echo "VPS_HOST / VPS_SSH_KEY secrets are not set: skipping deployment."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up SSH
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -T 15 -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Run on the server
+        if: steps.config.outputs.enabled == 'true'
+        run: |
+          ssh -i ~/.ssh/id_deploy -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 \
+            "$VPS_USER@$VPS_HOST" \
+            "ACTION='$ACTION' BRANCH='$BRANCH' VPS_PATH='$VPS_PATH' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$VPS_PATH"
+          compose() { docker compose -f docker-compose.prod.yml -f docker-compose.test-ip.yml --env-file .env.production "$@"; }
+
+          if [ "$ACTION" = "deploy" ]; then
+            echo "::group::Update code"
+            git fetch origin "$BRANCH"
+            if [ "$(git rev-parse --abbrev-ref HEAD)" != "$BRANCH" ]; then
+              git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
+            fi
+            git merge --ff-only "origin/$BRANCH"
+            echo "::endgroup::"
+            echo "::group::Build and start"
+            compose up -d --build --remove-orphans
+            echo "::endgroup::"
+            echo "Waiting for the API and web containers to become healthy..."
+            for i in $(seq 1 60); do
+              unhealthy=$(compose ps --format '{{.Service}} {{.Health}}' | awk '$2 != "" && $2 != "healthy"' || true)
+              [ -z "$unhealthy" ] && break
+              sleep 5
+            done
+          fi
+
+          echo "::group::Deployed commit"
+          git log -1 --format='%h %s (%cr)'
+          git status --short | head -20
+          echo "::endgroup::"
+          echo "::group::Containers"
+          compose ps
+          echo "::endgroup::"
+          if [ "$ACTION" != "status" ]; then
+            echo "::group::API log (errors and warnings, last 200 lines)"
+            compose logs --tail=200 api 2>&1 | grep -E '"@l":"(Error|Fatal|Warning)"|\[(ERR|FTL|WRN)\]|Exception' | tail -40 || true
+            echo "::endgroup::"
+            echo "::group::Web log (last 60 lines)"
+            compose logs --tail=60 web 2>&1 || true
+            echo "::endgroup::"
+          fi
+
+          unhealthy=$(compose ps --format '{{.Service}} {{.Health}}' | awk '$2 != "" && $2 != "healthy"' || true)
+          if [ -n "$unhealthy" ]; then
+            echo "Unhealthy services: $unhealthy"
+            exit 1
+          fi
+          REMOTE
