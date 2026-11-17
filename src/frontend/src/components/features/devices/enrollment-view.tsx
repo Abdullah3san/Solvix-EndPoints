@@ -3,7 +3,9 @@
 import * as React from "react";
 import { Ban, Copy, Download, Plus } from "lucide-react";
 import { api, downloadFile } from "@/lib/api/client";
-import type { BranchDto, CreatedEnrollmentTokenDto, DepartmentDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult } from "@/lib/api/types";
+import type { BranchDto, CreatedEnrollmentTokenDto, DepartmentDto, DeploymentProfileDto, DeviceGroupDto, EnrollmentTokenDto, PagedResult, PendingEnrollmentDto } from "@/lib/api/types";
+import { DeploymentProfilesPanel } from "./deployment-profiles-panel";
+import { PendingApprovalsPanel } from "./pending-approvals-panel";
 import { tokenStateTone } from "@/lib/devices";
 import { fieldErrorsFrom, messageFrom } from "@/lib/forms";
 import { formatDate } from "@/lib/utils";
@@ -30,9 +32,54 @@ interface Props {
   groups: DeviceGroupDto[];
   branches: BranchDto[];
   departments: DepartmentDto[];
+  profiles: DeploymentProfileDto[];
+  pending: PendingEnrollmentDto[];
 }
 
-export function EnrollmentView({ initial, groups, branches, departments }: Props) {
+const tabs = ["Deployment profiles", "Pending approval", "One-time tokens"] as const;
+type Tab = (typeof tabs)[number];
+
+export function EnrollmentView({ initial, groups, branches, departments, profiles: initialProfiles, pending: initialPending }: Props) {
+  const [tab, setTab] = React.useState<Tab>(initialPending.some((p) => p.status === "Pending") ? "Pending approval" : "Deployment profiles");
+  const [profiles, setProfiles] = React.useState(initialProfiles);
+  const [pending, setPending] = React.useState(initialPending);
+  const waiting = pending.filter((p) => p.status === "Pending" && !p.isExpired).length;
+
+  async function reloadDeployment() {
+    const [p, q] = await Promise.all([
+      api.get<DeploymentProfileDto[]>("deployment-profiles"),
+      api.get<PagedResult<PendingEnrollmentDto>>("pending-enrollments", { status: "Pending", pageSize: 100 }),
+    ]);
+    setProfiles(p);
+    setPending(q.items);
+  }
+
+  return (
+    <>
+      <div role="tablist" aria-label="Enrollment sections" className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
+        {tabs.map((t) => (
+          <button
+            key={t}
+            role="tab"
+            aria-selected={tab === t}
+            onClick={() => setTab(t)}
+            className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${tab === t ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            {t}
+            {t === "Pending approval" && waiting > 0 ? <Badge tone="warning" className="ml-2">{waiting}</Badge> : null}
+          </button>
+        ))}
+      </div>
+      {tab === "Deployment profiles" ? (
+        <DeploymentProfilesPanel profiles={profiles} groups={groups} branches={branches} departments={departments} onChanged={reloadDeployment} />
+      ) : null}
+      {tab === "Pending approval" ? <PendingApprovalsPanel items={pending} onChanged={reloadDeployment} /> : null}
+      {tab === "One-time tokens" ? <TokensView initial={initial} groups={groups} branches={branches} departments={departments} /> : null}
+    </>
+  );
+}
+
+function TokensView({ initial, groups, branches, departments }: Pick<Props, "initial" | "groups" | "branches" | "departments">) {
   const { toast } = useToast();
   const [tokens, setTokens] = React.useState(initial.items);
   const [creating, setCreating] = React.useState(false);

@@ -1944,3 +1944,68 @@ export interface ReportResultDto {
   truncated: boolean;
   notes: string | null;
 }
+
+// ---- Deployment profiles and the approval queue (ManageEngine-style enrollment) ----
+
+export type PendingEnrollmentStatus = "Pending" | "Approved" | "Rejected";
+
+export interface DeploymentProfileDto {
+  id: string;
+  name: string;
+  description: string | null;
+  branchId: string | null;
+  branchName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  deviceGroupId: string | null;
+  deviceGroupName: string | null;
+  isEnabled: boolean;
+  codeVersion: number;
+  pendingCount: number;
+  enrolledCount: number;
+  lastRequestAtUtc: string | null;
+  createdAtUtc: string;
+}
+
+export interface SaveDeploymentProfileRequest {
+  name: string;
+  description: string | null;
+  branchId: string | null;
+  departmentId: string | null;
+  deviceGroupId: string | null;
+}
+
+export interface PendingEnrollmentDto {
+  id: string;
+  profileId: string;
+  profileName: string | null;
+  status: PendingEnrollmentStatus;
+  hostname: string;
+  manufacturer: string | null;
+  model: string | null;
+  serialNumber: string | null;
+  osName: string | null;
+  osVersion: string | null;
+  agentVersion: string | null;
+  sourceAddress: string | null;
+  requestedAtUtc: string;
+  expiresAtUtc: string;
+  isExpired: boolean;
+  branchName: string | null;
+  departmentName: string | null;
+  deviceGroupName: string | null;
+  existingDeviceId: string | null;
+  existingDeviceHostname: string | null;
+  deviceId: string | null;
+  decidedAtUtc: string | null;
+  decisionNote: string | null;
+}
+
+export interface BulkDecisionResultDto {
+  succeeded: number;
+  failed: { id: string; code: string; message: string }[];
+}
+
+export function installerUrl(profileId: string): string {
+  return `/api/proxy/v1/deployment-profiles/${encodeURIComponent(profileId)}/installer`;
+}

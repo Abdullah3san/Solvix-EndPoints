@@ -35,19 +35,29 @@ Supported: Windows 10, Windows 11, Windows Server 2016 / 2019 / 2022 / 2025 (x64
 | 13 | Update management | `UpdateManager` (offer → local policy → download → SHA-256 → Authenticode publisher pin → stage; privileged apply re-verifies) |
 | 14 | Diagnostic logging | Rolling JSON logs in `%ProgramData%\Solvix\Agent\logs` (14 days, 10 MB), Windows Event Log for warnings |
 
-## Install (no command line)
+## Install (one .exe, no command line)
 
-1. An administrator creates an enrollment token in *Endpoints → Enrollment* (optionally with group, branch
-   and department) and clicks **Download agent package**. The server builds a zip containing the
-   **unmodified, code-signed `Solvix.Agent.exe`**, `appsettings.json` and `enrollment.json` (server URL,
-   short-lived token, optional certificate pin).
-2. On the Windows computer: extract the whole zip and **double-click `Solvix.Agent.exe`**, approve the
-   administrator (UAC) prompt. The exe installs itself, enrolls and starts; the device appears under
-   *Endpoints → Devices* within a minute. `enrollment.json` is deleted after use.
+1. An administrator clicks **Download agent** in the top bar (or *Endpoints → Enrollment → Deployment profiles*)
+   and gets a single `SolvixAgent-<workspace>-<profile>.exe`. A *deployment profile* decides the branch,
+   department and device group of the computers that use its installer.
+2. On the Windows computer: **double-click the .exe** and approve the administrator (UAC) prompt. It installs
+   itself as a service, generates a non-exportable key (TPM when available) and asks the server to enroll.
+3. The computer appears under *Endpoints → Enrollment → Pending approval* (with name, serial number, OS and the
+   placement it will get). An administrator **approves** (or rejects, singly or in bulk). The agent polls
+   outbound, receives its device certificate and starts reporting; nothing is issued before approval.
 
-The token lives in a separate file rather than inside the exe so the exe keeps its Authenticode signature
-(agents and updates rely on it). It is short-lived, use-limited and revocable; the exe stores it DPAPI-encrypted
-until enrollment completes. Treat the zip like a password.
+The exe carries a small block of enrollment data after its program bytes (server URL, a deployment-profile
+code, optional certificate pin; never a certificate or private key). The installed copy is the program only. The
+code only lets a computer *ask* to be enrolled: it cannot create a device by itself, its requests are rate
+limited and capped per workspace, and an administrator can rotate or disable it at any time. Because the data is
+appended, a download from Solvix is not covered by a pre-made Authenticode signature; sign the downloaded
+installer in your own pipeline if your policy requires it, or use a one-time token (below) with the signed zip.
+
+### One-time token + zip (scripted rollouts)
+
+*One-time tokens* still create a zip with the unmodified, code-signed exe, `appsettings.json` and
+`enrollment.json`; such a token enrolls immediately without an approval step. It is short-lived, use-limited and
+revocable. Treat the zip like a password.
 
 For deployment tools (Intune, SCCM, GPO) run `Solvix.Agent.exe install --silent` from the extracted folder as
 administrator, or pass settings explicitly: `install --silent --server <https url> --token <token> [--pin <sha256>]`

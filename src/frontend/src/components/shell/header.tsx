@@ -5,6 +5,7 @@ import { Breadcrumbs } from "./breadcrumbs";
 import { ThemeToggle } from "./theme-toggle";
 import { NotificationsMenu } from "./notifications-menu";
 import { UserMenu } from "./user-menu";
+import { DownloadAgentButton } from "./download-agent-button";
 
 export function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   return (
@@ -21,6 +22,7 @@ export function Header({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         <Breadcrumbs />
       </div>
       <div className="flex items-center gap-1">
+        <DownloadAgentButton />
         <ThemeToggle />
         <NotificationsMenu />
         <div className="mx-1 h-6 w-px bg-border" aria-hidden />
