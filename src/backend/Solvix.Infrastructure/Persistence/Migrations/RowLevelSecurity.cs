@@ -28,6 +28,9 @@ public static class RowLevelSecurity
         .. Phase10SecurityRlsMigration.TenantTables,
         .. Phase10SecurityRlsMigration.AppendOnlyTables,
         .. MobileDeviceManagementRlsMigration.TenantTables,
+        .. BillingSecurityMigration.TenantTables,
+        .. HelpdeskSecurityMigration.TenantTables,
+        .. ReportingSecurityMigration.TenantTables,
     ];
 
     public static void CreateHelperFunctions(MigrationBuilder migrationBuilder)

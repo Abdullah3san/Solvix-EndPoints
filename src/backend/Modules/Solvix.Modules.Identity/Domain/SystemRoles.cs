@@ -74,6 +74,7 @@ public static class SystemRoles
             Permissions.Mdm.Manage, Permissions.Reports.View, Permissions.Users.View, Permissions.Organization.View,
             .. ItManagerSoftware,
             Permissions.Assistant.Use, Permissions.Assistant.Manage,
+            Permissions.Helpdesk.Manage,
             Permissions.EndpointSecurity.View, Permissions.EndpointSecurity.Manage, Permissions.EndpointSecurity.Approve,
         ]);
 

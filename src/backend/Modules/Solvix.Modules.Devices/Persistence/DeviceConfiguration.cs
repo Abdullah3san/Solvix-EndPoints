@@ -35,6 +35,8 @@ internal sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.Property(d => d.AgentVersion).HasMaxLength(Device.VersionMaxLength).IsRequired();
         builder.Property(d => d.HealthStatus).HasConversion<string>().HasMaxLength(16);
         builder.Property(d => d.AgentHealthJson).HasColumnType("jsonb");
+        builder.Property(d => d.PurchasedOn).HasColumnType("date");
+        builder.Property(d => d.WarrantyExpiresOn).HasColumnType("date");
         builder.Ignore(d => d.IsInventoryRequested);
 
         // Referenced by memberships, credentials and inventory through (tenant_id, id):

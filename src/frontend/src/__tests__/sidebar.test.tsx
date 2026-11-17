@@ -71,7 +71,8 @@ describe("sidebar", () => {
     const { unmount } = renderSidebar(session(["assets.view", "reports.view", "assets.edit"]));
     expect(screen.getByRole("link", { name: /asset register/i })).toHaveAttribute("href", "/assets");
     expect(screen.getByRole("link", { name: /endpoint matching/i })).toHaveAttribute("href", "/assets/matching");
-    expect(screen.getByRole("link", { name: /^reports$/i })).toHaveAttribute("href", "/assets/reports");
+    // Asset reports and the cross-module report center (Phase 12) are both "Reports".
+    expect(screen.getAllByRole("link", { name: /^reports$/i }).map((a) => a.getAttribute("href"))).toEqual(["/assets/reports", "/reports"]);
     expect(screen.getByRole("link", { name: /asset management/i })).toHaveAttribute("href", "/settings/assets");
     expect(screen.getByRole("link", { name: /my assets/i })).toHaveAttribute("href", "/my-assets");
     unmount();

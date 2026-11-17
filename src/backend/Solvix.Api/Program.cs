@@ -15,6 +15,10 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Scalar.AspNetCore;
 using Serilog;
 using Serilog.Events;
@@ -30,6 +34,7 @@ using Solvix.Modules.Devices.Monitoring;
 using Solvix.Modules.Devices.Security;
 using Solvix.Modules.Identity.Configuration;
 using Solvix.SharedKernel.Identity;
+using Solvix.SharedKernel.Telemetry;
 using Solvix.SharedKernel.Tenancy;
 using Solvix.SharedKernel.Web;
 
@@ -316,6 +321,28 @@ try
             options => options.Configuration.ChannelPrefix = StackExchange.Redis.RedisChannel.Literal("solvix-signalr"));
     }
 
+    // Module-specific rate-limit policies (agent enrollment, billing webhooks, inbound e-mail) are registered by
+    // their modules; sign-in and registration use the Phase 02 policies configured above.
+
+    // -------------------------------------------------------------- telemetry
+    // Metrics and traces are exported over OTLP when OTEL_EXPORTER_OTLP_ENDPOINT (or Solvix:Telemetry:OtlpEndpoint)
+    // is set; without it instrumentation stays in-process and costs nothing.
+    var otlpEndpoint = builder.Configuration["Solvix:Telemetry:OtlpEndpoint"] ?? builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+    var telemetry = builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService("solvix-api", serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString()))
+        .WithMetrics(metrics => metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddMeter(SolvixMetrics.MeterName))
+        .WithTracing(tracing => tracing
+            .AddAspNetCoreInstrumentation(o => o.Filter = ctx => !ctx.Request.Path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
+            .AddHttpClientInstrumentation());
+    if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+    {
+        telemetry.UseOtlpExporter();
+    }
+
     // ------------------------------------------------------------------ CORS
     builder.Services.AddCors(options =>
     {
@@ -347,6 +374,7 @@ try
 
     app.UseExceptionHandler();
     app.UseStatusCodePages();
+    app.UseMiddleware<SecurityHeadersMiddleware>();
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.Use(async (context, next) =>
     {

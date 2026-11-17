@@ -32,6 +32,12 @@ Multi-tenant SaaS platform for endpoint management.
   approved and scheduled MSI/EXE deployments executed as signed commands, version detection, deployment
   groups, reports and restriction policies. See [`docs/PHASE-07-SUMMARY.md`](docs/PHASE-07-SUMMARY.md).
 
+* **Phase 12** – helpdesk (tickets incl. e-mail intake, SLA, escalation, technicians, attachments, AI summaries),
+  reporting (eight reports + CSV), SaaS commercialization (plans with device limits enforced on the server, subscriptions,
+  invoices, payments) and production readiness (security review, monitoring, backup/restore with a tested recovery drill,
+  deployment guide, CI). See [`docs/PHASE-12-SUMMARY.md`](docs/PHASE-12-SUMMARY.md) and
+  [`docs/PRODUCTION-READINESS.md`](docs/PRODUCTION-READINESS.md).
+
 | Layer      | Stack                                                                 |
 |------------|-----------------------------------------------------------------------|
 | Frontend   | Next.js 16 (App Router, TypeScript, Tailwind CSS 4), Vitest           |
@@ -118,6 +124,9 @@ src/backend/
     Solvix.Modules.Assistant/    AI assistant: tools, knowledge base, proposals, tickets, reports, audit
     Solvix.Modules.Security/     Phase 10: endpoint security posture, findings, policy, approvals, audit
     Solvix.Modules.Mdm/          mobile device management: Android Enterprise + Apple MDM (Phase 08)
+    Solvix.Modules.Billing/      plans, subscriptions, device-limit entitlements, invoices, payments, renewal worker
+    Solvix.Modules.Helpdesk/     tickets, categories, SLA, escalation, technicians, e-mail intake, AI summaries
+    Solvix.Modules.Reporting/    read-only operational reports + CSV export
   Solvix.Api/                 host: DI, Serilog, problem details, versioning, auth, OpenAPI, health
   Solvix.Migrator/            one-shot migration runner (Docker init container)
 src/shared/Solvix.Agent.Contracts/  wire contracts shared by agent and API
@@ -129,6 +138,9 @@ tests/
   Solvix.Agent.Tests/         agent runtime, enrollment, backoff, renewal, updates, inventory
 docker/postgres/init/         creates the migrator and runtime roles
 docs/                         architecture and phase summaries (Phase 08: docs/PHASE-08-MOBILE-DEVICE-MANAGEMENT.md)
+docker/monitoring/            OpenTelemetry collector, Prometheus rules/alerts, blackbox, Grafana dashboard
+scripts/ops/                  backup, restore, verify-restore and the end-to-end recovery drill
+docs/                         architecture, phase summaries, deployment, operations, security review, billing/helpdesk/reporting
 ```
 
 ## Documentation
@@ -164,6 +176,10 @@ Integration tests need a PostgreSQL superuser connection and a Redis instance:
 
 Each run creates and drops its own database (`solvix_test_*`), using the same
 two-role layout as production so Row-Level Security is really exercised.
+
+Production operations: `docker-compose.prod.yml` (hardened overlay with daily encrypted backups) and
+`docker-compose.monitoring.yml` (metrics, alerts, dashboards). Rehearse recovery any time with
+`PGHOST=… PGUSER=postgres PGPASSWORD=… ./scripts/ops/dr-drill.sh`. See `docs/DEPLOYMENT.md` and `docs/OPERATIONS.md`.
 
 ## Database migrations
 

@@ -1772,6 +1772,771 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("assistant_ticket_counters", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.BillingProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AddressLine1")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("address_line1");
+
+                    b.Property<string>("AddressLine2")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("address_line2");
+
+                    b.Property<string>("BillingEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("billing_email");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("city");
+
+                    b.Property<string>("CountryCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character(2)")
+                        .HasColumnName("country_code")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("LegalName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("legal_name");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("postal_code");
+
+                    b.Property<string>("Region")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("region");
+
+                    b.Property<string>("TaxId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("tax_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_billing_profiles");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_billing_profiles_tenant_id");
+
+                    b.ToTable("billing_profiles", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Invoice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountPaidMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_paid_minor");
+
+                    b.Property<string>("BillToAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("bill_to_address");
+
+                    b.Property<string>("BillToEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("bill_to_email");
+
+                    b.Property<string>("BillToName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("bill_to_name");
+
+                    b.Property<string>("BillToTaxId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("bill_to_tax_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("DueAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("due_at_utc");
+
+                    b.Property<DateTimeOffset>("IssuedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at_utc");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("number");
+
+                    b.Property<DateTimeOffset?>("PaidAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at_utc");
+
+                    b.Property<string>("PaymentReference")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("payment_reference");
+
+                    b.Property<DateTimeOffset>("PeriodEndUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("period_end_utc");
+
+                    b.Property<DateTimeOffset>("PeriodStartUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("period_start_utc");
+
+                    b.Property<string>("ProviderCheckoutId")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("provider_checkout_id");
+
+                    b.Property<string>("ProviderName")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provider_name");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<long>("SubtotalMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("subtotal_minor");
+
+                    b.Property<long>("TaxMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tax_minor");
+
+                    b.Property<int>("TaxRateBasisPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("tax_rate_basis_points");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("TermsDeviceLimit")
+                        .HasColumnType("integer")
+                        .HasColumnName("terms_device_limit");
+
+                    b.Property<string>("TermsInterval")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("terms_interval");
+
+                    b.Property<string>("TermsPlanCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("terms_plan_code");
+
+                    b.Property<Guid>("TermsPlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("terms_plan_id");
+
+                    b.Property<long>("TermsUnitPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("terms_unit_price_minor");
+
+                    b.Property<long>("TotalMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<DateTimeOffset?>("VoidedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("voided_at_utc");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoices");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_invoices_tenant_id_id");
+
+                    b.HasIndex("ProviderCheckoutId")
+                        .HasDatabaseName("ix_invoices_provider_checkout_id");
+
+                    b.HasIndex("TenantId", "IssuedAtUtc")
+                        .HasDatabaseName("ix_invoices_tenant_id_issued_at_utc");
+
+                    b.HasIndex("TenantId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoices_tenant_id_number");
+
+                    b.HasIndex("TenantId", "PeriodStartUtc")
+                        .IsUnique()
+                        .HasDatabaseName("ux_invoices_one_renewal_per_period")
+                        .HasFilter("purpose = 'Renewal' AND status <> 'Void'");
+
+                    b.ToTable("invoices", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_invoices_amounts", "subtotal_minor >= 0 AND tax_minor >= 0 AND total_minor = subtotal_minor + tax_minor");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.InvoiceCounter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<long>("LastNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_number");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice_counters");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoice_counters_tenant_id");
+
+                    b.ToTable("invoice_counters", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.InvoiceLine", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("UnitAmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_amount_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invoice_lines");
+
+                    b.HasIndex("TenantId", "InvoiceId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invoice_lines_tenant_id_invoice_id_position");
+
+                    b.ToTable("invoice_lines", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("AmountMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("amount_minor");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("failure_reason");
+
+                    b.Property<Guid>("InvoiceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invoice_id");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderReference")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("provider_reference");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_payments");
+
+                    b.HasIndex("TenantId", "InvoiceId")
+                        .HasDatabaseName("ix_payments_tenant_id_invoice_id");
+
+                    b.HasIndex("TenantId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_payments_tenant_id_occurred_at_utc");
+
+                    b.HasIndex("Provider", "ProviderReference", "Status")
+                        .IsUnique()
+                        .HasDatabaseName("ix_payments_provider_provider_reference_status");
+
+                    b.ToTable("payments", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Plan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long?>("AnnualPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("annual_price_minor");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<int?>("DeviceLimit")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_limit");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_public");
+
+                    b.Property<long?>("MonthlyPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("monthly_price_minor");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_plans");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_plans_code");
+
+                    b.ToTable("plans", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_plans_device_limit_positive", "device_limit IS NULL OR device_limit > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Subscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("CancelAtPeriodEnd")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cancel_at_period_end");
+
+                    b.Property<DateTimeOffset?>("CancelledAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character(3)")
+                        .HasColumnName("currency")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CurrentPeriodEndUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_period_end_utc");
+
+                    b.Property<DateTimeOffset>("CurrentPeriodStartUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_period_start_utc");
+
+                    b.Property<int>("DeviceLimit")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_limit");
+
+                    b.Property<string>("Interval")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("interval");
+
+                    b.Property<string>("PendingInterval")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("pending_interval");
+
+                    b.Property<string>("PendingPlanCode")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("pending_plan_code");
+
+                    b.Property<Guid?>("PendingPlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pending_plan_id");
+
+                    b.Property<string>("PlanCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("plan_code");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("plan_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("SuspensionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("suspension_reason");
+
+                    b.Property<int?>("TaxRateBasisPoints")
+                        .HasColumnType("integer")
+                        .HasColumnName("tax_rate_basis_points");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset?>("TrialEndsAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("trial_ends_at_utc");
+
+                    b.Property<long>("UnitPriceMinor")
+                        .HasColumnType("bigint")
+                        .HasColumnName("unit_price_minor");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscriptions");
+
+                    b.HasIndex("CurrentPeriodEndUtc")
+                        .HasDatabaseName("ix_subscriptions_current_period_end_utc");
+
+                    b.HasIndex("PlanId")
+                        .HasDatabaseName("ix_subscriptions_plan_id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_subscriptions_tenant_id");
+
+                    b.ToTable("subscriptions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_subscriptions_device_limit_positive", "device_limit > 0");
+
+                            t.HasCheckConstraint("ck_subscriptions_tax_rate", "tax_rate_basis_points IS NULL OR (tax_rate_basis_points >= 0 AND tax_rate_basis_points <= 10000)");
+                        });
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.SubscriptionEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Actor")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("actor");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("detail");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_subscription_events");
+
+                    b.HasIndex("TenantId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_subscription_events_tenant_id_occurred_at_utc");
+
+                    b.ToTable("subscription_events", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.UsageSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date")
+                        .HasColumnName("day");
+
+                    b.Property<int>("DeviceLimit")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_limit");
+
+                    b.Property<int>("PeakDevices")
+                        .HasColumnType("integer")
+                        .HasColumnName("peak_devices");
+
+                    b.Property<DateTimeOffset>("RecordedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at_utc");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_usage_snapshots");
+
+                    b.HasIndex("TenantId", "Day")
+                        .IsUnique()
+                        .HasDatabaseName("ix_usage_snapshots_tenant_id_day");
+
+                    b.ToTable("usage_snapshots", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.WebhookEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("event_id");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("event_type");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("outcome");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("provider");
+
+                    b.Property<DateTimeOffset>("ReceivedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at_utc");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_billing_webhook_events");
+
+                    b.HasIndex("Provider", "EventId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_billing_webhook_events_provider_event_id");
+
+                    b.ToTable("billing_webhook_events", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Devices.Domain.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1933,6 +2698,10 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(256)")
                         .HasColumnName("processor_name");
 
+                    b.Property<DateOnly?>("PurchasedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("purchased_on");
+
                     b.Property<DateTimeOffset?>("RetiredAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("retired_at_utc");
@@ -1966,6 +2735,10 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at_utc");
+
+                    b.Property<DateOnly?>("WarrantyExpiresOn")
+                        .HasColumnType("date")
+                        .HasColumnName("warranty_expires_on");
 
                     b.HasKey("Id")
                         .HasName("pk_devices");
@@ -2696,6 +3469,944 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_monitoring_settings_tenant_id");
 
                     b.ToTable("monitoring_settings", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.AppliedEscalation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AppliedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("applied_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid>("RuleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rule_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_applied_escalations");
+
+                    b.HasIndex("TenantId", "RuleId")
+                        .HasDatabaseName("ix_ticket_applied_escalations_tenant_id_rule_id");
+
+                    b.HasIndex("TenantId", "TicketId", "RuleId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ticket_applied_escalations_tenant_id_ticket_id_rule_id");
+
+                    b.ToTable("ticket_applied_escalations", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.EscalationRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("action");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("MinPriority")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("min_priority");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("TargetTechnicianId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("target_technician_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("ThresholdPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("threshold_percent");
+
+                    b.Property<string>("Trigger")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("trigger");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_escalation_rules");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_escalation_rules_tenant_id_id");
+
+                    b.HasIndex("TenantId", "IsActive")
+                        .HasDatabaseName("ix_escalation_rules_tenant_id_is_active");
+
+                    b.ToTable("escalation_rules", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.InboundEmailChannel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("address");
+
+                    b.PrimitiveCollection<List<string>>("AllowedSenderDomains")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("allowed_sender_domains");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("DefaultPriority")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("default_priority");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<DateTimeOffset?>("LastReceivedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_received_at_utc");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("secret_hash")
+                        .IsFixedLength();
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_inbound_email_channels");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_inbound_email_channels_tenant_id");
+
+                    b.ToTable("inbound_email_channels", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.SlaPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("BusinessHoursOnly")
+                        .HasColumnType("boolean")
+                        .HasColumnName("business_hours_only");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("time_zone_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<int>("WorkDaysMask")
+                        .HasColumnType("integer")
+                        .HasColumnName("work_days_mask");
+
+                    b.Property<int>("WorkdayEndMinute")
+                        .HasColumnType("integer")
+                        .HasColumnName("workday_end_minute");
+
+                    b.Property<int>("WorkdayStartMinute")
+                        .HasColumnType("integer")
+                        .HasColumnName("workday_start_minute");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sla_policies");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_sla_policies_tenant_id_id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_sla_policies_one_default")
+                        .HasFilter("is_default");
+
+                    b.HasIndex("TenantId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sla_policies_tenant_id_normalized_name");
+
+                    b.ToTable("sla_policies", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.SlaTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<int>("FirstResponseMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("first_response_minutes");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("priority");
+
+                    b.Property<int>("ResolutionMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("resolution_minutes");
+
+                    b.Property<Guid>("SlaPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sla_policy_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sla_targets");
+
+                    b.HasIndex("TenantId", "SlaPolicyId", "Priority")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sla_targets_tenant_id_sla_policy_id_priority");
+
+                    b.ToTable("sla_targets", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.Technician", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.PrimitiveCollection<List<Guid>>("CategoryIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("category_ids");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_available");
+
+                    b.Property<int?>("MaxOpenTickets")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_open_tickets");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_technicians");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_technicians_tenant_id_id");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_technicians_tenant_id_user_id");
+
+                    b.ToTable("technicians", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.Ticket", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AssigneeTechnicianId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignee_technician_id");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTimeOffset?>("ClosedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("closed_at_utc");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)")
+                        .HasColumnName("description");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<int>("EscalationLevel")
+                        .HasColumnType("integer")
+                        .HasColumnName("escalation_level");
+
+                    b.Property<string>("ExternalMessageId")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("external_message_id");
+
+                    b.Property<DateTimeOffset?>("FirstRespondedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_responded_at_utc");
+
+                    b.Property<bool>("FirstResponseBreached")
+                        .HasColumnType("boolean")
+                        .HasColumnName("first_response_breached");
+
+                    b.Property<DateTimeOffset?>("FirstResponseDueAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_response_due_at_utc");
+
+                    b.Property<DateTimeOffset>("LastActivityAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_activity_at_utc");
+
+                    b.Property<long>("Number")
+                        .HasColumnType("bigint")
+                        .HasColumnName("number");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("priority");
+
+                    b.Property<int>("ReopenCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("reopen_count");
+
+                    b.Property<string>("RequesterEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("requester_email");
+
+                    b.Property<string>("RequesterName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("requester_name");
+
+                    b.Property<Guid?>("RequesterUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requester_user_id");
+
+                    b.Property<bool>("ResolutionBreached")
+                        .HasColumnType("boolean")
+                        .HasColumnName("resolution_breached");
+
+                    b.Property<DateTimeOffset?>("ResolutionDueAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolution_due_at_utc");
+
+                    b.Property<DateTimeOffset?>("ResolvedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at_utc");
+
+                    b.Property<DateTimeOffset?>("SlaPausedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sla_paused_at_utc");
+
+                    b.Property<Guid?>("SlaPolicyId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sla_policy_id");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("subject");
+
+                    b.Property<Guid?>("SuggestedCategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("suggested_category_id");
+
+                    b.Property<string>("Summary")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("summary");
+
+                    b.Property<DateTimeOffset?>("SummaryGeneratedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("summary_generated_at_utc");
+
+                    b.Property<string>("SummarySource")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("summary_source");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tickets");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_tickets_tenant_id_id");
+
+                    b.HasIndex("TenantId", "CategoryId")
+                        .HasDatabaseName("ix_tickets_tenant_id_category_id");
+
+                    b.HasIndex("TenantId", "ExternalMessageId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tickets_tenant_id_external_message_id")
+                        .HasFilter("external_message_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "LastActivityAtUtc")
+                        .HasDatabaseName("ix_tickets_tenant_id_last_activity_at_utc");
+
+                    b.HasIndex("TenantId", "Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_tickets_tenant_id_number");
+
+                    b.HasIndex("TenantId", "RequesterUserId")
+                        .HasDatabaseName("ix_tickets_tenant_id_requester_user_id");
+
+                    b.HasIndex("TenantId", "SlaPolicyId")
+                        .HasDatabaseName("ix_tickets_tenant_id_sla_policy_id");
+
+                    b.HasIndex("TenantId", "AssigneeTechnicianId", "Status")
+                        .HasDatabaseName("ix_tickets_tenant_id_assignee_technician_id_status");
+
+                    b.HasIndex("TenantId", "Status", "Priority")
+                        .HasDatabaseName("ix_tickets_tenant_id_status_priority");
+
+                    b.ToTable("tickets", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("CommentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("comment_id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("sha256")
+                        .IsFixedLength();
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.Property<Guid?>("UploadedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_attachments");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_ticket_attachments_tenant_id_id");
+
+                    b.HasIndex("TenantId", "TicketId")
+                        .HasDatabaseName("ix_ticket_attachments_tenant_id_ticket_id");
+
+                    b.ToTable("ticket_attachments", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketAttachmentContent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AttachmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("attachment_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("data");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_attachment_contents");
+
+                    b.HasIndex("TenantId", "AttachmentId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ticket_attachment_contents_tenant_id_attachment_id");
+
+                    b.ToTable("ticket_attachment_contents", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DefaultTechnicianId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_technician_id");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.PrimitiveCollection<List<string>>("Keywords")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("keywords");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("normalized_name");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_categories");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_ticket_categories_tenant_id_id");
+
+                    b.HasIndex("TenantId", "NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ticket_categories_tenant_id_normalized_name");
+
+                    b.ToTable("ticket_categories", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketComment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AuthorEmail")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("author_email");
+
+                    b.Property<string>("AuthorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("author_name");
+
+                    b.Property<Guid?>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("ExternalMessageId")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("external_message_id");
+
+                    b.Property<bool>("IsFromStaff")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_from_staff");
+
+                    b.Property<bool>("IsInternal")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_internal");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("source");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_comments");
+
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_ticket_comments_tenant_id_id");
+
+                    b.HasIndex("TenantId", "ExternalMessageId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ticket_comments_tenant_id_external_message_id")
+                        .HasFilter("external_message_id IS NOT NULL");
+
+                    b.HasIndex("TenantId", "TicketId", "CreatedAtUtc")
+                        .HasDatabaseName("ix_ticket_comments_tenant_id_ticket_id_created_at_utc");
+
+                    b.ToTable("ticket_comments", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketCounter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<long>("LastNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_number");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_counters");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ticket_counters_tenant_id");
+
+                    b.ToTable("ticket_counters", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActorLabel")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("actor_label");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("detail");
+
+                    b.Property<string>("FromValue")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("from_value");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at_utc");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<string>("ToValue")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("to_value");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("character varying(24)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_events");
+
+                    b.HasIndex("TenantId", "TicketId", "OccurredAtUtc")
+                        .HasDatabaseName("ix_ticket_events_tenant_id_ticket_id_occurred_at_utc");
+
+                    b.HasIndex("TenantId", "Type", "OccurredAtUtc")
+                        .HasDatabaseName("ix_ticket_events_tenant_id_type_occurred_at_utc");
+
+                    b.ToTable("ticket_events", (string)null);
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketResolution", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTimeOffset?>("ReopenedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reopened_at_utc");
+
+                    b.Property<DateTimeOffset>("ResolvedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at_utc");
+
+                    b.Property<Guid?>("ResolvedByTechnicianId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by_technician_id");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_resolutions");
+
+                    b.HasIndex("TenantId", "TicketId", "ResolvedAtUtc")
+                        .HasDatabaseName("ix_ticket_resolutions_tenant_id_ticket_id_resolved_at_utc");
+
+                    b.ToTable("ticket_resolutions", (string)null);
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.AuthAuditEvent", b =>
@@ -4923,6 +6634,49 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("remote_audit_events", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Reporting.Domain.AvailabilitySnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("ActiveDevices")
+                        .HasColumnType("integer")
+                        .HasColumnName("active_devices");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<DateTimeOffset>("HourUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("hour_utc");
+
+                    b.Property<int>("OnlineDevices")
+                        .HasColumnType("integer")
+                        .HasColumnName("online_devices");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_availability_snapshots");
+
+                    b.HasIndex("TenantId", "HourUtc")
+                        .IsUnique()
+                        .HasDatabaseName("ix_availability_snapshots_tenant_id_hour_utc");
+
+                    b.ToTable("availability_snapshots", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_availability_snapshots_counts", "online_devices >= 0 AND online_devices <= active_devices");
+                        });
+                });
+
             modelBuilder.Entity("Solvix.Modules.Security.Domain.ManagedEndpoint", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7077,6 +8831,109 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_assistant_ticket_counters_tenants_tenant_id");
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.BillingProfile", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_billing_profiles_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Invoice", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoices_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.InvoiceCounter", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_counters_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.InvoiceLine", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_lines_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Billing.Domain.Invoice", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("TenantId", "InvoiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_invoice_lines_invoices_tenant_id_invoice_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Payment", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payments_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Billing.Domain.Invoice", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "InvoiceId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_payments_invoices_tenant_id_invoice_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Subscription", b =>
+                {
+                    b.HasOne("Solvix.Modules.Billing.Domain.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscriptions_plans_plan_id");
+
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscriptions_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.SubscriptionEvent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_subscription_events_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.UsageSnapshot", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_usage_snapshots_tenants_tenant_id");
+                });
+
             modelBuilder.Entity("Solvix.Modules.Devices.Domain.Device", b =>
                 {
                     b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
@@ -7256,6 +9113,231 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_monitoring_settings_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.AppliedEscalation", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_applied_escalations_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.EscalationRule", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "RuleId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_applied_escalations_escalation_rules_tenant_id_rule_~");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TicketId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_applied_escalations_tickets_tenant_id_ticket_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.EscalationRule", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_escalation_rules_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.InboundEmailChannel", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_inbound_email_channels_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.SlaPolicy", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sla_policies_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.SlaTarget", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sla_targets_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.SlaPolicy", null)
+                        .WithMany("Targets")
+                        .HasForeignKey("TenantId", "SlaPolicyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sla_targets_sla_policies_tenant_id_sla_policy_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.Technician", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_technicians_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.Ticket", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_tickets_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.Technician", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AssigneeTechnicianId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tickets_technicians_tenant_id_assignee_technician_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.TicketCategory", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "CategoryId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tickets_ticket_categories_tenant_id_category_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.SlaPolicy", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "SlaPolicyId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tickets_sla_policies_tenant_id_sla_policy_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketAttachment", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_attachments_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TicketId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_attachments_tickets_tenant_id_ticket_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketAttachmentContent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_attachment_contents_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.TicketAttachment", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "AttachmentId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_attachment_contents_ticket_attachments_tenant_id_att~");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketCategory", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_categories_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketComment", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_comments_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TicketId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_comments_tickets_tenant_id_ticket_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketCounter", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_counters_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketEvent", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_events_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TicketId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_events_tickets_tenant_id_ticket_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.TicketResolution", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_resolutions_tenants_tenant_id");
+
+                    b.HasOne("Solvix.Modules.Helpdesk.Domain.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TicketId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_resolutions_tickets_tenant_id_ticket_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.AuthAuditEvent", b =>
@@ -7812,6 +9894,16 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_remote_audit_events_tenants_tenant_id");
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Reporting.Domain.AvailabilitySnapshot", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_availability_snapshots_tenants_tenant_id");
+                });
+
             modelBuilder.Entity("Solvix.Modules.Security.Domain.ManagedEndpoint", b =>
                 {
                     b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
@@ -8068,6 +10160,16 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_software_restriction_rules_tenants_tenant_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Billing.Domain.Invoice", b =>
+                {
+                    b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Helpdesk.Domain.SlaPolicy", b =>
+                {
+                    b.Navigation("Targets");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.Role", b =>

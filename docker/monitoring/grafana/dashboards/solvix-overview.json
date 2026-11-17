@@ -1,0 +1,35 @@
+{
+  "title": "Solvix overview",
+  "uid": "solvix-overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    { "id": 1, "type": "timeseries", "title": "Requests per second by status class", "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [ { "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count[5m]))", "legendFormat": "{{http_response_status_code}}" } ] },
+    { "id": 2, "type": "timeseries", "title": "API latency p50 / p95 / p99 (s)", "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m])))", "legendFormat": "p50" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m])))", "legendFormat": "p95" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m])))", "legendFormat": "p99" } ] },
+    { "id": 3, "type": "stat", "title": "Readiness probe", "gridPos": { "x": 0, "y": 8, "w": 4, "h": 4 },
+      "targets": [ { "expr": "probe_success{job=\"solvix-api-health\"}" } ] },
+    { "id": 4, "type": "timeseries", "title": "Billing: invoices issued, payments, mismatches", "gridPos": { "x": 4, "y": 8, "w": 10, "h": 8 },
+      "targets": [
+        { "expr": "sum(increase(solvix_billing_invoices_issued_total[1h]))", "legendFormat": "invoices issued" },
+        { "expr": "sum(increase(solvix_billing_payments_succeeded_total[1h]))", "legendFormat": "payments" },
+        { "expr": "sum(increase(solvix_billing_payment_mismatches_total[1h]))", "legendFormat": "mismatches" } ] },
+    { "id": 5, "type": "timeseries", "title": "Device enrollments denied (limit / lapsed)", "gridPos": { "x": 14, "y": 8, "w": 10, "h": 8 },
+      "targets": [ { "expr": "sum by (reason) (increase(solvix_devices_enrollments_denied_total[1h]))", "legendFormat": "{{reason}}" } ] },
+    { "id": 6, "type": "timeseries", "title": "Helpdesk: tickets created, escalations, SLA breaches", "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (source) (increase(solvix_helpdesk_tickets_created_total[1h]))", "legendFormat": "created ({{source}})" },
+        { "expr": "sum(increase(solvix_helpdesk_tickets_escalated_total[1h]))", "legendFormat": "escalated" },
+        { "expr": "sum by (kind) (increase(solvix_helpdesk_sla_breaches_total[1h]))", "legendFormat": "breach ({{kind}})" } ] },
+    { "id": 7, "type": "timeseries", "title": "Webhook rejections and billing job failures", "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(increase(solvix_billing_webhooks_rejected_total[1h]))", "legendFormat": "webhooks rejected" },
+        { "expr": "sum(increase(solvix_billing_job_failures_total[1h]))", "legendFormat": "job failures" } ] }
+  ]
+}

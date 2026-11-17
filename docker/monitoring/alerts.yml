@@ -1,0 +1,101 @@
+# Alert rules for Solvix. Metric names are the OpenTelemetry names after the Prometheus exporter's conversion
+# (dots become underscores, counters gain _total). Severity "page" = wake someone; "ticket" = next business day.
+groups:
+  - name: solvix-availability
+    rules:
+      - alert: SolvixApiNotReady
+        expr: probe_success{job="solvix-api-health"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "API readiness probe failing"
+          description: "/health/ready has failed for 2 minutes: PostgreSQL or Redis is unreachable, or the API is down. See docs/OPERATIONS.md#api-not-ready."
+
+      - alert: SolvixMetricsMissing
+        expr: absent(http_server_request_duration_seconds_count) or up{job="solvix-api-metrics"} == 0
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: "No API metrics received"
+          description: "The collector is down or the API is not exporting OTLP (check OTEL_EXPORTER_OTLP_ENDPOINT)."
+
+  - name: solvix-api
+    rules:
+      - alert: SolvixHigh5xxRate
+        expr: |
+          sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~"5.."}[5m]))
+            / clamp_min(sum(rate(http_server_request_duration_seconds_count[5m])), 1) > 0.02
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "More than 2% of API requests fail with 5xx"
+
+      - alert: SolvixSlowRequests
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[10m]))) > 1
+        for: 10m
+        labels: { severity: ticket }
+        annotations:
+          summary: "API p95 latency above 1 s"
+
+      - alert: SolvixAuthThrottling
+        expr: sum(increase(http_server_request_duration_seconds_count{http_response_status_code="429"}[10m])) > 50
+        for: 0m
+        labels: { severity: ticket }
+        annotations:
+          summary: "Many requests are being rate limited"
+          description: "Possible credential stuffing, webhook flood or misbehaving client. Check the access log for the source address."
+
+  - name: solvix-billing
+    rules:
+      - alert: SolvixPaymentMismatch
+        expr: increase(solvix_billing_payment_mismatches_total[15m]) > 0
+        labels: { severity: page }
+        annotations:
+          summary: "A payment did not match its invoice"
+          description: "Wrong amount/currency, wrong tenant, a duplicate payment or a payment for a void invoice. Money may need refunding or the invoice reconciling by hand (docs/BILLING.md)."
+
+      - alert: SolvixWebhookSignatureFailures
+        expr: increase(solvix_billing_webhooks_rejected_total[10m]) > 20
+        labels: { severity: ticket }
+        annotations:
+          summary: "Payment webhooks failing signature verification"
+          description: "Either the webhook secret was rotated without updating Solvix, or someone is probing the endpoint."
+
+      - alert: SolvixBillingJobFailing
+        expr: increase(solvix_billing_job_failures_total[1h]) > 0
+        labels: { severity: ticket }
+        annotations:
+          summary: "Renewal / expiry job failed for a tenant"
+          description: "Renewal invoices may not be issued. Look for 'Billing job failed for tenant' in the API logs."
+
+      - alert: SolvixEnrollmentsDeniedBurst
+        expr: increase(solvix_devices_enrollments_denied_total[30m]) > 25
+        labels: { severity: ticket }
+        annotations:
+          summary: "Many device enrollments refused by the subscription"
+          description: "A customer is hitting its device limit or its subscription lapsed; consider contacting them."
+
+  - name: solvix-helpdesk
+    rules:
+      - alert: SolvixSlaBreachSpike
+        expr: increase(solvix_helpdesk_sla_breaches_total[1h]) > 20
+        labels: { severity: ticket }
+        annotations:
+          summary: "Unusual number of SLA breaches in the last hour"
+
+      - alert: SolvixInboundEmailSilent
+        expr: sum(increase(solvix_helpdesk_inbound_emails_total[24h])) == 0 and sum(increase(http_server_request_duration_seconds_count[24h])) > 1000
+        for: 1h
+        labels: { severity: ticket }
+        annotations:
+          summary: "No inbound e-mail processed in 24 h"
+          description: "Only meaningful if you use e-mail intake: the mail forwarder may be down."
+
+  - name: solvix-runtime
+    rules:
+      - alert: SolvixHighMemory
+        expr: dotnet_process_memory_working_set_bytes > 1.5e9
+        for: 15m
+        labels: { severity: ticket }
+        annotations:
+          summary: "API process memory above 1.5 GB"

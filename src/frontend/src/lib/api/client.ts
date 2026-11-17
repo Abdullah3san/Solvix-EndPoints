@@ -16,6 +16,11 @@ interface ClientOptions extends Omit<RequestInit, "body"> {
   query?: Record<string, string | number | boolean | null | undefined>;
 }
 
+/** URL of an endpoint behind the BFF proxy (for plain links such as file downloads). */
+export function proxyUrl(path: string, query?: ClientOptions["query"]): string {
+  return buildUrl(path, query);
+}
+
 function buildUrl(path: string, query?: ClientOptions["query"]): string {
   const clean = path.replace(/^\/+/, "");
   const url = `${PROXY_PREFIX}/${clean}`;

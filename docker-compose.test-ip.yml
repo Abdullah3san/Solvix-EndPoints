@@ -38,6 +38,7 @@ services:
       # Agent packages point at the IP and pin the self-signed agent certificate.
       Solvix__Devices__AgentPackage__PublicServerUrl: https://${SOLVIX_PUBLIC_HOST}:${SOLVIX_AGENT_PORT:-8443}/
       Solvix__Devices__AgentPackage__ServerCertificateSha256: ${SOLVIX_AGENT_SERVER_CERT_SHA256:-}
+      Solvix__Billing__PublicAppUrl: http://${SOLVIX_PUBLIC_HOST}:${SOLVIX_HTTP_PORT:-8080}
 
   web:
     environment:

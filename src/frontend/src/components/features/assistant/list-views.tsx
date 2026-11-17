@@ -15,8 +15,8 @@ import type {
   ReportKind,
   ReportSummaryDto,
   TicketDto,
-  TicketPriority,
-  TicketStatus,
+  AssistantTicketPriority,
+  AssistantTicketStatus,
 } from "@/lib/api/types";
 import { messageFrom } from "@/lib/forms";
 import { Alert } from "@/components/ui/alert";
@@ -259,8 +259,8 @@ export function KnowledgeView() {
 
 // ------------------------------------------------------------------ tickets
 
-const priorities: TicketPriority[] = ["Low", "Normal", "High", "Urgent"];
-const ticketStatuses: TicketStatus[] = ["Open", "InProgress", "Resolved", "Closed"];
+const priorities: AssistantTicketPriority[] = ["Low", "Normal", "High", "Urgent"];
+const ticketStatuses: AssistantTicketStatus[] = ["Open", "InProgress", "Resolved", "Closed"];
 const priorityTone = { Low: "neutral", Normal: "brand", High: "warning", Urgent: "danger" } as const;
 
 export function TicketsView() {
@@ -268,7 +268,7 @@ export function TicketsView() {
   const { toast } = useToast();
   const { data, error, reload } = useLoad<PagedResult<TicketDto>>("assistant/tickets", { pageSize: 50 });
   const [creating, setCreating] = React.useState(false);
-  const [form, setForm] = React.useState({ title: "", description: "", priority: "Normal" as TicketPriority });
+  const [form, setForm] = React.useState({ title: "", description: "", priority: "Normal" as AssistantTicketPriority });
   const [formError, setFormError] = React.useState<string | null>(null);
 
   async function create() {
@@ -283,7 +283,7 @@ export function TicketsView() {
     }
   }
 
-  async function setStatus(t: TicketDto, status: TicketStatus) {
+  async function setStatus(t: TicketDto, status: AssistantTicketStatus) {
     try {
       await api.patch(`assistant/tickets/${t.id}/status`, { status });
       await reload();
@@ -328,7 +328,7 @@ export function TicketsView() {
                   <TD>{t.devices.map((d) => d.name).join(", ") || "–"}</TD>
                   <TD>
                     {isAdmin ? (
-                      <Select aria-label={`Status of ${t.reference}`} value={t.status} onChange={(e) => void setStatus(t, e.target.value as TicketStatus)} className="h-8 w-32">
+                      <Select aria-label={`Status of ${t.reference}`} value={t.status} onChange={(e) => void setStatus(t, e.target.value as AssistantTicketStatus)} className="h-8 w-32">
                         {ticketStatuses.map((s) => (
                           <option key={s}>{s}</option>
                         ))}
@@ -367,7 +367,7 @@ export function TicketsView() {
             <Textarea id="t-desc" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           </Field>
           <Field label="Priority" htmlFor="t-prio">
-            <Select id="t-prio" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as TicketPriority })}>
+            <Select id="t-prio" value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as AssistantTicketPriority })}>
               {priorities.map((p) => (
                 <option key={p}>{p}</option>
               ))}

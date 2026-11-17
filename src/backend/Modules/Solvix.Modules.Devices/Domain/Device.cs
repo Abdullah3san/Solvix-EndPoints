@@ -122,6 +122,12 @@ public sealed class Device : TenantEntity
 
     public DateTimeOffset? RetiredAtUtc { get; private set; }
 
+    /// <summary>Asset lifecycle: when the hardware was purchased (entered by an administrator).</summary>
+    public DateOnly? PurchasedOn { get; private set; }
+
+    /// <summary>Asset lifecycle: end of the manufacturer warranty.</summary>
+    public DateOnly? WarrantyExpiresOn { get; private set; }
+
     public Guid? AssignedUserId { get; private set; }
 
     public Guid? BranchId { get; private set; }
@@ -239,6 +245,17 @@ public sealed class Device : TenantEntity
     {
         DisplayName = Guard.Optional(displayName, "displayName", DisplayNameMaxLength);
         Notes = Guard.Optional(notes, "notes", NotesMaxLength);
+    }
+
+    public void UpdateLifecycle(DateOnly? purchasedOn, DateOnly? warrantyExpiresOn)
+    {
+        if (purchasedOn is { } p && warrantyExpiresOn is { } w && w < p)
+        {
+            throw new ValidationException("warrantyExpiresOn", "The warranty cannot end before the purchase date.");
+        }
+
+        PurchasedOn = purchasedOn;
+        WarrantyExpiresOn = warrantyExpiresOn;
     }
 
     public void Assign(Guid? userId, Guid? branchId, Guid? departmentId)

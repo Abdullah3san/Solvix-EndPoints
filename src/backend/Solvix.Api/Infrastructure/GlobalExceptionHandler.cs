@@ -67,6 +67,8 @@ internal sealed partial class GlobalExceptionHandler(
             PayloadTooLargeException p => (StatusCodes.Status413PayloadTooLarge, "Payload too large", p.Code, null),
             TooManyRequestsException r => (StatusCodes.Status429TooManyRequests, "Too many requests", r.Code, null),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Conflict", "concurrent_update", null),
+            PaymentRequiredException p => (StatusCodes.Status402PaymentRequired, "Payment required", p.Code, null),
+            ExternalServiceException e => (StatusCodes.Status502BadGateway, "Upstream service unavailable", e.Code, null),
             UnauthorizedException u => (StatusCodes.Status401Unauthorized, "Unauthorized", u.Code, null),
             TenantInactiveException t => (StatusCodes.Status403Forbidden, "Tenant inactive", t.Code, null),
             TenantContextMissingException t => (StatusCodes.Status401Unauthorized, "Tenant context missing", t.Code, null),

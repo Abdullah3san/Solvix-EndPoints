@@ -10,6 +10,7 @@ import {
   Bug,
   Building2,
   ClipboardCheck,
+  CreditCard,
   FileCheck,
   FileText,
   GitBranch,
@@ -17,6 +18,7 @@ import {
   KeyRound,
   Laptop,
   LayoutDashboard,
+  LifeBuoy,
   Monitor,
   Network,
   Package,
@@ -108,7 +110,7 @@ export const navigation: NavSection[] = [
       { label: "Assistant", href: "/assistant", icon: Bot, permission: "assistant.use" },
       { label: "Approvals", href: "/assistant/approvals", icon: ShieldCheck, permission: "assistant.use" },
       { label: "Knowledge base", href: "/assistant/knowledge", icon: BookOpen, permission: "assistant.use" },
-      { label: "Tickets", href: "/assistant/tickets", icon: Ticket, permission: "assistant.use" },
+      { label: "Assistant tickets", href: "/assistant/tickets", icon: Ticket, permission: "assistant.use" },
       { label: "Reports", href: "/assistant/reports", icon: FileText, permission: "assistant.use" },
       { label: "AI audit log", href: "/assistant/audit", icon: ScrollText, permission: "assistant.manage" },
     ],
@@ -138,11 +140,23 @@ export const navigation: NavSection[] = [
     ],
   },
   {
+    title: "Helpdesk",
+    items: [
+      { label: "Tickets", href: "/helpdesk/tickets", icon: LifeBuoy },
+      { label: "Helpdesk settings", href: "/helpdesk/settings", icon: SlidersHorizontal, permission: "helpdesk.manage" },
+    ],
+  },
+  {
+    title: "Insights",
+    items: [{ label: "Reports", href: "/reports", icon: BarChart3, permission: "reports.view" }],
+  },
+  {
     title: "Settings",
     items: [
       { label: "Workspace", href: "/settings/workspace", icon: Settings2 },
       { label: "Asset management", href: "/settings/assets", icon: SlidersHorizontal, permission: "assets.edit" },
       { label: "My account", href: "/account/security", icon: KeyRound },
+      { label: "Billing", href: "/settings/billing", icon: CreditCard, permission: "billing.manage" },
     ],
   },
 ];
@@ -192,6 +206,8 @@ export const segmentLabels: Record<string, string> = {
   alerts: "Alerts",
   advisories: "Vulnerable software",
   rules: "Rules and scoring",
+  helpdesk: "Helpdesk",
+  billing: "Billing",
 };
 
 /** Hrefs that are parents of other nav items must match exactly, or they would always look active. */

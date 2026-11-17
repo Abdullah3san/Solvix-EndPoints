@@ -42,6 +42,7 @@ public static class PermissionCatalog
         Define(Permissions.Assets.Edit, "Assets", "Edit assets.", Permissions.Assets.View),
         Define(Permissions.Assets.Transfer, "Assets", "Transfer assets between people, branches and departments.", Permissions.Assets.View),
         Define(Permissions.Mdm.Manage, "MDM", "Manage mobile device management policies and profiles.", Permissions.Devices.View),
+        Define(Permissions.Helpdesk.Manage, "Helpdesk", "Manage helpdesk categories, SLA policies, escalation, technicians and e-mail channels; see every ticket."),
         Define(Permissions.EndpointSecurity.View, "Endpoint security", "View security posture, findings, alerts, reports and the security audit trail."),
         Define(Permissions.EndpointSecurity.Manage, "Endpoint security", "Register security agents, triage findings and alerts, author policies and advisories, request remediation.", Permissions.EndpointSecurity.View),
         Define(Permissions.EndpointSecurity.Approve, "Endpoint security", "Approve or reject Low and Medium risk security changes requested by others.", Permissions.EndpointSecurity.View),

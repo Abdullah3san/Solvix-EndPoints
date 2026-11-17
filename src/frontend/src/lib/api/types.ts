@@ -33,6 +33,7 @@ export type Permission =
   | "assets.edit"
   | "assets.transfer"
   | "mdm.manage"
+  | "helpdesk.manage"
   | "posture.view"
   | "posture.manage"
   | "posture.approve"
@@ -1478,8 +1479,8 @@ export interface AssetSettingsDto {
 export type AssistantRole = "Member" | "Admin" | "Owner";
 export type RiskLevel = "Low" | "Medium" | "High";
 export type ProposalStatus = "PendingApproval" | "Executing" | "Succeeded" | "PartiallyFailed" | "Failed" | "Rejected" | "Expired";
-export type TicketPriority = "Low" | "Normal" | "High" | "Urgent";
-export type TicketStatus = "Open" | "InProgress" | "Resolved" | "Closed";
+export type AssistantTicketPriority = "Low" | "Normal" | "High" | "Urgent";
+export type AssistantTicketStatus = "Open" | "InProgress" | "Resolved" | "Closed";
 export type ReportKind = "FleetHealth" | "SoftwareInventory" | "Security" | "Performance";
 export type DocumentStatus = "Processing" | "Ready" | "Failed";
 
@@ -1610,9 +1611,9 @@ export interface TicketDto {
   number: number;
   title: string;
   description: string;
-  priority: TicketPriority;
+  priority: AssistantTicketPriority;
   category: string | null;
-  status: TicketStatus;
+  status: AssistantTicketStatus;
   devices: { id: string; name: string }[];
   createdByEmail: string | null;
   createdViaAssistant: boolean;
@@ -1648,4 +1649,295 @@ export interface AuditEntryDto {
   correlationId: string | null;
   model: string | null;
   createdAtUtc: string;
+}
+
+// ------------------------------------------------------------------------------------------------ Helpdesk (Phase 12)
+
+export type TicketStatus = "New" | "Open" | "InProgress" | "WaitingOnRequester" | "Resolved" | "Closed";
+export type TicketPriority = "Low" | "Medium" | "High" | "Critical";
+export type TicketSource = "Web" | "Email" | "Api";
+export type SlaState = "none" | "ok" | "at_risk" | "breached" | "paused" | "met";
+
+export interface TicketSummaryDto {
+  id: string;
+  number: number;
+  subject: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  source: TicketSource;
+  categoryId: string | null;
+  categoryName: string | null;
+  suggestedCategoryId: string | null;
+  needsTriage: boolean;
+  requesterName: string | null;
+  requesterEmail: string | null;
+  assigneeTechnicianId: string | null;
+  assigneeName: string | null;
+  deviceId: string | null;
+  firstResponseDueAtUtc: string | null;
+  resolutionDueAtUtc: string | null;
+  firstResponseBreached: boolean;
+  resolutionBreached: boolean;
+  slaState: SlaState;
+  escalationLevel: number;
+  createdAtUtc: string;
+  lastActivityAtUtc: string;
+}
+
+export interface TicketCommentDto {
+  id: string;
+  authorName: string | null;
+  authorEmail: string | null;
+  isInternal: boolean;
+  isFromStaff: boolean;
+  body: string;
+  source: TicketSource;
+  createdAtUtc: string;
+}
+
+export interface TicketAttachmentDto {
+  id: string;
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  sha256: string;
+  createdAtUtc: string;
+}
+
+export interface TicketResolutionDto {
+  id: string;
+  notes: string;
+  resolvedByTechnicianId: string | null;
+  resolvedAtUtc: string;
+  reopenedAtUtc: string | null;
+}
+
+export interface TicketDetailsDto {
+  summary: TicketSummaryDto;
+  description: string;
+  deviceName: string | null;
+  aiSummary: string | null;
+  aiSummaryGeneratedAtUtc: string | null;
+  aiSummarySource: string | null;
+  reopenCount: number;
+  comments: TicketCommentDto[];
+  attachments: TicketAttachmentDto[];
+  resolutions: TicketResolutionDto[];
+}
+
+export interface TicketEventDto {
+  id: string;
+  type: string;
+  actorLabel: string | null;
+  actorUserId: string | null;
+  fromValue: string | null;
+  toValue: string | null;
+  detail: string | null;
+  occurredAtUtc: string;
+}
+
+export interface TicketStatsDto {
+  open: number;
+  unassigned: number;
+  needsTriage: number;
+  escalated: number;
+  overdue: number;
+  resolvedLast7Days: number;
+  dueSoon: number;
+}
+
+export interface TicketCategoryDto {
+  id: string;
+  name: string;
+  description: string | null;
+  isActive: boolean;
+  defaultTechnicianId: string | null;
+  keywords: string[];
+}
+
+export interface TechnicianDto {
+  id: string;
+  userId: string;
+  displayName: string | null;
+  email: string | null;
+  isActive: boolean;
+  isAvailable: boolean;
+  maxOpenTickets: number | null;
+  categoryIds: string[];
+  notes: string | null;
+  openTickets: number;
+}
+
+export interface SlaTargetDto {
+  priority: TicketPriority;
+  firstResponseMinutes: number;
+  resolutionMinutes: number;
+}
+
+export interface SlaPolicyDto {
+  id: string;
+  name: string;
+  isDefault: boolean;
+  isActive: boolean;
+  businessHoursOnly: boolean;
+  timeZoneId: string;
+  workdayStartMinute: number;
+  workdayEndMinute: number;
+  workDaysMask: number;
+  targets: SlaTargetDto[];
+}
+
+export type EscalationTrigger = "FirstResponseElapsedPercent" | "ResolutionElapsedPercent";
+export type EscalationAction = "FlagOnly" | "Reassign" | "RaisePriority";
+
+export interface EscalationRuleDto {
+  id: string;
+  name: string;
+  isActive: boolean;
+  trigger: EscalationTrigger;
+  thresholdPercent: number;
+  action: EscalationAction;
+  targetTechnicianId: string | null;
+  minPriority: TicketPriority | null;
+}
+
+export interface InboundChannelDto {
+  id: string;
+  name: string;
+  address: string | null;
+  isEnabled: boolean;
+  defaultPriority: TicketPriority;
+  allowedSenderDomains: string[];
+  lastReceivedAtUtc: string | null;
+}
+
+export interface CreatedInboundChannelDto {
+  channel: InboundChannelDto;
+  token: string;
+}
+
+// -------------------------------------------------------------------------------------------------- Billing (Phase 12)
+
+export type BillingInterval = "Monthly" | "Annual";
+export type SubscriptionStatus = "Trialing" | "Active" | "PastDue" | "Cancelled" | "Expired" | "Suspended";
+export type InvoiceStatus = "Open" | "Paid" | "Void";
+
+export interface PlanDto {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  deviceLimit: number | null;
+  monthlyPriceMinor: number | null;
+  annualPriceMinor: number | null;
+  currency: string;
+  isCustom: boolean;
+}
+
+export interface SubscriptionDto {
+  planCode: string;
+  planName: string;
+  status: SubscriptionStatus;
+  interval: BillingInterval;
+  deviceLimit: number;
+  unitPriceMinor: number;
+  currency: string;
+  trialEndsAtUtc: string | null;
+  currentPeriodStartUtc: string;
+  currentPeriodEndUtc: string;
+  graceEndsAtUtc: string | null;
+  cancelAtPeriodEnd: boolean;
+  pendingPlanCode: string | null;
+  pendingInterval: BillingInterval | null;
+  canEnrollDevices: boolean;
+  restrictionCode: string | null;
+  restrictionMessage: string | null;
+}
+
+export interface UsageDto {
+  devicesUsed: number;
+  deviceLimit: number;
+  percentUsed: number;
+  level: "ok" | "warning" | "critical" | "limit";
+  canEnrollDevices: boolean;
+  history: { day: string; peakDevices: number; deviceLimit: number }[];
+}
+
+export interface InvoiceDto {
+  id: string;
+  number: string;
+  status: InvoiceStatus;
+  purpose: "NewSubscription" | "Renewal" | "PlanChange";
+  currency: string;
+  subtotalMinor: number;
+  taxMinor: number;
+  totalMinor: number;
+  issuedAtUtc: string;
+  dueAtUtc: string;
+  paidAtUtc: string | null;
+  periodStartUtc: string;
+  periodEndUtc: string;
+  planCode: string;
+  interval: BillingInterval;
+}
+
+export interface ChangePlanResult {
+  outcome: "invoice_issued" | "scheduled" | "unchanged";
+  invoice: InvoiceDto | null;
+  checkoutUrl: string | null;
+  subscription: SubscriptionDto;
+}
+
+export interface CheckoutDto {
+  invoice: InvoiceDto;
+  checkoutUrl: string | null;
+  provider: string;
+}
+
+export interface BillingProfileDto {
+  legalName: string;
+  billingEmail: string;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  city: string | null;
+  region: string | null;
+  postalCode: string | null;
+  countryCode: string | null;
+  taxId: string | null;
+}
+
+export interface BillingHistoryItemDto {
+  kind: "invoice" | "payment" | "subscription";
+  atUtc: string;
+  title: string;
+  amountMinor: number | null;
+  currency: string | null;
+  status: string | null;
+  invoiceId: string | null;
+}
+
+// ------------------------------------------------------------------------------------------------- Reporting (Phase 12)
+
+export interface ReportInfoDto {
+  key: string;
+  title: string;
+  description: string;
+  filters: string[];
+}
+
+export interface ReportColumnDto {
+  key: string;
+  label: string;
+  type: "string" | "number" | "datetime" | "date" | "bool";
+}
+
+export interface ReportResultDto {
+  report: string;
+  title: string;
+  generatedAtUtc: string;
+  summary: { label: string; value: string | number | null }[];
+  columns: ReportColumnDto[];
+  rows: (string | number | boolean | null)[][];
+  truncated: boolean;
+  notes: string | null;
 }

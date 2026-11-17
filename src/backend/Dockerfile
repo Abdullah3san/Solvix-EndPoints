@@ -22,6 +22,9 @@ COPY src/shared/Solvix.Agent.Contracts/Solvix.Agent.Contracts.csproj src/shared/
 COPY src/backend/Modules/Solvix.Modules.Assistant/Solvix.Modules.Assistant.csproj src/backend/Modules/Solvix.Modules.Assistant/
 COPY src/backend/Modules/Solvix.Modules.Security/Solvix.Modules.Security.csproj src/backend/Modules/Solvix.Modules.Security/
 COPY src/backend/Modules/Solvix.Modules.Mdm/Solvix.Modules.Mdm.csproj src/backend/Modules/Solvix.Modules.Mdm/
+COPY src/backend/Modules/Solvix.Modules.Billing/Solvix.Modules.Billing.csproj src/backend/Modules/Solvix.Modules.Billing/
+COPY src/backend/Modules/Solvix.Modules.Helpdesk/Solvix.Modules.Helpdesk.csproj src/backend/Modules/Solvix.Modules.Helpdesk/
+COPY src/backend/Modules/Solvix.Modules.Reporting/Solvix.Modules.Reporting.csproj src/backend/Modules/Solvix.Modules.Reporting/
 COPY src/agent/Directory.Build.props src/agent/
 COPY src/agent/Solvix.Agent/Solvix.Agent.csproj src/agent/Solvix.Agent/
 COPY src/agent/Solvix.Agent.Core/Solvix.Agent.Core.csproj src/agent/Solvix.Agent.Core/

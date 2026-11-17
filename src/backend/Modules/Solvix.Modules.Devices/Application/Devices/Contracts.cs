@@ -46,6 +46,10 @@ public sealed record DeviceDetailsDto
 
     public DateTimeOffset? LastBootAtUtc { get; init; }
 
+    public DateOnly? PurchasedOn { get; init; }
+
+    public DateOnly? WarrantyExpiresOn { get; init; }
+
     public required IReadOnlyList<string> MacAddresses { get; init; }
 
     public DateTimeOffset? AgentVersionChangedAtUtc { get; init; }
@@ -108,6 +112,8 @@ public sealed record DeviceListQuery(
     int PageSize = 25);
 
 public sealed record UpdateDeviceRequest(string? DisplayName, string? Notes);
+
+public sealed record UpdateDeviceLifecycleRequest(DateOnly? PurchasedOn, DateOnly? WarrantyExpiresOn);
 
 public sealed record UpdateDeviceAssignmentRequest(Guid? AssignedUserId, Guid? BranchId, Guid? DepartmentId);
 

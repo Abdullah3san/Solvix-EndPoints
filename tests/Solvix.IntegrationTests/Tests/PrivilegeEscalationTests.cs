@@ -106,11 +106,12 @@ public sealed class PrivilegeEscalationTests(ApiFixture fixture)
             Assert.True((isAnonymous ? 1 : 0) + (permissions.Count > 0 ? 1 : 0) + (authenticatedOnly ? 1 : 0) + (deviceOnly ? 1 : 0) == 1, $"{name}: ambiguous protection");
             if (isAnonymous)
             {
-                // Device protocols that authenticate the device themselves (security agent device key,
-                // Apple MDM check-in/command signatures) are anonymous to ASP.NET by design; the guard
-                // below is about everything else.
+                // Machine protocols that authenticate the caller themselves are anonymous to ASP.NET by design:
+                // security agent device key, Apple MDM signatures, Stripe webhook signature, inbound e-mail
+                // channel secret, platform-operator key. The guard below is about everything else.
                 var raw = endpoint.RoutePattern.RawText ?? string.Empty;
-                if (!raw.Contains("/security/ingest", StringComparison.Ordinal) && !raw.Contains("/mdm/apple", StringComparison.Ordinal))
+                string[] selfAuthenticating = ["/security/ingest", "/mdm/apple", "/billing/webhooks", "/helpdesk/inbound-email", "/platform/billing"];
+                if (!selfAuthenticating.Any(prefix => raw.Contains(prefix, StringComparison.Ordinal)))
                 {
                     anonymousCount++;
                 }

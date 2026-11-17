@@ -66,6 +66,15 @@ public static class Permissions
     }
 
     /// <summary>
+    /// Helpdesk (Phase 12). Raising and following one's own tickets needs no permission; technicians are
+    /// configured in the helpdesk itself. This key manages categories, SLAs, escalation, technicians and channels.
+    /// </summary>
+    public static class Helpdesk
+    {
+        public const string Manage = "helpdesk.manage";
+    }
+
+    /// <summary>
     /// Endpoint security management (Phase 10): posture, findings, alerts, security policies,
     /// vulnerable-software advisories and approval-gated remediation.
     /// </summary>
