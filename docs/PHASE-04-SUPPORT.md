@@ -1,7 +1,7 @@
 # Help desk: tickets and chat through the agent
 
 People using enrolled laptops can report a problem and talk to a technician without opening a browser;
-technicians work from the web console. **Remote access (screen/shell) is not part of this phase.**
+technicians work from the web console. Remote command sessions are described at the end; screen sharing is not built.
 
 ## For the person at the laptop
 
@@ -60,3 +60,60 @@ Deleting a device keeps its tickets (`device_id` is cleared); its chat is delete
   pipe is the natural next step, as are chat notifications to the user when a technician writes.
 * Chat uses long polling and 3 s polling in the console; WebSockets/SignalR would make it instant.
 * Ticket numbers are global (database identity), not per tenant. No e-mail notifications, SLAs or attachments.
+
+
+---
+
+# Remote command sessions
+
+A technician opens a command shell (PowerShell on Windows) on a laptop from the console. This reverses the
+Phase 03 rule that the agent never runs server-supplied input, so it is **off by default and controlled on the computer**.
+
+## Turning it on (on the computer, by whoever installs the agent)
+
+```
+Solvix.Agent.exe install --remote-access consent       # the person at the computer approves each session
+Solvix.Agent.exe install --remote-access unattended    # no prompt (servers, kiosks); still audited
+```
+
+This writes `SolvixAgent:RemoteAccess:Mode` to the machine's `agent.json`. Neither the server nor the downloadable
+enrollment package can enable it. The agent reports its mode with each heartbeat; the console only shows it and
+refuses to start a session when it is `Disabled` (or unknown, e.g. an older agent).
+
+## How a session works
+
+1. Administrator: *Device → Remote → Start remote session* (with a reason).
+2. The agent, which long-polls outbound, receives the request. In *consent* mode a Yes/No dialog is shown to the
+   signed-in person (`WTSSendMessage`; no answer, no signed-in user or any failure = **no**). In *unattended* mode it accepts.
+3. The agent starts the shell and relays text: technician input → shell, shell output → console (long polls both ways,
+   so it also works through the web proxy; this is a line-oriented shell, not a full terminal emulator).
+4. Either side can end it; the agent kills the shell when the session ends or the shell exits.
+
+## Safeguards
+
+* Administrators only (`TenantAdmin`); one open session per computer; a request expires after 2 minutes unanswered,
+  an active session ends after 15 minutes idle or 4 hours total.
+* Audit (`remote_sessions`): who asked, why, device, consent (person vs. unattended policy), start/end and why it ended.
+  Rows outlive the device and the user. **Terminal content is relayed, not stored**; in-flight text is deleted after the session.
+* A computer can only read and answer its own sessions; other tenants and other computers get 404. Row-Level Security
+  on both tables. Every request, acceptance, denial and technician end is also logged as a warning.
+* The shell runs as the agent's own account (`NT SERVICE\SolvixAgent`), with that account's limited rights.
+
+## Verification
+
+Integration (real PostgreSQL): full lifecycle with audit, policy gate (disabled/unknown), single open session, deny,
+expiry and idle timeout, long polls, tenant/device isolation, authentication and input limits, retired device,
+audit surviving device deletion. End-to-end with the real agent worker and a **real shell** (`/bin/sh`) against the
+real API: unattended session runs `echo`, `exit` ends the session; consent mode with no one to ask declines.
+Agent unit tests: disabled mode never polls, decline never starts a shell, input/output relay, shell exit, shell failure,
+installer flag parsing, and that the package cannot enable remote access. Frontend: helpers and panel.
+
+## Not verified / not built
+
+* The Windows consent dialog (`WTSSendMessage`), the PowerShell shell and the install flag on a real Windows laptop:
+  compiled, not executed.
+* **Not a privileged shell**: it runs with the service account's rights. Running as SYSTEM or an admin would need a
+  deliberate, separate design (like the updater task) and is not done.
+* No screen sharing or file transfer. No keystroke/command transcript is kept (a tenant-level "record sessions" option
+  would be the next audit step). No tenant-wide kill switch yet beyond not enabling it on computers.
+* Latency is ~0.3 s per round trip (polling relay); WebSockets would remove it.

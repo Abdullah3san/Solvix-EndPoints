@@ -31,6 +31,12 @@ public static class AgentRoutes
     /// (<c>?after=N&amp;wait=S</c>), POST sends a message from the user.
     /// </summary>
     public const string Chat = Base + "/chat";
+
+    /// <summary>
+    /// Device certificate (mutual TLS). Remote command sessions:
+    /// <c>GET /pending?wait=S</c>, <c>POST /{id}/accept|deny|end|output</c>, <c>GET /{id}/input?after=N&amp;wait=S</c>.
+    /// </summary>
+    public const string Remote = Base + "/remote";
 }
 
 /// <summary>Well-known identifiers embedded in device certificates.</summary>

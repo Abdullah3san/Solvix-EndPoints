@@ -76,6 +76,13 @@ namespace Solvix.Agent
                     return Fail(error ?? "Invalid enrollment settings.", silent);
                 }
 
+                if (!RemoteAccessChoice.TryParse(Option(args, "--remote-access"), out var remoteMode))
+                {
+                    return Fail($"Unknown remote access choice. Use {RemoteAccessChoice.Usage} (or leave it out to keep remote access off).", silent);
+                }
+
+                settings = settings with { RemoteAccess = remoteMode };
+
                 var elevation = host.Services.GetRequiredService<IElevation>();
                 if (!elevation.IsElevated)
                 {
@@ -102,6 +109,7 @@ namespace Solvix.Agent
 
                 Console.WriteLine("Installing the Solvix Agent");
                 Console.WriteLine($"  Server: {settings.ServerUrl}");
+                Console.WriteLine($"  Remote access: {(remoteMode == Solvix.Agent.Contracts.RemoteAccessMode.Disabled ? "off" : remoteMode)}");
                 var enrollment = host.Services.GetRequiredService<EnrollmentSetup>();
                 var result = await installer.InstallAsync(options, environment, () => enrollment.Apply(settings), CancellationToken.None);
                 if (!result.Success)

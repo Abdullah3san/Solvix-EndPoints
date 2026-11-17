@@ -11,6 +11,7 @@ using Solvix.Agent.Core.Health;
 using Solvix.Agent.Core.Installation;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.LocalApi;
+using Solvix.Agent.Core.Remote;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
@@ -48,6 +49,9 @@ public static class AgentServiceCollectionExtensions
         services.TryAddSingleton<IPackageSignatureVerifier, UnsupportedSignatureVerifier>();
         services.TryAddSingleton<AgentRuntime>();
         services.TryAddSingleton<LocalApiServer>();
+        services.TryAddSingleton<IRemoteShellFactory, ProcessShellFactory>();
+        services.TryAddSingleton<IConsentPrompter, DenyingConsentPrompter>();
+        services.TryAddSingleton<RemoteAccessWorker>();
         services.AddHttpClient(UpdateManager.DownloadClientName, c => c.Timeout = TimeSpan.FromMinutes(30))
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {

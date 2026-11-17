@@ -19,6 +19,8 @@ public sealed class SupportModule : IModule
         services.AddScoped<ITicketService, TicketService>();
         services.AddScoped<IChatService, ChatService>();
         services.AddScoped<IAgentSupportService, AgentSupportService>();
+        services.AddScoped<IRemoteSessionService, RemoteSessionService>();
+        services.AddScoped<IAgentRemoteService, AgentRemoteService>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
     }
 }

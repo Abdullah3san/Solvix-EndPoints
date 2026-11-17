@@ -215,6 +215,39 @@ public sealed class InstallerTests : IDisposable
         Assert.DoesNotContain("svxe_token", File.ReadAllText(Path.Combine(agent.DataDirectory, "agent.json")), StringComparison.Ordinal); // the token is never in the plain settings file
     }
 
+    [Theory]
+    [InlineData(null, RemoteAccessMode.Disabled, true)]
+    [InlineData("", RemoteAccessMode.Disabled, true)]
+    [InlineData("off", RemoteAccessMode.Disabled, true)]
+    [InlineData("Consent", RemoteAccessMode.ConsentRequired, true)]
+    [InlineData("unattended", RemoteAccessMode.Unattended, true)]
+    [InlineData("always", RemoteAccessMode.Disabled, false)]
+    public void Remote_access_choice_is_parsed_strictly(string? value, RemoteAccessMode expected, bool valid)
+    {
+        Assert.Equal(valid, RemoteAccessChoice.TryParse(value, out var mode));
+        Assert.Equal(expected, mode);
+    }
+
+    [Fact]
+    public void Remote_access_is_only_written_when_the_installer_explicitly_chose_it()
+    {
+        using var agent = new AgentHarness();
+        var settings = EnrollmentRequestSettings.Validate("https://agents.example.com/", "svxe_token", null, out _)!;
+
+        agent.Get<EnrollmentSetup>().Apply(settings);
+        Assert.DoesNotContain("RemoteAccess", File.ReadAllText(Path.Combine(agent.DataDirectory, "agent.json")), StringComparison.Ordinal);
+
+        agent.Get<EnrollmentSetup>().Apply(settings with { RemoteAccess = RemoteAccessMode.ConsentRequired });
+        using var json = JsonDocument.Parse(File.ReadAllText(Path.Combine(agent.DataDirectory, "agent.json")));
+        Assert.Equal("ConsentRequired", json.RootElement.GetProperty("SolvixAgent").GetProperty("RemoteAccess").GetProperty("Mode").GetString());
+
+        // The downloadable package (enrollment.json) can never switch it on.
+        var file = Path.Combine(_root, "package-enrollment.json");
+        Directory.CreateDirectory(_root);
+        File.WriteAllText(file, System.Text.Json.JsonSerializer.Serialize(new AgentEnrollmentFile { ServerUrl = "https://a.example/", EnrollmentToken = "svxe_abc" }, AgentJsonContext.Default.AgentEnrollmentFile));
+        Assert.Null(EnrollmentRequestSettings.TryLoad(file, DateTimeOffset.UtcNow, out _)!.RemoteAccess);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_root))

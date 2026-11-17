@@ -1,4 +1,4 @@
-import type { TicketPriority, TicketStatus } from "@/lib/api/types";
+import type { RemoteAccessMode, RemoteSessionStatus, TicketPriority, TicketStatus } from "@/lib/api/types";
 
 type Tone = "neutral" | "brand" | "success" | "warning" | "danger";
 
@@ -46,4 +46,35 @@ export function mergeMessages<T extends { sequence: number }>(current: T[], inco
   const seen = new Set(current.map((m) => m.sequence));
   const fresh = incoming.filter((m) => !seen.has(m.sequence));
   return fresh.length === 0 ? current : [...current, ...fresh].sort((a, b) => a.sequence - b.sequence);
+}
+
+export function remoteStatusTone(status: RemoteSessionStatus): Tone {
+  switch (status) {
+    case "Active":
+      return "success";
+    case "Pending":
+      return "warning";
+    case "Denied":
+    case "Expired":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+export function remoteModeLabel(mode: RemoteAccessMode | undefined): string {
+  switch (mode) {
+    case "ConsentRequired":
+      return "Enabled: the person at the computer must approve each session";
+    case "Unattended":
+      return "Enabled: unattended sessions allowed";
+    default:
+      return "Not enabled on this computer";
+  }
+}
+
+/** Keeps the terminal text bounded so a chatty session cannot exhaust browser memory. */
+export function appendTerminal(current: string, addition: string, max = 200_000): string {
+  const next = current + addition;
+  return next.length > max ? next.slice(next.length - max) : next;
 }

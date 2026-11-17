@@ -199,6 +199,7 @@ export interface AgentHealthReport {
   workingSetBytes: number;
   certificateNotAfterUtc: string | null;
   osBuild: string | null;
+  remoteAccess?: RemoteAccessMode;
   issues: HealthIssue[];
 }
 
@@ -390,4 +391,29 @@ export interface ChatConversationDto {
   lastSender: "User" | "Technician";
   lastMessageAtUtc: string;
   lastSequence: number;
+}
+
+// ---- Remote sessions ----------------------------------------------------
+
+export type RemoteAccessMode = "Disabled" | "ConsentRequired" | "Unattended";
+export type RemoteSessionStatus = "Pending" | "Active" | "Ended" | "Denied" | "Expired";
+
+export interface RemoteSessionDto {
+  id: string;
+  deviceId: string;
+  deviceName: string | null;
+  requestedByName: string;
+  reason: string | null;
+  status: RemoteSessionStatus;
+  consent: "User" | "Unattended" | null;
+  createdAtUtc: string;
+  startedAtUtc: string | null;
+  endedAtUtc: string | null;
+  endReason: string | null;
+}
+
+export interface RemoteOutputDto {
+  chunks: { sequence: number; text: string }[];
+  status: RemoteSessionStatus;
+  endReason: string | null;
 }

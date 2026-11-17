@@ -29,6 +29,20 @@ public interface IAgentApiClient
     Task<ChatMessageList> PollChatAsync(long after, int waitSeconds, CancellationToken cancellationToken);
 
     Task<ChatMessage> SendChatAsync(SendChatMessageRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Long-polls for a technician's request to open a remote session.</summary>
+    Task<PendingRemoteResponse> PollRemotePendingAsync(int waitSeconds, CancellationToken cancellationToken);
+
+    Task AcceptRemoteAsync(Guid sessionId, AcceptRemoteRequest request, CancellationToken cancellationToken);
+
+    Task DenyRemoteAsync(Guid sessionId, DenyRemoteRequest request, CancellationToken cancellationToken);
+
+    Task EndRemoteAsync(Guid sessionId, EndRemoteRequest request, CancellationToken cancellationToken);
+
+    /// <summary>Sends shell output. Fails with a rejection once the session is no longer active.</summary>
+    Task PostRemoteOutputAsync(Guid sessionId, RemoteOutputRequest request, CancellationToken cancellationToken);
+
+    Task<RemoteInputResponse> PollRemoteInputAsync(Guid sessionId, long after, int waitSeconds, CancellationToken cancellationToken);
 }
 
 /// <summary>
@@ -110,6 +124,41 @@ public sealed class AgentApiClient : IAgentApiClient, IDisposable
 
     public Task<ChatMessage> SendChatAsync(SendChatMessageRequest request, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Post, AgentRoutes.Chat, request, AgentJsonContext.Default.SendChatMessageRequest, AgentJsonContext.Default.ChatMessage, cancellationToken);
+
+    public async Task<PendingRemoteResponse> PollRemotePendingAsync(int waitSeconds, CancellationToken cancellationToken)
+    {
+        var uri = string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Remote}/pending?wait={waitSeconds}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await ReadAsync(response, AgentJsonContext.Default.PendingRemoteResponse, cancellationToken);
+    }
+
+    public Task AcceptRemoteAsync(Guid sessionId, AcceptRemoteRequest request, CancellationToken cancellationToken) =>
+        PostAsync($"{AgentRoutes.Remote}/{sessionId:D}/accept", request, AgentJsonContext.Default.AcceptRemoteRequest, cancellationToken);
+
+    public Task DenyRemoteAsync(Guid sessionId, DenyRemoteRequest request, CancellationToken cancellationToken) =>
+        PostAsync($"{AgentRoutes.Remote}/{sessionId:D}/deny", request, AgentJsonContext.Default.DenyRemoteRequest, cancellationToken);
+
+    public Task EndRemoteAsync(Guid sessionId, EndRemoteRequest request, CancellationToken cancellationToken) =>
+        PostAsync($"{AgentRoutes.Remote}/{sessionId:D}/end", request, AgentJsonContext.Default.EndRemoteRequest, cancellationToken);
+
+    public Task PostRemoteOutputAsync(Guid sessionId, RemoteOutputRequest request, CancellationToken cancellationToken) =>
+        PostAsync($"{AgentRoutes.Remote}/{sessionId:D}/output", request, AgentJsonContext.Default.RemoteOutputRequest, cancellationToken);
+
+    public async Task<RemoteInputResponse> PollRemoteInputAsync(Guid sessionId, long after, int waitSeconds, CancellationToken cancellationToken)
+    {
+        var uri = string.Create(CultureInfo.InvariantCulture, $"{AgentRoutes.Remote}/{sessionId:D}/input?after={after}&wait={waitSeconds}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        using var response = await SendRawAsync(request, cancellationToken);
+        return await ReadAsync(response, AgentJsonContext.Default.RemoteInputResponse, cancellationToken);
+    }
+
+    private async Task PostAsync<TRequest>(string route, TRequest body, JsonTypeInfo<TRequest> requestType, CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(body, requestType);
+        using var request = new HttpRequestMessage(HttpMethod.Post, route) { Content = content };
+        using var response = await SendRawAsync(request, cancellationToken);
+    }
 
     public void Dispose() => _http.Dispose();
 

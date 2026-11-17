@@ -11,6 +11,7 @@ using Solvix.Agent.Core.Communication;
 using Solvix.Agent.Core.Health;
 using Solvix.Agent.Core.Inventory;
 using Solvix.Agent.Core.LocalApi;
+using Solvix.Agent.Core.Remote;
 using Solvix.Agent.Core.Runtime;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
@@ -95,6 +96,108 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task Technician_runs_a_command_on_the_laptop_through_a_consented_remote_session()
+    {
+        var tenant = await fixture.RegisterTenantAsync();
+        using var admin = fixture.CreateClient(tenant.Token);
+        using var agent = new InProcessAgent(fixture, RemoteAccessMode.Unattended);
+        agent.Services.GetRequiredService<BootstrapTokenStore>().Save(await fixture.CreateTokenAsync(tenant));
+        var runtime = agent.Services.GetRequiredService<AgentRuntime>();
+        await runtime.RunCycleAsync(CancellationToken.None);
+        var deviceId = agent.Services.GetRequiredService<IAgentStateStore>().Load().DeviceId!.Value;
+
+        var worker = agent.Services.GetRequiredService<RemoteAccessWorker>();
+        await worker.StartAsync(CancellationToken.None);
+        try
+        {
+            await runtime.RunCycleAsync(CancellationToken.None); // heartbeat reports the local policy
+            var session = await HttpAssert.OkAsync<Solvix.Modules.Support.Application.RemoteSessionDto>(
+                await admin.PostAsJsonAsync($"/api/v1/devices/{deviceId}/remote-sessions", new Solvix.Modules.Support.Application.StartRemoteSessionRequest("e2e"), ApiFixture.Json),
+                HttpStatusCode.Created);
+
+            // The agent picks the request up on its own, accepts (unattended policy) and starts a real shell.
+            var active = DateTimeOffset.UtcNow.AddSeconds(20);
+            while ((await HttpAssert.OkAsync<Solvix.Modules.Support.Application.RemoteSessionDto>(await admin.GetAsync($"/api/v1/remote-sessions/{session.Id}"))).Status
+                   != Solvix.Modules.Support.Domain.RemoteSessionStatus.Active)
+            {
+                Assert.True(DateTimeOffset.UtcNow < active, "The agent never accepted the session.");
+                await Task.Delay(300);
+            }
+
+            Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsJsonAsync($"/api/v1/remote-sessions/{session.Id}/input", new Solvix.Modules.Support.Application.RemoteInputRequest("echo solvix-remote-ok\n"), ApiFixture.Json)).StatusCode);
+            var seen = new System.Text.StringBuilder();
+            long after = 0;
+            var deadline = DateTimeOffset.UtcNow.AddSeconds(20);
+            while (!seen.ToString().Contains("solvix-remote-ok", StringComparison.Ordinal) && DateTimeOffset.UtcNow < deadline)
+            {
+                var output = await admin.GetAsync($"/api/v1/remote-sessions/{session.Id}/output?after={after}&wait=2");
+                var dto = await HttpAssert.OkAsync<Solvix.Modules.Support.Application.RemoteOutputDto>(output);
+                foreach (var chunk in dto.Chunks)
+                {
+                    seen.Append(chunk.Text);
+                    after = chunk.Sequence;
+                }
+            }
+
+            Assert.Contains("solvix-remote-ok", seen.ToString(), StringComparison.Ordinal);
+
+            // `exit` ends the shell and with it the session.
+            await admin.PostAsJsonAsync($"/api/v1/remote-sessions/{session.Id}/input", new Solvix.Modules.Support.Application.RemoteInputRequest("exit\n"), ApiFixture.Json);
+            Solvix.Modules.Support.Application.RemoteSessionDto final;
+            var until = DateTimeOffset.UtcNow.AddSeconds(20);
+            do
+            {
+                await Task.Delay(300);
+                final = await HttpAssert.OkAsync<Solvix.Modules.Support.Application.RemoteSessionDto>(await admin.GetAsync($"/api/v1/remote-sessions/{session.Id}"));
+            }
+            while (final.Status == Solvix.Modules.Support.Domain.RemoteSessionStatus.Active && DateTimeOffset.UtcNow < until);
+
+            Assert.Equal(Solvix.Modules.Support.Domain.RemoteSessionStatus.Ended, final.Status);
+            Assert.Equal(RemoteConsent.Unattended, final.Consent);
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
+    public async Task With_consent_required_and_nobody_to_ask_the_agent_declines()
+    {
+        var tenant = await fixture.RegisterTenantAsync();
+        using var admin = fixture.CreateClient(tenant.Token);
+        using var agent = new InProcessAgent(fixture, RemoteAccessMode.ConsentRequired);
+        agent.Services.GetRequiredService<BootstrapTokenStore>().Save(await fixture.CreateTokenAsync(tenant));
+        var runtime = agent.Services.GetRequiredService<AgentRuntime>();
+        await runtime.RunCycleAsync(CancellationToken.None);
+        var deviceId = agent.Services.GetRequiredService<IAgentStateStore>().Load().DeviceId!.Value;
+
+        var worker = agent.Services.GetRequiredService<RemoteAccessWorker>();
+        await worker.StartAsync(CancellationToken.None);
+        try
+        {
+            await runtime.RunCycleAsync(CancellationToken.None);
+            var session = await HttpAssert.OkAsync<Solvix.Modules.Support.Application.RemoteSessionDto>(
+                await admin.PostAsJsonAsync($"/api/v1/devices/{deviceId}/remote-sessions", new Solvix.Modules.Support.Application.StartRemoteSessionRequest(null), ApiFixture.Json),
+                HttpStatusCode.Created);
+            Solvix.Modules.Support.Application.RemoteSessionDto final;
+            var until = DateTimeOffset.UtcNow.AddSeconds(20);
+            do
+            {
+                await Task.Delay(300);
+                final = await HttpAssert.OkAsync<Solvix.Modules.Support.Application.RemoteSessionDto>(await admin.GetAsync($"/api/v1/remote-sessions/{session.Id}"));
+            }
+            while (final.Status == Solvix.Modules.Support.Domain.RemoteSessionStatus.Pending && DateTimeOffset.UtcNow < until);
+            Assert.Equal(Solvix.Modules.Support.Domain.RemoteSessionStatus.Denied, final.Status);
+            Assert.Null(final.Consent);
+        }
+        finally
+        {
+            await worker.StopAsync(CancellationToken.None);
+        }
+    }
+
+    [Fact]
     public async Task Person_at_the_laptop_raises_a_ticket_and_chats_with_a_technician_through_the_agent()
     {
         var tenant = await fixture.RegisterTenantAsync();
@@ -148,13 +251,14 @@ public sealed class AgentEndToEndTests(ApiFixture fixture)
     {
         private readonly string _directory = Path.Combine(Path.GetTempPath(), "solvix-e2e-agent-" + Guid.NewGuid().ToString("N"));
 
-        public InProcessAgent(ApiFixture fixture)
+        public InProcessAgent(ApiFixture fixture, RemoteAccessMode remoteMode = RemoteAccessMode.Disabled)
         {
             var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["SolvixAgent:ServerUrl"] = "https://localhost/",
                 ["SolvixAgent:DataDirectory"] = _directory,
                 ["SolvixAgent:Backoff:JitterRatio"] = "0",
+                ["SolvixAgent:RemoteAccess:Mode"] = remoteMode.ToString(),
                 ["SolvixAgent:LocalPipeName"] = "solvix-e2e-" + Guid.NewGuid().ToString("N"),
             }).Build();
             var services = new ServiceCollection();

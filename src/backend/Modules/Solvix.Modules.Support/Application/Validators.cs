@@ -58,3 +58,51 @@ public sealed class SendChatRequestValidator : AbstractValidator<SendChatRequest
         RuleFor(x => x.Body).NotEmpty().MaximumLength(ChatMessage.BodyMaxLength);
     }
 }
+
+public sealed class StartRemoteSessionRequestValidator : AbstractValidator<StartRemoteSessionRequest>
+{
+    public StartRemoteSessionRequestValidator()
+    {
+        RuleFor(x => x.Reason).MaximumLength(RemoteSession.ReasonMaxLength);
+    }
+}
+
+public sealed class RemoteInputRequestValidator : AbstractValidator<RemoteInputRequest>
+{
+    public RemoteInputRequestValidator()
+    {
+        RuleFor(x => x.Text).NotEmpty().MaximumLength(RemoteChunk.MaxTextLength);
+    }
+}
+
+public sealed class AcceptRemoteRequestValidator : AbstractValidator<AcceptRemoteRequest>
+{
+    public AcceptRemoteRequestValidator()
+    {
+        RuleFor(x => x.Consent).IsInEnum();
+    }
+}
+
+public sealed class DenyRemoteRequestValidator : AbstractValidator<DenyRemoteRequest>
+{
+    public DenyRemoteRequestValidator()
+    {
+        RuleFor(x => x.Reason).MaximumLength(RemoteSession.ReasonMaxLength);
+    }
+}
+
+public sealed class EndRemoteRequestValidator : AbstractValidator<EndRemoteRequest>
+{
+    public EndRemoteRequestValidator()
+    {
+        RuleFor(x => x.Reason).MaximumLength(RemoteSession.ReasonMaxLength);
+    }
+}
+
+public sealed class RemoteOutputRequestValidator : AbstractValidator<RemoteOutputRequest>
+{
+    public RemoteOutputRequestValidator()
+    {
+        RuleFor(x => x.Text).NotEmpty().MaximumLength(RemoteChunk.MaxTextLength);
+    }
+}

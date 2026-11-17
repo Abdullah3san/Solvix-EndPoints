@@ -43,6 +43,9 @@ public sealed record AgentHealthReport
 
     public string? OsBuild { get; init; }
 
+    /// <summary>The computer's local remote-session policy (informational for the console).</summary>
+    public RemoteAccessMode RemoteAccess { get; init; } = RemoteAccessMode.Disabled;
+
     public IReadOnlyList<HealthIssue> Issues { get; init; } = [];
 }
 

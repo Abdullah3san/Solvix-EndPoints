@@ -25,6 +25,12 @@ using System.Text.Json.Serialization;
 [JsonSerializable(typeof(SendChatMessageRequest))]
 [JsonSerializable(typeof(ChatMessage))]
 [JsonSerializable(typeof(ChatMessageList))]
+[JsonSerializable(typeof(PendingRemoteResponse))]
+[JsonSerializable(typeof(AcceptRemoteRequest))]
+[JsonSerializable(typeof(DenyRemoteRequest))]
+[JsonSerializable(typeof(EndRemoteRequest))]
+[JsonSerializable(typeof(RemoteOutputRequest))]
+[JsonSerializable(typeof(RemoteInputResponse))]
 [JsonSerializable(typeof(AgentProblem))]
 [JsonSerializable(typeof(AgentEnrollmentFile))]
 public sealed partial class AgentJsonContext : JsonSerializerContext

@@ -51,3 +51,29 @@ describe("chat panel", () => {
     expect(JSON.parse(post.body!)).toEqual({ body: "On it" });
   });
 });
+
+describe("remote helpers", () => {
+  it("describes the computer's policy and session states", async () => {
+    const { remoteModeLabel, remoteStatusTone, appendTerminal } = await import("@/lib/support");
+    expect(remoteModeLabel(undefined)).toMatch(/not enabled/i);
+    expect(remoteModeLabel("Disabled")).toMatch(/not enabled/i);
+    expect(remoteModeLabel("ConsentRequired")).toMatch(/approve/i);
+    expect(remoteStatusTone("Active")).toBe("success");
+    expect(remoteStatusTone("Denied")).toBe("danger");
+    expect(appendTerminal("abc", "def", 4)).toBe("cdef");
+  });
+});
+
+describe("remote session panel", () => {
+  it("explains that remote access is off and blocks starting a session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ items: [], page: 1, pageSize: 20, totalCount: 0, totalPages: 0 }), { status: 200, headers: { "content-type": "application/json" } })),
+    );
+    const { RemoteSessionPanel } = await import("@/components/features/support/remote-session-panel");
+    render(<RemoteSessionPanel deviceId="11111111-1111-1111-1111-111111111111" mode="Disabled" retired={false} />);
+    expect(await screen.findByText(/not enabled on this computer/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /start remote session/i })).toBeDisabled();
+    expect(await screen.findByText(/no remote sessions on this device/i)).toBeInTheDocument();
+  });
+});

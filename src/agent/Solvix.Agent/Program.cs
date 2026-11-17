@@ -6,6 +6,8 @@
 //                                            reads enrollment.json next to the exe, or --server/--token/--pin
 //   Solvix.Agent.exe uninstall [--remove-data]   remove the service (and optionally the device identity)
 //   Solvix.Agent.exe run                     run in the console
+//   Solvix.Agent.exe install --remote-access consent|unattended   also allow remote command sessions (off by default;
+//                                            "consent" asks the person at the computer each time)
 //   Solvix.Agent.exe enroll [--server <url> --token <token> [--pin <sha256>]]
 //                                            store server URL + protected one-time token
 //                                            (no arguments: read enrollment.json next to the exe)
@@ -105,6 +107,7 @@ if (command == "run")
 {
     builder.Services.AddHostedService<AgentWorker>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<Solvix.Agent.Core.LocalApi.LocalApiServer>());
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<Solvix.Agent.Core.Remote.RemoteAccessWorker>());
 }
 
 try
@@ -165,6 +168,17 @@ namespace Solvix.Agent
             else
             {
                 settings = EnrollmentRequestSettings.Validate(server, token, Option(args, "--pin"), out error);
+            }
+
+            if (settings is not null)
+            {
+                if (!RemoteAccessChoice.TryParse(Option(args, "--remote-access"), out var remoteMode))
+                {
+                    Console.Error.WriteLine($"Unknown remote access choice. Use {RemoteAccessChoice.Usage} (or leave it out to keep remote access off).");
+                    return 2;
+                }
+
+                settings = settings with { RemoteAccess = remoteMode };
             }
 
             if (settings is null)

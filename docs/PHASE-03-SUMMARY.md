@@ -2,7 +2,7 @@
 
 Authorized Windows computers enroll into Solvix EndPoints and report their inventory and health.
 Design details: `docs/ARCHITECTURE.md` (section *Device management*), agent operations:
-`src/agent/README.md`. Remote command execution is intentionally **not** implemented.
+`src/agent/README.md`. Remote command execution was intentionally left out of this phase; it was added later, opt-in per computer, in `docs/PHASE-04-SUPPORT.md`.
 
 ## Scope delivered
 

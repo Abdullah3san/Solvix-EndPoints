@@ -164,6 +164,68 @@ public sealed class FakeAgentApi : IAgentApiClient, IDisposable
         return Task.FromResult(new ChatMessage { Sequence = ChatSent.Count, Sender = ChatSender.User, Body = request.Body, SenderName = request.SenderName, SentAtUtc = DateTimeOffset.UtcNow });
     }
 
+    public Queue<AgentRemoteRequest> RemoteRequests { get; } = [];
+
+    public List<(Guid Id, RemoteConsent Consent)> RemoteAccepted { get; } = [];
+
+    public List<(Guid Id, string? Reason)> RemoteDenied { get; } = [];
+
+    public List<Guid> RemoteEnded { get; } = [];
+
+    public List<string> RemoteOutput { get; } = [];
+
+    /// <summary>Input batches handed out (in order) by the input long poll; an empty queue answers "ended".</summary>
+    public Queue<RemoteInputResponse> RemoteInput { get; } = [];
+
+    public bool RemoteInputEndsWhenEmpty { get; set; } = true;
+
+    public async Task<PendingRemoteResponse> PollRemotePendingAsync(int waitSeconds, CancellationToken cancellationToken)
+    {
+        Calls.Add("remote-pending");
+        ThrowIfFailing();
+        if (RemoteRequests.TryDequeue(out var request))
+        {
+            return new PendingRemoteResponse { Request = request };
+        }
+
+        await Task.Delay(20, cancellationToken);
+        return new PendingRemoteResponse();
+    }
+
+    public Task AcceptRemoteAsync(Guid sessionId, AcceptRemoteRequest request, CancellationToken cancellationToken)
+    {
+        RemoteAccepted.Add((sessionId, request.Consent));
+        return Task.CompletedTask;
+    }
+
+    public Task DenyRemoteAsync(Guid sessionId, DenyRemoteRequest request, CancellationToken cancellationToken)
+    {
+        RemoteDenied.Add((sessionId, request.Reason));
+        return Task.CompletedTask;
+    }
+
+    public Task EndRemoteAsync(Guid sessionId, EndRemoteRequest request, CancellationToken cancellationToken)
+    {
+        RemoteEnded.Add(sessionId);
+        return Task.CompletedTask;
+    }
+
+    public Task PostRemoteOutputAsync(Guid sessionId, RemoteOutputRequest request, CancellationToken cancellationToken)
+    {
+        lock (RemoteOutput)
+        {
+            RemoteOutput.Add(request.Text);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public async Task<RemoteInputResponse> PollRemoteInputAsync(Guid sessionId, long after, int waitSeconds, CancellationToken cancellationToken)
+    {
+        await Task.Delay(20, cancellationToken);
+        return RemoteInput.TryDequeue(out var next) ? next : new RemoteInputResponse { Ended = RemoteInputEndsWhenEmpty };
+    }
+
     public void Dispose()
     {
         _ca.Dispose();

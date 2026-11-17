@@ -9,7 +9,7 @@ using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.State;
 
 /// <summary>A validated enrollment request: where to enroll, with which one-time token.</summary>
-public sealed record EnrollmentRequestSettings(Uri ServerUrl, string Token, string? ServerCertificateSha256)
+public sealed record EnrollmentRequestSettings(Uri ServerUrl, string Token, string? ServerCertificateSha256, RemoteAccessMode? RemoteAccess = null)
 {
     /// <summary>Reads and validates <c>enrollment.json</c>; returns an error message instead of throwing.</summary>
     public static EnrollmentRequestSettings? TryLoad(string path, DateTimeOffset now, out string? error)
@@ -80,15 +80,50 @@ public sealed class EnrollmentSetup(IOptions<AgentOptions> options, BootstrapTok
     public void Apply(EnrollmentRequestSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        var json = new JsonObject
+        var section = new JsonObject
         {
-            [AgentOptions.SectionName] = new JsonObject
-            {
-                [nameof(AgentOptions.ServerUrl)] = settings.ServerUrl.AbsoluteUri,
-                [nameof(AgentOptions.TrustedServerCertificateSha256)] = settings.ServerCertificateSha256 is null ? new JsonArray() : new JsonArray(settings.ServerCertificateSha256),
-            },
+            [nameof(AgentOptions.ServerUrl)] = settings.ServerUrl.AbsoluteUri,
+            [nameof(AgentOptions.TrustedServerCertificateSha256)] = settings.ServerCertificateSha256 is null ? new JsonArray() : new JsonArray(settings.ServerCertificateSha256),
         };
+        if (settings.RemoteAccess is { } mode && mode != RemoteAccessMode.Disabled)
+        {
+            // A local decision taken by whoever installs the agent; it never comes from the server.
+            section[nameof(AgentOptions.RemoteAccess)] = new JsonObject { [nameof(RemoteAccessOptions.Mode)] = mode.ToString() };
+        }
+
+        var json = new JsonObject { [AgentOptions.SectionName] = section };
         AtomicFile.WriteAllText(MachineSettingsPath, json.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         bootstrap.Save(settings.Token);
+    }
+}
+
+
+/// <summary>Parses the installer's <c>--remote-access</c> choice.</summary>
+public static class RemoteAccessChoice
+{
+    public const string Usage = "--remote-access consent|unattended";
+
+    /// <summary>No value means disabled. Returns false for an unrecognised value.</summary>
+    public static bool TryParse(string? value, out RemoteAccessMode mode)
+    {
+        mode = RemoteAccessMode.Disabled;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "consent":
+                mode = RemoteAccessMode.ConsentRequired;
+                return true;
+            case "unattended":
+                mode = RemoteAccessMode.Unattended;
+                return true;
+            case "off" or "disabled" or "none":
+                return true;
+            default:
+                return false;
+        }
     }
 }

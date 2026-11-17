@@ -1,5 +1,7 @@
 namespace Solvix.Agent.Core.Configuration;
 
+using Solvix.Agent.Contracts;
+
 /// <summary>
 /// Local agent settings (<c>SolvixAgent</c> section). Security-relevant values
 /// — server URL, certificate pins, update publisher and download hosts — come
@@ -28,6 +30,8 @@ public sealed class AgentOptions
     public string LocalPipeName { get; set; } = "solvix-agent-local";
 
     public int RequestTimeoutSeconds { get; set; } = 60;
+
+    public RemoteAccessOptions RemoteAccess { get; set; } = new();
 
     public BackoffOptions Backoff { get; set; } = new();
 
@@ -71,4 +75,23 @@ public sealed class UpdateOptions
     public List<string> TrustedPublisherThumbprints { get; set; } = [];
 
     public long MaxPackageBytes { get; set; } = 200L * 1024 * 1024;
+}
+
+
+/// <summary>
+/// Remote command sessions. Off unless the person installing the agent turns it on in the local
+/// configuration (<c>agent.json</c>); the server cannot enable it.
+/// </summary>
+public sealed class RemoteAccessOptions
+{
+    public RemoteAccessMode Mode { get; set; } = RemoteAccessMode.Disabled;
+
+    /// <summary>Program that provides the command shell. Defaults to PowerShell on Windows and <c>/bin/sh</c> elsewhere.</summary>
+    public string? Shell { get; set; }
+
+    /// <summary>Arguments for <see cref="Shell"/> (default: read commands from standard input).</summary>
+    public List<string>? ShellArguments { get; set; }
+
+    /// <summary>How long the person at the computer has to answer a consent prompt.</summary>
+    public int ConsentTimeoutSeconds { get; set; } = 90;
 }

@@ -5,9 +5,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Solvix.Agent.Core.Installation;
 using Solvix.Agent.Core.Inventory;
+using Solvix.Agent.Core.Remote;
 using Solvix.Agent.Core.Security;
 using Solvix.Agent.Core.Updates;
 using Solvix.Agent.Windows.Inventory;
+using Solvix.Agent.Windows.Remote;
 using Solvix.Agent.Windows.Security;
 using Solvix.Agent.Windows.Updates;
 
@@ -22,6 +24,7 @@ public static class WindowsAgentServiceCollectionExtensions
         services.Replace(ServiceDescriptor.Singleton<IPackageSignatureVerifier, AuthenticodeVerifier>());
         services.Replace(ServiceDescriptor.Singleton<IPackageInstaller>(_ => new MsiPackageInstaller(Path.Combine(dataDirectory, "logs"))));
         services.Replace(ServiceDescriptor.Singleton<IElevation, WindowsElevation>());
+        services.Replace(ServiceDescriptor.Singleton<IConsentPrompter, WtsConsentPrompter>());
         services.AddSingleton<IInventoryCollector, SystemCollector>();
         services.AddSingleton<IInventoryCollector, BiosCollector>();
         services.AddSingleton<IInventoryCollector, OperatingSystemCollector>();

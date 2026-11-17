@@ -20,8 +20,9 @@ import { Table, THead, TBody, TR, TH, TD, EmptyRow } from "@/components/ui/table
 import { useToast } from "@/components/providers/toast-provider";
 import { useCan } from "@/components/providers/session-provider";
 import { ChatPanel } from "@/components/features/support/chat-panel";
+import { RemoteSessionPanel } from "@/components/features/support/remote-session-panel";
 
-const tabs = ["Overview", "Hardware", "Network", "Storage", "Software", "Security", "Chat"] as const;
+const tabs = ["Overview", "Hardware", "Network", "Storage", "Software", "Security", "Chat", "Remote"] as const;
 type Tab = (typeof tabs)[number];
 
 interface Props {
@@ -108,7 +109,7 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
       ) : null}
 
       <div role="tablist" aria-label="Device sections" className="mb-4 flex gap-1 overflow-x-auto border-b border-border">
-        {tabs.filter((t) => t !== "Chat" || isAdmin).map((t) => (
+        {tabs.filter((t) => (t !== "Chat" && t !== "Remote") || isAdmin).map((t) => (
           <button
             key={t}
             role="tab"
@@ -121,7 +122,7 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
         ))}
       </div>
 
-      {!report && tab !== "Overview" && tab !== "Security" && tab !== "Chat" ? (
+      {!report && tab !== "Overview" && tab !== "Security" && tab !== "Chat" && tab !== "Remote" ? (
         <Alert>No inventory has been reported yet. The agent uploads it shortly after enrollment.</Alert>
       ) : null}
 
@@ -281,6 +282,8 @@ export function DeviceDetailsView({ initial, inventory, groups, members, branche
       {tab === "Software" && report ? <SoftwareTable software={report.software} /> : null}
 
       {tab === "Chat" && isAdmin ? <ChatPanel deviceId={s.id} disabled={s.status === "Retired"} /> : null}
+
+      {tab === "Remote" && isAdmin ? <RemoteSessionPanel deviceId={s.id} mode={device.health?.remoteAccess} retired={s.status === "Retired"} /> : null}
 
       {tab === "Security" ? (
         <SimpleTable
