@@ -148,14 +148,18 @@ function CreatedDialog({ created, onClose }: { created: CreatedEnrollmentTokenDt
   const { toast } = useToast();
   const [downloading, setDownloading] = React.useState(false);
   const [downloaded, setDownloaded] = React.useState<string | null>(null);
+  const [downloadError, setDownloadError] = React.useState<string | null>(null);
   const token = created.enrollmentToken;
   const placement = [token.branchName, token.departmentName].filter(Boolean).join(" / ");
 
   async function download() {
     setDownloading(true);
+    setDownloadError(null);
     try {
       setDownloaded(await downloadFile("enrollment-tokens/package", { token: created.token }, "SolvixAgent.zip"));
     } catch (e) {
+      // Kept in the dialog (not only a toast): the token cannot be shown again once the dialog closes.
+      setDownloadError(messageFrom(e));
       toast({ tone: "error", title: "Could not build the agent package", description: messageFrom(e) });
     } finally {
       setDownloading(false);
@@ -168,6 +172,11 @@ function CreatedDialog({ created, onClose }: { created: CreatedEnrollmentTokenDt
         <Button onClick={download} loading={downloading} size="lg" className="w-full">
           <Download className="h-4 w-4" /> Download agent package (.zip)
         </Button>
+        {downloadError ? (
+          <Alert tone="error" title="The agent package could not be downloaded">
+            {downloadError} You can still enroll with the token under “Deployment tools” below, or try again.
+          </Alert>
+        ) : null}
         {downloaded ? (
           <Alert tone="success" title={`Downloaded ${downloaded}`}>
             Extract the whole zip on the Windows computer, run <span className="font-mono">Solvix.Agent.exe</span> and approve the administrator prompt. The

@@ -37,7 +37,6 @@ RUN dotnet restore src/backend/Solvix.Api/Solvix.Api.csproj && dotnet restore sr
 
 COPY src/shared/ src/shared/
 COPY src/backend/ src/backend/
-COPY src/shared/ src/shared/
 COPY src/agent/ src/agent/
 RUN dotnet publish src/backend/Solvix.Api/Solvix.Api.csproj -c Release --no-restore -o /out/api \
  && dotnet publish src/backend/Solvix.Migrator/Solvix.Migrator.csproj -c Release --no-restore -o /out/migrator \

@@ -255,10 +255,21 @@ with the domain URL.
 ```bash
 cd /opt/solvix
 ./scripts/backup-db.sh                       # always back up before upgrading
-git pull
-dc up -d --build                             # migrator runs before the new API starts
+./scripts/deploy.sh                          # pull, rebuild, wait for health, report
 dc image prune -f
 ```
+
+`scripts/deploy.sh` fast-forwards the checked-out branch (it refuses, without changing
+anything, if the server has local edits), rebuilds and restarts the stack (the migrator
+runs before the new API starts), waits up to five minutes for every service to be healthy,
+checks that the sign-in page answers and prints the deployed commit and container status.
+It picks test mode automatically when `.env.production` has `SOLVIX_PUBLIC_HOST`. A
+non-zero exit code means the update did not come up healthy; the API and web logs are
+printed.
+
+Deploying from GitHub instead: `.github/workflows/deploy-vps.yml` runs the same script over
+SSH on every push to the deployment branch (or on demand) once the repository secrets
+`VPS_HOST` and `VPS_SSH_KEY` are set; without them it does nothing.
 
 Migrations only move forward automatically. To roll back a release that changed the
 schema, restore the backup taken before the upgrade (see below) and check out the

@@ -74,22 +74,11 @@ jobs:
           compose() { docker compose -f docker-compose.prod.yml -f docker-compose.test-ip.yml --env-file .env.production "$@"; }
 
           if [ "$ACTION" = "deploy" ]; then
-            echo "::group::Update code"
             git fetch origin "$BRANCH"
             if [ "$(git rev-parse --abbrev-ref HEAD)" != "$BRANCH" ]; then
               git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
             fi
-            git merge --ff-only "origin/$BRANCH"
-            echo "::endgroup::"
-            echo "::group::Build and start"
-            compose up -d --build --remove-orphans
-            echo "::endgroup::"
-            echo "Waiting for the API and web containers to become healthy..."
-            for i in $(seq 1 60); do
-              unhealthy=$(compose ps --format '{{.Service}} {{.Health}}' | awk '$2 != "" && $2 != "healthy"' || true)
-              [ -z "$unhealthy" ] && break
-              sleep 5
-            done
+            ./scripts/deploy.sh
           fi
 
           echo "::group::Deployed commit"

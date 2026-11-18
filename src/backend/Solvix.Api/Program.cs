@@ -372,6 +372,26 @@ try
         app.UseForwardedHeaders();
     }
 
+    // Outside the exception handler, so handled errors are logged with the status the client received
+    // (400/404/409...) instead of as unhandled 500s.
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.EnrichDiagnosticContext = (diagnostic, httpContext) =>
+        {
+            diagnostic.Set("RequestHost", httpContext.Request.Host.Value);
+            diagnostic.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
+            if (httpContext.Items[CorrelationIdMiddleware.HeaderName] is string correlationId)
+            {
+                diagnostic.Set("CorrelationId", correlationId);
+            }
+
+            var tenant = httpContext.RequestServices.GetService<ITenantContext>();
+            if (tenant?.TenantId is { } tenantId)
+            {
+                diagnostic.Set("TenantId", tenantId);
+            }
+        };
+    });
     app.UseExceptionHandler();
     app.UseStatusCodePages();
     app.UseMiddleware<SecurityHeadersMiddleware>();
@@ -385,19 +405,6 @@ try
         context.Response.Headers.XFrameOptions = "DENY";
         context.Response.Headers["Referrer-Policy"] = "no-referrer";
         await next(context);
-    });
-    app.UseSerilogRequestLogging(options =>
-    {
-        options.EnrichDiagnosticContext = (diagnostic, httpContext) =>
-        {
-            diagnostic.Set("RequestHost", httpContext.Request.Host.Value);
-            diagnostic.Set("UserAgent", httpContext.Request.Headers.UserAgent.ToString());
-            var tenant = httpContext.RequestServices.GetService<ITenantContext>();
-            if (tenant?.TenantId is { } tenantId)
-            {
-                diagnostic.Set("TenantId", tenantId);
-            }
-        };
     });
     app.UseCors(CorsOptions.PolicyName);
     if (!string.IsNullOrWhiteSpace(forwardedCertificateHeader))
