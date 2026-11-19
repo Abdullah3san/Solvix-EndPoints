@@ -208,6 +208,8 @@ export interface DeviceSummaryDto {
   assignedUserName: string | null;
   branchId: string | null;
   branchName: string | null;
+  /** Active Directory / DNS domain reported by the agent; null for workgroup computers. */
+  domainName: string | null;
   lastSeenAtUtc: string | null;
   lastInventoryAtUtc: string | null;
   enrolledAtUtc: string;
@@ -334,6 +336,70 @@ export interface DeviceStatsDto {
   requiringAttention: number;
   latestAgentVersion: string | null;
   agentVersions: { version: string; deviceCount: number; isLatest: boolean; updateAvailable: boolean }[];
+}
+
+export interface NamedCountDto {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface BranchFleetDto {
+  branchId: string | null;
+  name: string;
+  total: number;
+  online: number;
+  offline: number;
+}
+
+/** Breakdowns of the active fleet (retired devices excluded). */
+export interface DeviceOverviewDto {
+  platforms: NamedCountDto[];
+  operatingSystems: NamedCountDto[];
+  health: NamedCountDto[];
+  branches: BranchFleetDto[];
+}
+
+export type AlertSeverity = "Info" | "Warning" | "Critical";
+
+export interface DeviceAlertDto {
+  code: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  count: number;
+  /** A sample of the affected devices (at most 5). */
+  devices: { id: string; name: string }[];
+}
+
+export type StagedComputerStatus = "Pending" | "Enrolled" | "Retired";
+export type StagedComputerSource = "Manual" | "Import" | "Directory";
+
+export interface StagedComputerDto {
+  id: string;
+  hostname: string;
+  branchId: string | null;
+  branchName: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+  source: StagedComputerSource;
+  status: StagedComputerStatus;
+  deviceId: string | null;
+  enrolledAtUtc: string | null;
+  createdAtUtc: string;
+}
+
+export interface StagedComputerSummaryDto {
+  total: number;
+  pending: number;
+  enrolled: number;
+  retired: number;
+}
+
+export interface ImportStagedComputersResult {
+  created: number;
+  alreadyStaged: number;
+  rejected: { value: string; reason: string }[];
 }
 
 export type DeviceSortField = "Name" | "OperatingSystem" | "LastSeen" | "EnrolledAt";

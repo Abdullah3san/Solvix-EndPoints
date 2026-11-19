@@ -1,4 +1,4 @@
-import type { DeviceSortField, DeviceStatus, DeviceConnectivity, SortDirection } from "@/lib/api/types";
+import type { AgentHealthStatus, DeviceSortField, DeviceStatus, DeviceConnectivity, SortDirection } from "@/lib/api/types";
 
 /** "State" facet in the device table: connectivity for active devices, plus retired. */
 export type DeviceStateFilter = "" | "Online" | "Offline" | "Retired";
@@ -10,9 +10,25 @@ export interface DeviceFilters {
   groupId: string;
   agentVersion: string;
   attention: boolean;
+  /** Agent health, e.g. from an alert's "View all" link. */
+  health: AgentHealthStatus | "";
+  /** Active devices that have not checked in for at least this many hours (0 = off). */
+  notSeenHours: number;
+  /** Only devices running an agent older than the latest release. */
+  updateAvailable: boolean;
 }
 
-export const emptyDeviceFilters: DeviceFilters = { search: "", state: "", branchId: "", groupId: "", agentVersion: "", attention: false };
+export const emptyDeviceFilters: DeviceFilters = {
+  search: "",
+  state: "",
+  branchId: "",
+  groupId: "",
+  agentVersion: "",
+  attention: false,
+  health: "",
+  notSeenHours: 0,
+  updateAvailable: false,
+};
 
 export interface DeviceListState {
   filters: DeviceFilters;
@@ -29,7 +45,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? "";
 
 export function activeFilterCount(filters: DeviceFilters): number {
-  return [filters.search.trim(), filters.state, filters.branchId, filters.groupId, filters.agentVersion, filters.attention].filter(Boolean).length;
+  return [filters.search.trim(), filters.state, filters.branchId, filters.groupId, filters.agentVersion, filters.attention, filters.health, filters.notSeenHours, filters.updateAvailable].filter(Boolean).length;
 }
 
 /** Query-string parameters for `GET /devices`. Empty values are dropped by the API client. */
@@ -47,6 +63,9 @@ export function toApiQuery(state: DeviceListState): Record<string, string | numb
     groupId: filters.groupId || undefined,
     agentVersion: filters.agentVersion || undefined,
     attention: filters.attention ? true : undefined,
+    health: filters.health || undefined,
+    notSeenHours: filters.notSeenHours > 0 ? filters.notSeenHours : undefined,
+    updateAvailable: filters.updateAvailable ? true : undefined,
     sortBy: state.sortBy,
     sortDirection: state.sortDirection,
     page: state.page,
@@ -79,5 +98,8 @@ export function filtersFromSearchParams(params: Record<string, string | string[]
     groupId: id(first(params.groupId)),
     agentVersion: /^[\w.+-]{1,40}$/.test(first(params.agentVersion)) ? first(params.agentVersion) : "",
     attention: first(params.attention) === "true",
+    health: ["Healthy", "Degraded", "Unhealthy"].includes(first(params.health)) ? (first(params.health) as AgentHealthStatus) : "",
+    notSeenHours: /^\d{1,5}$/.test(first(params.notSeenHours)) ? Math.min(Number(first(params.notSeenHours)), 24 * 365) : 0,
+    updateAvailable: first(params.updateAvailable) === "true",
   };
 }

@@ -15,6 +15,8 @@ using Solvix.Modules.Devices.Application.Agent;
 using Solvix.Modules.Devices.Application.Devices;
 using Solvix.Modules.Devices.Application.Enrollment;
 using Solvix.Modules.Devices.Application.Groups;
+using Solvix.Modules.Devices.Application.Insights;
+using Solvix.Modules.Devices.Application.Staged;
 using Solvix.Modules.Devices.Configuration;
 using Solvix.Modules.Devices.Security;
 using Solvix.SharedKernel.Modules;
@@ -45,6 +47,8 @@ public sealed class DevicesModule : IModule
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<Solvix.SharedKernel.Directory.IDeviceCensus, DeviceCensus>();
         services.AddScoped<IDeviceGroupService, DeviceGroupService>();
+        services.AddScoped<IStagedComputerService, StagedComputerService>();
+        services.AddScoped<IDeviceInsightsService, DeviceInsightsService>();
         services.AddValidatorsFromAssembly(Assembly, includeInternalTypes: true);
 
         // Anonymous enrollment is the only unauthenticated device endpoint: throttle it per client address.

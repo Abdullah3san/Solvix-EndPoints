@@ -1,20 +1,9 @@
 import "server-only";
-import { unstable_rethrow } from "next/navigation";
 import { serverApi } from "@/lib/api/server";
+import { settle } from "@/lib/api/settle";
 import type { DeviceStatsDto } from "@/lib/api/types";
 import { isDemoDataEnabled } from "@/lib/env";
-import { messageFrom } from "@/lib/forms";
-import { buildOverview, type DashboardOverview, type Settled } from "./model";
-
-async function settle<T>(promise: Promise<T>): Promise<Settled<T>> {
-  try {
-    return { ok: true, value: await promise };
-  } catch (error) {
-    // Redirects (expired session) must keep propagating.
-    unstable_rethrow(error);
-    return { ok: false, message: messageFrom(error, "The request failed.") };
-  }
-}
+import { buildOverview, type DashboardOverview } from "./model";
 
 /** Loads the executive overview. A failing source degrades its own widgets instead of the whole page. */
 export async function loadDashboardOverview(): Promise<DashboardOverview> {

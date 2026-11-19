@@ -535,6 +535,61 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                     b.ToTable("enrollment_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("Solvix.Modules.Devices.Domain.StagedComputer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at_utc");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("department_id");
+
+                    b.Property<string>("Hostname")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("hostname");
+
+                    b.Property<string>("NormalizedHostname")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("normalized_hostname");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("source");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAtUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at_utc");
+
+                    b.HasKey("Id")
+                        .HasName("pk_staged_computers");
+
+                    b.HasIndex("TenantId", "NormalizedHostname")
+                        .IsUnique()
+                        .HasDatabaseName("ix_staged_computers_tenant_id_normalized_hostname");
+
+                    b.ToTable("staged_computers", (string)null);
+                });
+
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.TenantMembership", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1000,6 +1055,16 @@ namespace Solvix.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_enrollment_tokens_device_groups_tenant_id_device_group_id");
+                });
+
+            modelBuilder.Entity("Solvix.Modules.Devices.Domain.StagedComputer", b =>
+                {
+                    b.HasOne("Solvix.Modules.Tenancy.Domain.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_staged_computers_tenants_tenant_id");
                 });
 
             modelBuilder.Entity("Solvix.Modules.Identity.Domain.TenantMembership", b =>

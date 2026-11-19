@@ -104,6 +104,24 @@ internal sealed class DeviceService(
             devices = devices.Where(NeedsAttention);
         }
 
+        if (query.Health is { } health)
+        {
+            devices = devices.Where(d => d.Status == DeviceStatus.Active && d.HealthStatus == health);
+        }
+
+        if (query.NotSeenHours is > 0 and var hours)
+        {
+            var cutoff = now.AddHours(-Math.Min(hours, 24 * 365));
+            devices = devices.Where(d => d.Status == DeviceStatus.Active && (d.LastSeenAtUtc == null || d.LastSeenAtUtc < cutoff));
+        }
+
+        if (query.UpdateAvailable == true)
+        {
+            var installed = await db.Set<Device>().AsNoTracking().Where(d => d.Status == DeviceStatus.Active).Select(d => d.AgentVersion).Distinct().ToListAsync(cancellationToken);
+            var outdated = installed.Where(releases.IsUpdateAvailable).ToList();
+            devices = devices.Where(d => d.Status == DeviceStatus.Active && outdated.Contains(d.AgentVersion));
+        }
+
         var total = await devices.LongCountAsync(cancellationToken);
         var items = await Sort(devices, query.SortBy, query.SortDirection)
             .Skip(page.Skip).Take(page.SafePageSize)
@@ -344,6 +362,7 @@ internal sealed class DeviceService(
             d.EnrolledAtUtc)
         {
             BranchId = d.BranchId,
+            DomainName = d.DomainName,
         };
 
     private async Task<DeviceDetailsDto> ToDetailsAsync(Device d, CancellationToken cancellationToken)

@@ -254,3 +254,38 @@ optional serial number, hardware and enrolled columns.
 4. Add the component to `/design-system` and to this document, and cover behaviour with a Vitest
    test in `src/__tests__`.
 5. `npm run check` (typecheck, lint, tests) must pass.
+
+## Agent section
+
+`Endpoints → Agent overview`, `Devices` and `Staged computers` cover installation and health of the agents.
+Everything on them is calculated from stored data; nothing is invented.
+
+| Screen | What it shows | API |
+|--------|---------------|-----|
+| Agent overview (`/endpoints/agents`) | Managed, online, offline and yet-to-install counts; **alerts**; OS platform, operating system, agent version and agent health charts (each with a table view); computers per branch | `GET /devices/stats`, `/devices/overview`, `/devices/alerts`, `/staged-computers/summary` |
+| Devices (`/endpoints/devices`) | The device table, now with a **Domain** column ("Workgroup" when none) and filters that alerts link to: `?health=`, `?notSeenHours=`, `?updateAvailable=true` (shown as removable chips) | `GET /devices` |
+| Staged computers (`/endpoints/staged`) | Computers you expect to manage. Add one, **import** a pasted list or CSV/TXT (first column, up to 1000), assign a branch/department, remove entries | `/staged-computers` |
+| Download agent (dialog, on all three) | Platform (Windows; macOS and Linux shown as not available yet), branch, department, group, validity and number of computers. Creates a short-lived enrollment token and downloads the package; if the package cannot be built the token is revoked | `POST /enrollment-tokens`, `/enrollment-tokens/package` |
+
+### Alerts
+
+Alerts are derived on every request (nothing is stored), most severe first, each with a count and a sample of up to 5 devices:
+
+| Code | Severity | Condition |
+|------|----------|-----------|
+| `certificate_expired` | Critical | The newest unrevoked device certificate has expired |
+| `agent_unhealthy` | Critical | Agent reports an unhealthy state |
+| `not_reporting` | Warning | Active device has not checked in for 24 hours |
+| `agent_degraded` | Warning | Agent reports a degraded state |
+| `certificate_expiring` | Warning | The newest certificate expires within 7 days (a device that already received its renewed certificate is not flagged) |
+| `agent_outdated` | Info | Agent is older than the latest configured release |
+| `staged_pending` | Info | Staged computers whose hostname has no enrolled device |
+
+Retired devices never raise alerts.
+
+### Staged computers and enrollment
+
+A staged entry is "pending" until a device with the same host name (case-insensitive) exists in the workspace; the
+status (`Pending` / `Enrolled` / `Retired`) is derived when the list is read, so enrolling needs no extra bookkeeping.
+Removing an entry never touches a device. The `Directory` source is reserved for Active Directory / Entra discovery,
+which will write to the same table.

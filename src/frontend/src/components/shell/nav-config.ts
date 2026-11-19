@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Boxes, Building2, Landmark, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Palette, Settings2 } from "lucide-react";
+import { Activity, Boxes, Building2, ClipboardList, Landmark, GitBranch, KeyRound, LayoutDashboard, Monitor, Network, Palette, Settings2 } from "lucide-react";
 
 export interface NavItem {
   label: string;
@@ -28,7 +28,9 @@ export const navigation: NavSection[] = [
   {
     title: "Endpoints",
     items: [
+      { label: "Agent overview", href: "/endpoints/agents", icon: Activity, keywords: "agents health versions platform alerts installation status" },
       { label: "Devices", href: "/endpoints/devices", icon: Monitor, keywords: "computers inventory fleet" },
+      { label: "Staged computers", href: "/endpoints/staged", icon: ClipboardList, keywords: "expected yet to install import pending agent not installed" },
       { label: "Device groups", href: "/endpoints/groups", icon: Boxes },
       { label: "Enrollment", href: "/endpoints/enrollment", icon: KeyRound, adminOnly: true, keywords: "token agent install" },
     ],
@@ -76,6 +78,8 @@ export const segmentLabels: Record<string, string> = {
   workspace: "Workspace",
   endpoints: "Endpoints",
   devices: "Devices",
+  agents: "Agent overview",
+  staged: "Staged computers",
   groups: "Device groups",
   enrollment: "Enrollment",
   platform: "Platform",

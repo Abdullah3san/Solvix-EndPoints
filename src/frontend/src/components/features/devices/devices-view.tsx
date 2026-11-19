@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Eye, KeyRound, MonitorOff, MoreHorizontal, RefreshCw, SearchX, ShieldOff, Trash2, TriangleAlert } from "lucide-react";
+import { Eye, KeyRound, MonitorOff, MoreHorizontal, RefreshCw, SearchX, ShieldOff, Trash2, TriangleAlert, X } from "lucide-react";
 import { api } from "@/lib/api/client";
 import type { BranchDto, DeviceGroupDto, DeviceSortField, DeviceStatsDto, DeviceSummaryDto, PagedResult } from "@/lib/api/types";
 import { activeFilterCount, emptyDeviceFilters, PAGE_SIZES, toApiQuery, type DeviceFilters, type DeviceListState, type DeviceStateFilter } from "@/lib/device-query";
@@ -245,13 +245,20 @@ export function DevicesView({
         header: ({ column }) => <DataTableColumnHeader column={column} title="Operating system" />,
         cell: ({ row: { original: d } }) =>
           d.osName ? (
-            <span className="whitespace-nowrap">
-              {d.osName}
-              {d.osDisplayVersion ? <span className="ml-1.5 text-xs text-muted-foreground">{d.osDisplayVersion}</span> : null}
-            </span>
+            <div className="min-w-32">
+              <p className="whitespace-nowrap">{d.osName}</p>
+              {d.osDisplayVersion ? <p className="text-xs text-muted-foreground">{d.osDisplayVersion}</p> : null}
+            </div>
           ) : (
             dash
           ),
+      },
+      {
+        id: "domain",
+        enableSorting: false,
+        meta: { label: "Domain" },
+        header: "Domain",
+        cell: ({ row: { original: d } }) => (d.domainName ? <span className="whitespace-nowrap font-mono text-xs">{d.domainName}</span> : <span className="text-muted-foreground">Workgroup</span>),
       },
       {
         id: "ip",
@@ -463,6 +470,9 @@ export function DevicesView({
               <TriangleAlert /> Needs attention
               {counts.requiringAttention > 0 ? <span className="tabular-nums text-muted-foreground">{counts.requiringAttention}</span> : null}
             </Button>
+            {filters.health ? <FilterChip label={`Agent ${filters.health.toLowerCase()}`} onClear={() => updateQuery({ filters: { health: "" } })} /> : null}
+            {filters.notSeenHours > 0 ? <FilterChip label={`Not seen for ${filters.notSeenHours}h+`} onClear={() => updateQuery({ filters: { notSeenHours: 0 } })} /> : null}
+            {filters.updateAvailable ? <FilterChip label="Agent update available" onClear={() => updateQuery({ filters: { updateAvailable: false } })} /> : null}
             {filtered ? <ResetFiltersButton onClick={resetFilters} /> : null}
             <div className="ml-auto">
               <DataTableViewOptions table={table} onReset={() => changeVisibility(DEFAULT_VISIBILITY)} />
@@ -541,5 +551,14 @@ export function DevicesView({
         ) : null}
       </ConfirmDialog>
     </>
+  );
+}
+
+/** An active filter that has no dedicated control (it comes from a link, e.g. an agent alert); click to remove it. */
+function FilterChip({ label, onClear }: { label: string; onClear: () => void }) {
+  return (
+    <Button variant="outline" size="sm" onClick={onClear} className="border-primary/40 bg-accent/60" aria-label={`Remove filter: ${label}`}>
+      {label} <X />
+    </Button>
   );
 }

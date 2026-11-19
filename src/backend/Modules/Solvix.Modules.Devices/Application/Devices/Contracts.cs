@@ -35,6 +35,9 @@ public sealed record DeviceSummaryDto(
     /// <summary>Display name of the assigned member; null when unassigned or the user has left the workspace.</summary>
     public string? AssignedUserName { get; init; }
 
+    /// <summary>Active Directory / DNS domain reported by the agent; null when the computer is in a workgroup or has not reported one.</summary>
+    public string? DomainName { get; init; }
+
     public Guid? BranchId { get; init; }
 
     /// <summary>Name of the assigned branch; null when unassigned.</summary>
@@ -137,7 +140,10 @@ public sealed record DeviceListQuery(
     Guid? BranchId = null,
     bool? Attention = null,
     DeviceSortField SortBy = DeviceSortField.Name,
-    SortDirection SortDirection = SortDirection.Asc);
+    SortDirection SortDirection = SortDirection.Asc,
+    AgentHealthStatus? Health = null,
+    int? NotSeenHours = null,
+    bool? UpdateAvailable = null);
 
 public sealed record UpdateDeviceRequest(string? DisplayName, string? Notes);
 

@@ -3,6 +3,7 @@ import { serverApi } from "@/lib/api/server";
 import type { BranchDto, DeviceGroupDto, DeviceStatsDto, DeviceSummaryDto, PagedResult } from "@/lib/api/types";
 import { DEFAULT_PAGE_SIZE, filtersFromSearchParams, toQueryString, type DeviceListState } from "@/lib/device-query";
 import { PageHeader } from "@/components/ui/page-header";
+import { DownloadAgentButton } from "@/components/features/agent/download-agent";
 import { DevicesView } from "@/components/features/devices/devices-view";
 
 export const metadata: Metadata = { title: "Devices" };
@@ -23,7 +24,7 @@ export default async function DevicesPage({ searchParams }: { searchParams: Prom
   ]);
   return (
     <>
-      <PageHeader title="Devices" description="Windows endpoints enrolled in this workspace and the inventory they report." />
+      <PageHeader title="Devices" description="Windows endpoints enrolled in this workspace and the inventory they report." actions={<DownloadAgentButton variant="outline" />} />
       <DevicesView initial={devices} initialState={initialState} stats={stats} groups={groups.items} branches={branches.items} />
     </>
   );

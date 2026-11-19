@@ -5,12 +5,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Solvix.Modules.Devices.Application.Devices;
+using Solvix.Modules.Devices.Application.Insights;
 using Solvix.SharedKernel.Results;
 using Solvix.SharedKernel.Web;
 
 /// <summary>Device inventory and management for workspace members (writes: admins).</summary>
 [ApiVersion(1.0)]
-public sealed class DevicesController(IDeviceService service) : ApiControllerBase
+public sealed class DevicesController(IDeviceService service, IDeviceInsightsService insights) : ApiControllerBase
 {
     [HttpGet]
     [ProducesResponseType<PagedResult<DeviceSummaryDto>>(StatusCodes.Status200OK)]
@@ -21,6 +22,18 @@ public sealed class DevicesController(IDeviceService service) : ApiControllerBas
     [ProducesResponseType<DeviceStatsDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<DeviceStatsDto>> Stats(CancellationToken cancellationToken) =>
         Ok(await service.GetStatsAsync(cancellationToken));
+
+    /// <summary>Platform, operating system, agent health and per-branch breakdown of the active fleet.</summary>
+    [HttpGet("overview")]
+    [ProducesResponseType<DeviceOverviewDto>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<DeviceOverviewDto>> Overview(CancellationToken cancellationToken) =>
+        Ok(await insights.GetOverviewAsync(cancellationToken));
+
+    /// <summary>Conditions that need attention (unhealthy or silent agents, expiring certificates, pending installs), derived from live data.</summary>
+    [HttpGet("alerts")]
+    [ProducesResponseType<IReadOnlyList<DeviceAlertDto>>(StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<DeviceAlertDto>>> Alerts(CancellationToken cancellationToken) =>
+        Ok(await insights.GetAlertsAsync(cancellationToken));
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType<DeviceDetailsDto>(StatusCodes.Status200OK)]

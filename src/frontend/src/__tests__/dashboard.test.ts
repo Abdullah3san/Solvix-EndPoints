@@ -113,7 +113,7 @@ describe("navigation", () => {
 
   it("matches pages by label and keyword in the global search", () => {
     expect(matchPages(all, "branch").map((i) => i.label)).toEqual(["Branches"]);
-    expect(matchPages(all, "install").map((i) => i.label)).toEqual(["Enrollment"]);
+    expect(matchPages(all, "enroll").map((i) => i.label)).toEqual(["Enrollment"]);
     expect(matchPages(all, "")).toHaveLength(all.length);
   });
 });
