@@ -97,3 +97,18 @@ with the generated certificate). Download the package from **Download agent** in
 - [ ] Operator can sign in; a test company can be created, suspended and reactivated
 - [ ] A test agent enrolls and appears under Devices
 - [ ] A backup restored successfully on another machine
+
+## Troubleshooting
+
+**`service "migrator" didn't complete successfully: exit 1`** (and `api`/`web` "not started")
+
+Read the reason first: `docker compose logs migrator | tail -30`.
+
+* `password authentication failed for user "solvix_migrator"` (or `solvix_app`): the database volume was created earlier with
+  different passwords. PostgreSQL only reads the `SOLVIX_DB_*` passwords the **first** time the volume is created; later edits
+  to `.env` do not change the stored roles. On a fresh install with nothing to keep, recreate it:
+  `docker compose down -v && docker compose up -d --build` (**`-v` deletes the database volume**). If there is data, reset the role
+  passwords inside Postgres instead (`docker compose exec postgres psql -U postgres -c "ALTER ROLE solvix_migrator PASSWORD '…'"`),
+  or put the original passwords back in `.env`.
+* `could not connect` / `connection refused`: postgres was not healthy yet; run `docker compose up -d` again.
+* Anything else: the last lines of the log name the failing migration; send them (remove secrets first).
