@@ -40,6 +40,8 @@ docker compose up --build
 `migrator` applies EF Core migrations as the schema-owner role and exits; `api`
 only starts once it succeeded.
 
+Deploying to a server: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 **Sign-up is closed.** Only companies you create can sign in. Set `SOLVIX_PLATFORM_OPERATOR_EMAIL` and
 `SOLVIX_PLATFORM_OPERATOR_PASSWORD` in `.env`, start the stack, sign in at http://localhost:3000/login as that
 operator and create each subscribed company under **Platform → Companies**. See

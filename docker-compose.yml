@@ -23,7 +23,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${SOLVIX_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-solvix}"]
       interval: 5s
@@ -36,7 +36,7 @@ services:
     volumes:
       - redis-data:/data
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${SOLVIX_BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-solvix_redis_dev} ping | grep PONG"]
       interval: 5s
@@ -97,7 +97,7 @@ services:
     volumes:
       - solvix-pki:/var/lib/solvix
     ports:
-      - "${API_HTTP_PORT:-8080}:8080"
+      - "${SOLVIX_BIND_ADDRESS:-127.0.0.1}:${API_HTTP_PORT:-8080}:8080"
       - "${API_AGENT_PORT:-8443}:8443"
     depends_on:
       migrator:
@@ -112,9 +112,9 @@ services:
       dockerfile: Dockerfile
     environment:
       SOLVIX_API_INTERNAL_URL: ${SOLVIX_API_INTERNAL_URL:-http://api:8080}
-      SOLVIX_COOKIE_SECURE: "false"
+      SOLVIX_COOKIE_SECURE: ${SOLVIX_COOKIE_SECURE:-false}
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "${SOLVIX_BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-3000}:3000"
     depends_on:
       api:
         condition: service_healthy
